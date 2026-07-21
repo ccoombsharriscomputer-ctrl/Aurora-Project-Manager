@@ -65,6 +65,10 @@ function CreateTypeForm() {
 export function ProjectTypesPage() {
   const queryClient = useQueryClient();
   const [deleteErrors, setDeleteErrors] = useState<Record<string, string>>({});
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editName, setEditName] = useState("");
+  const [editDescription, setEditDescription] = useState("");
+  const [editError, setEditError] = useState<string | null>(null);
   const { data: types, isLoading } = useQuery({
     queryKey: ["project-types"],
     queryFn: () => api.get<ProjectType[]>("/project-types"),
@@ -74,6 +78,17 @@ export function ProjectTypesPage() {
     mutationFn: ({ id, active }: { id: string; active: boolean }) =>
       api.patch(`/project-types/${id}`, { active }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["project-types"] }),
+  });
+
+  const updateType = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Record<string, unknown> }) =>
+      api.patch(`/project-types/${id}`, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["project-types"] });
+      setEditingId(null);
+      setEditError(null);
+    },
+    onError: (err) => setEditError(extractErrorMessage(err)),
   });
 
   const deleteType = useMutation({
@@ -88,6 +103,13 @@ export function ProjectTypesPage() {
     },
     onError: (err, id) => setDeleteErrors((prev) => ({ ...prev, [id]: extractErrorMessage(err) })),
   });
+
+  function startEdit(type: ProjectType) {
+    setEditingId(type.id);
+    setEditName(type.name);
+    setEditDescription(type.description ?? "");
+    setEditError(null);
+  }
 
   if (isLoading || !types) {
     return <div className="muted">Loading project types…</div>;
@@ -116,33 +138,73 @@ export function ProjectTypesPage() {
             </tr>
           </thead>
           <tbody>
-            {types.map((t) => (
-              <tr key={t.id}>
-                <td>{t.name}</td>
-                <td>{t.description || "—"}</td>
-                <td>{t.active ? "Active" : "Inactive"}</td>
-                <td>{formatDate(t.createdAt)}</td>
-                <td className="gap-8">
-                  <button
-                    className="btn btn-sm"
-                    onClick={() => toggleActive.mutate({ id: t.id, active: !t.active })}
-                  >
-                    {t.active ? "Deactivate" : "Reactivate"}
-                  </button>
-                  <button
-                    className="btn btn-sm btn-danger"
-                    onClick={() => {
-                      if (confirm(`Delete project type "${t.name}"? This cannot be undone.`)) {
-                        deleteType.mutate(t.id);
-                      }
-                    }}
-                  >
-                    Delete
-                  </button>
-                  {deleteErrors[t.id] && <div className="error-text">{deleteErrors[t.id]}</div>}
-                </td>
-              </tr>
-            ))}
+            {types.map((t) =>
+              editingId === t.id ? (
+                <tr key={t.id}>
+                  <td colSpan={5}>
+                    <form
+                      className="card"
+                      style={{ margin: "8px 0" }}
+                      onSubmit={(e: FormEvent) => {
+                        e.preventDefault();
+                        if (!editName.trim()) return;
+                        updateType.mutate({
+                          id: t.id,
+                          data: { name: editName, description: editDescription || null },
+                        });
+                      }}
+                    >
+                      <div className="field">
+                        <label>Name</label>
+                        <input type="text" required value={editName} onChange={(e) => setEditName(e.target.value)} />
+                      </div>
+                      <div className="field">
+                        <label>Description</label>
+                        <textarea value={editDescription} onChange={(e) => setEditDescription(e.target.value)} />
+                      </div>
+                      {editError && <div className="error-text">{editError}</div>}
+                      <div className="gap-8">
+                        <button className="btn btn-sm btn-primary" type="submit" disabled={updateType.isPending}>
+                          Save
+                        </button>
+                        <button className="btn btn-sm" type="button" onClick={() => setEditingId(null)}>
+                          Cancel
+                        </button>
+                      </div>
+                    </form>
+                  </td>
+                </tr>
+              ) : (
+                <tr key={t.id}>
+                  <td>{t.name}</td>
+                  <td>{t.description || "—"}</td>
+                  <td>{t.active ? "Active" : "Inactive"}</td>
+                  <td>{formatDate(t.createdAt)}</td>
+                  <td className="gap-8">
+                    <button className="btn btn-sm" onClick={() => startEdit(t)}>
+                      Edit
+                    </button>
+                    <button
+                      className="btn btn-sm"
+                      onClick={() => toggleActive.mutate({ id: t.id, active: !t.active })}
+                    >
+                      {t.active ? "Deactivate" : "Reactivate"}
+                    </button>
+                    <button
+                      className="btn btn-sm btn-danger"
+                      onClick={() => {
+                        if (confirm(`Delete project type "${t.name}"? This cannot be undone.`)) {
+                          deleteType.mutate(t.id);
+                        }
+                      }}
+                    >
+                      Delete
+                    </button>
+                    {deleteErrors[t.id] && <div className="error-text">{deleteErrors[t.id]}</div>}
+                  </td>
+                </tr>
+              )
+            )}
             {types.length === 0 && (
               <tr>
                 <td colSpan={5} className="muted">

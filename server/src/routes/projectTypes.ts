@@ -55,6 +55,13 @@ router.patch("/:id", requireProjectTypeManager, async (req, res) => {
     return res.status(400).json({ error: parsed.error.issues[0].message });
   }
 
+  if (parsed.data.name) {
+    const existing = await prisma.projectType.findUnique({ where: { name: parsed.data.name } });
+    if (existing && existing.id !== req.params.id) {
+      return res.status(409).json({ error: "A project type with that name already exists" });
+    }
+  }
+
   const type = await prisma.projectType.update({
     where: { id: req.params.id },
     data: parsed.data,
