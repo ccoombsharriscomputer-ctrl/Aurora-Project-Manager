@@ -2,27 +2,33 @@ import { useState, type FormEvent } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../api/client";
-import type { Project, ProjectType, SubProject, UserSummary } from "../api/types";
+import type { ChecklistItem, Project, SubProject, UserSummary } from "../api/types";
 import { extractErrorMessage, useAuth } from "../context/AuthContext";
 
-function NewSubProjectForm({ projectId, projectTypes }: { projectId: string; projectTypes: ProjectType[] }) {
+function NewSubProjectForm({ projectId, projectTypeId }: { projectId: string; projectTypeId: string }) {
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
-  const [projectTypeId, setProjectTypeId] = useState("");
+  const [checklistItemId, setChecklistItemId] = useState("");
   const [name, setName] = useState("");
   const [error, setError] = useState<string | null>(null);
 
-  const activeTypes = projectTypes.filter((t) => t.active);
+  const { data: checklistItems } = useQuery({
+    queryKey: ["checklist-items", projectTypeId],
+    queryFn: () => api.get<ChecklistItem[]>(`/project-types/${projectTypeId}/checklist-items`),
+    enabled: open,
+  });
+
+  const activeItems = (checklistItems ?? []).filter((i) => i.active);
 
   const createSubProject = useMutation({
     mutationFn: () =>
       api.post<SubProject>(`/projects/${projectId}/sub-projects`, {
-        projectTypeId,
+        checklistItemId,
         name: name || undefined,
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["project-sub-projects", projectId] });
-      setProjectTypeId("");
+      setChecklistItemId("");
       setName("");
       setOpen(false);
       setError(null);
@@ -44,23 +50,23 @@ function NewSubProjectForm({ projectId, projectTypes }: { projectId: string; pro
       style={{ marginBottom: 16 }}
       onSubmit={(e: FormEvent) => {
         e.preventDefault();
-        if (!projectTypeId) return;
+        if (!checklistItemId) return;
         createSubProject.mutate();
       }}
     >
       <div className="field">
-        <label>Type</label>
-        <select value={projectTypeId} onChange={(e) => setProjectTypeId(e.target.value)} required>
-          <option value="">Select a project type…</option>
-          {activeTypes.map((t) => (
-            <option key={t.id} value={t.id}>
-              {t.name}
+        <label>Checklist item</label>
+        <select value={checklistItemId} onChange={(e) => setChecklistItemId(e.target.value)} required>
+          <option value="">Select a checklist item…</option>
+          {activeItems.map((i) => (
+            <option key={i.id} value={i.id}>
+              {i.name}
             </option>
           ))}
         </select>
-        {activeTypes.length === 0 && (
+        {activeItems.length === 0 && (
           <p className="muted" style={{ fontSize: 12, marginTop: 6 }}>
-            No project types yet — an admin or project lead needs to create one first.
+            No checklist items for this project's type yet — add one on the Project Types page.
           </p>
         )}
       </div>
@@ -68,14 +74,14 @@ function NewSubProjectForm({ projectId, projectTypes }: { projectId: string; pro
         <label>Custom name (optional)</label>
         <input
           type="text"
-          placeholder="Defaults to the type name"
+          placeholder="Defaults to the checklist item's name"
           value={name}
           onChange={(e) => setName(e.target.value)}
         />
       </div>
       {error && <div className="error-text">{error}</div>}
       <div className="gap-8">
-        <button className="btn btn-primary" type="submit" disabled={createSubProject.isPending || !projectTypeId}>
+        <button className="btn btn-primary" type="submit" disabled={createSubProject.isPending || !checklistItemId}>
           Create
         </button>
         <button className="btn" type="button" onClick={() => setOpen(false)}>
@@ -160,11 +166,6 @@ export function ProjectDetailPage() {
     enabled: !!projectId,
   });
 
-  const { data: projectTypes } = useQuery({
-    queryKey: ["project-types"],
-    queryFn: () => api.get<ProjectType[]>("/project-types"),
-  });
-
   const { data: allUsers } = useQuery({
     queryKey: ["users"],
     queryFn: () => api.get<UserSummary[]>("/users"),
@@ -189,10 +190,13 @@ export function ProjectDetailPage() {
       <div className="page-header">
         <div>
           <h1>{project.name}</h1>
-          {project.description && <p className="muted" style={{ margin: "4px 0 0" }}>{project.description}</p>}
+          <p className="muted" style={{ margin: "4px 0 0" }}>
+            {project.projectType.name}
+            {project.description ? ` · ${project.description}` : ""}
+          </p>
         </div>
         <div className="gap-8">
-          <NewSubProjectForm projectId={project.id} projectTypes={projectTypes ?? []} />
+          <NewSubProjectForm projectId={project.id} projectTypeId={project.projectType.id} />
           {canManage && (
             <button
               className="btn btn-danger"
@@ -219,8 +223,8 @@ export function ProjectDetailPage() {
               const percent = sp.totalTasks === 0 ? 0 : Math.round((sp.doneTasks / sp.totalTasks) * 100);
               return (
                 <Link key={sp.id} to={`/projects/${project.id}/sub-projects/${sp.id}`} className="card project-card">
-                  <h3>{sp.name || sp.projectType.name}</h3>
-                  <p>{sp.name ? sp.projectType.name : " "}</p>
+                  <h3>{sp.name || sp.checklistItem.name}</h3>
+                  <p>{sp.name ? sp.checklistItem.name : " "}</p>
                   <div className="progress-row-top">
                     <span className="muted">
                       {sp.doneTasks}/{sp.totalTasks} tasks

@@ -1,7 +1,7 @@
-import { useState, type FormEvent } from "react";
+import { Fragment, useState, type FormEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../api/client";
-import type { ProjectType } from "../api/types";
+import type { ChecklistItem, ProjectType } from "../api/types";
 import { extractErrorMessage } from "../context/AuthContext";
 import { formatDate } from "../utils/format";
 
@@ -62,8 +62,77 @@ function CreateTypeForm() {
   );
 }
 
+function ChecklistPanel({ projectTypeId }: { projectTypeId: string }) {
+  const queryClient = useQueryClient();
+  const [name, setName] = useState("");
+  const [error, setError] = useState<string | null>(null);
+
+  const { data: items, isLoading } = useQuery({
+    queryKey: ["checklist-items", projectTypeId],
+    queryFn: () => api.get<ChecklistItem[]>(`/project-types/${projectTypeId}/checklist-items`),
+  });
+
+  const createItem = useMutation({
+    mutationFn: () => api.post<ChecklistItem>(`/project-types/${projectTypeId}/checklist-items`, { name }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["checklist-items", projectTypeId] });
+      setName("");
+      setError(null);
+    },
+    onError: (err) => setError(extractErrorMessage(err)),
+  });
+
+  const toggleActive = useMutation({
+    mutationFn: ({ id, active }: { id: string; active: boolean }) => api.patch(`/checklist-items/${id}`, { active }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["checklist-items", projectTypeId] }),
+  });
+
+  return (
+    <div style={{ padding: "12px 4px" }}>
+      <div className="section-title" style={{ fontSize: 13 }}>
+        Checklist items
+      </div>
+      <p className="muted" style={{ fontSize: 12, marginTop: -8, marginBottom: 10 }}>
+        These auto-create as sub-projects whenever someone creates a project of this type.
+      </p>
+      {isLoading && <p className="muted">Loading…</p>}
+      {items?.map((item) => (
+        <div className="task-list-item" key={item.id}>
+          <span>{item.name}</span>
+          <span className="gap-8">
+            <span className="muted">{item.active ? "Active" : "Inactive"}</span>
+            <button
+              className="btn btn-sm"
+              onClick={() => toggleActive.mutate({ id: item.id, active: !item.active })}
+            >
+              {item.active ? "Deactivate" : "Reactivate"}
+            </button>
+          </span>
+        </div>
+      ))}
+      {items?.length === 0 && <p className="muted">No checklist items yet.</p>}
+      <form
+        className="gap-8"
+        style={{ marginTop: 12 }}
+        onSubmit={(e: FormEvent) => {
+          e.preventDefault();
+          if (!name.trim()) return;
+          createItem.mutate();
+        }}
+      >
+        <input type="text" placeholder="e.g. Data Conversion" value={name} onChange={(e) => setName(e.target.value)} />
+        <button className="btn btn-sm btn-primary" type="submit" disabled={createItem.isPending}>
+          Add
+        </button>
+      </form>
+      {error && <div className="error-text">{error}</div>}
+    </div>
+  );
+}
+
 export function ProjectTypesPage() {
   const queryClient = useQueryClient();
+  const [expandedId, setExpandedId] = useState<string | null>(null);
   const { data: types, isLoading } = useQuery({
     queryKey: ["project-types"],
     queryFn: () => api.get<ProjectType[]>("/project-types"),
@@ -86,7 +155,9 @@ export function ProjectTypesPage() {
         <CreateTypeForm />
       </div>
       <p className="muted" style={{ marginTop: -12, marginBottom: 20 }}>
-        This is the catalog teams pick from when adding a sub-project (e.g. "Data Conversion", "Training") under a project.
+        A project type is a program category (e.g. "Payroll Implementation"). Each type has a checklist of
+        standard phases (e.g. "Data Conversion", "Training", "Go-Live") that automatically become sub-projects
+        whenever a project of that type is created.
       </p>
       <div className="card">
         <table className="table">
@@ -101,20 +172,32 @@ export function ProjectTypesPage() {
           </thead>
           <tbody>
             {types.map((t) => (
-              <tr key={t.id}>
-                <td>{t.name}</td>
-                <td>{t.description || "—"}</td>
-                <td>{t.active ? "Active" : "Inactive"}</td>
-                <td>{formatDate(t.createdAt)}</td>
-                <td>
-                  <button
-                    className="btn btn-sm"
-                    onClick={() => toggleActive.mutate({ id: t.id, active: !t.active })}
-                  >
-                    {t.active ? "Deactivate" : "Reactivate"}
-                  </button>
-                </td>
-              </tr>
+              <Fragment key={t.id}>
+                <tr>
+                  <td>{t.name}</td>
+                  <td>{t.description || "—"}</td>
+                  <td>{t.active ? "Active" : "Inactive"}</td>
+                  <td>{formatDate(t.createdAt)}</td>
+                  <td className="gap-8">
+                    <button className="btn btn-sm" onClick={() => setExpandedId(expandedId === t.id ? null : t.id)}>
+                      {expandedId === t.id ? "Hide checklist" : "Manage checklist"}
+                    </button>
+                    <button
+                      className="btn btn-sm"
+                      onClick={() => toggleActive.mutate({ id: t.id, active: !t.active })}
+                    >
+                      {t.active ? "Deactivate" : "Reactivate"}
+                    </button>
+                  </td>
+                </tr>
+                {expandedId === t.id && (
+                  <tr>
+                    <td colSpan={5} style={{ background: "var(--bg)" }}>
+                      <ChecklistPanel projectTypeId={t.id} />
+                    </td>
+                  </tr>
+                )}
+              </Fragment>
             ))}
             {types.length === 0 && (
               <tr>

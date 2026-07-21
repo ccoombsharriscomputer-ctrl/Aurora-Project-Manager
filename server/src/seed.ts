@@ -25,24 +25,60 @@ async function main() {
     create: { name: "Onboarding", description: "Getting a new project up and running", createdById: admin.id },
   });
 
+  const checklistItem = await prisma.checklistItem.upsert({
+    where: { id: `${projectType.id}-setup` },
+    update: {},
+    create: {
+      id: `${projectType.id}-setup`,
+      projectTypeId: projectType.id,
+      name: "Initial Setup",
+      createdById: admin.id,
+    },
+  });
+
   const project = await prisma.project.create({
     data: {
       name: "Aurora Launch",
       description: "Demo project created by the seed script.",
+      projectTypeId: projectType.id,
       createdById: admin.id,
       members: { create: { userId: admin.id, role: "OWNER" } },
     },
   });
 
   const subProject = await prisma.subProject.create({
-    data: { projectId: project.id, projectTypeId: projectType.id, createdById: admin.id },
+    data: { projectId: project.id, checklistItemId: checklistItem.id, createdById: admin.id },
   });
 
   await prisma.task.createMany({
     data: [
-      { title: "Set up project board", status: "DONE", priority: "MEDIUM", createdById: admin.id, projectId: project.id, subProjectId: subProject.id },
-      { title: "Invite the team", status: "IN_PROGRESS", priority: "HIGH", createdById: admin.id, projectId: project.id, subProjectId: subProject.id },
-      { title: "Plan first sprint", status: "TODO", priority: "MEDIUM", createdById: admin.id, projectId: project.id, subProjectId: subProject.id },
+      {
+        title: "Set up project board",
+        status: "DONE",
+        priority: "MEDIUM",
+        createdById: admin.id,
+        projectId: project.id,
+        subProjectId: subProject.id,
+        projectTypeId: projectType.id,
+      },
+      {
+        title: "Invite the team",
+        status: "IN_PROGRESS",
+        priority: "HIGH",
+        createdById: admin.id,
+        projectId: project.id,
+        subProjectId: subProject.id,
+        projectTypeId: projectType.id,
+      },
+      {
+        title: "Plan first sprint",
+        status: "TODO",
+        priority: "MEDIUM",
+        createdById: admin.id,
+        projectId: project.id,
+        subProjectId: subProject.id,
+        projectTypeId: projectType.id,
+      },
     ],
   });
 

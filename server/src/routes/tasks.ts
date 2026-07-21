@@ -29,7 +29,7 @@ router.get("/:id", async (req, res) => {
     where: { id: req.params.id },
     include: {
       project: { select: { id: true, name: true } },
-      subProject: { select: { id: true, name: true, projectType: { select: { id: true, name: true } } } },
+      subProject: { select: { id: true, name: true, checklistItem: { select: { id: true, name: true } } } },
       assignee: { select: { id: true, name: true } },
       createdBy: { select: { id: true, name: true } },
       comments: {

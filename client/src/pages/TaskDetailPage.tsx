@@ -101,7 +101,7 @@ export function TaskDetailPage() {
       <div className="page-header">
         <div>
           <Link to={`/projects/${task.project.id}/sub-projects/${task.subProjectId}`} className="muted">
-            ← {task.subProject.name || task.subProject.projectType.name} ({task.project.name})
+            ← {task.subProject.name || task.subProject.checklistItem.name} ({task.project.name})
           </Link>
           <h1 style={{ marginTop: 6 }}>{task.title}</h1>
         </div>

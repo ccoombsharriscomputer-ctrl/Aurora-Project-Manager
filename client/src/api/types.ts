@@ -38,6 +38,7 @@ export interface Project {
   id: string;
   name: string;
   description: string | null;
+  projectType: { id: string; name: string };
   createdBy: UserSummary;
   createdAt: string;
   members: ProjectMember[];
@@ -53,11 +54,20 @@ export interface ProjectType {
   createdAt: string;
 }
 
+export interface ChecklistItem {
+  id: string;
+  projectTypeId: string;
+  name: string;
+  description: string | null;
+  active: boolean;
+  createdAt: string;
+}
+
 export interface SubProject {
   id: string;
   projectId: string;
   name: string | null;
-  projectType: ProjectType;
+  checklistItem: ChecklistItem;
   createdBy: UserSummary;
   createdAt: string;
   totalTasks: number;
@@ -67,7 +77,7 @@ export interface SubProject {
 export interface SubProjectDetail {
   id: string;
   name: string | null;
-  projectType: ProjectType;
+  checklistItem: ChecklistItem;
   createdAt: string;
   project: {
     id: string;
@@ -81,6 +91,7 @@ export interface Task {
   id: string;
   projectId: string;
   subProjectId: string;
+  projectTypeId: string;
   title: string;
   description: string | null;
   status: TaskStatus;
@@ -126,7 +137,7 @@ export interface TimeEntry {
 
 export interface TaskDetail extends Task {
   project: { id: string; name: string };
-  subProject: { id: string; name: string | null; projectType: { id: string; name: string } };
+  subProject: { id: string; name: string | null; checklistItem: { id: string; name: string } };
   comments: Comment[];
   attachments: Attachment[];
   timeEntries: TimeEntry[];
@@ -151,4 +162,37 @@ export interface DashboardSummary {
   projectProgress: { id: string; name: string; totalTasks: number; doneTasks: number; percent: number }[];
   myTasks: Task[];
   recentActivity: Activity[];
+}
+
+export interface UserReportRow {
+  id: string;
+  name: string;
+  email: string;
+  role: UserRole;
+  projects: { id: string; name: string }[];
+  openTasks: number;
+  doneTasks: number;
+  hoursLogged: number;
+}
+
+export interface ProjectReportRow {
+  id: string;
+  name: string;
+  projectType: { id: string; name: string };
+  members: UserSummary[];
+  totalSubProjects: number;
+  totalTasks: number;
+  doneTasks: number;
+  openTasks: number;
+  hoursLogged: number;
+}
+
+export interface ProjectTypeReportRow {
+  id: string;
+  name: string;
+  totalProjects: number;
+  totalTasks: number;
+  doneTasks: number;
+  openTasks: number;
+  hoursLogged: number;
 }

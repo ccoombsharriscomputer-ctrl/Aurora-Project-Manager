@@ -15,6 +15,7 @@ router.get("/", async (_req, res) => {
     orderBy: { createdAt: "desc" },
     include: {
       createdBy: { select: { id: true, name: true } },
+      projectType: { select: { id: true, name: true } },
       members: { include: { user: { select: { id: true, name: true, email: true } } } },
       _count: { select: { tasks: true } },
     },
@@ -27,6 +28,7 @@ router.get("/", async (_req, res) => {
         id: p.id,
         name: p.name,
         description: p.description,
+        projectType: p.projectType,
         createdBy: p.createdBy,
         createdAt: p.createdAt,
         members: p.members.map((m) => ({ ...m.user, role: m.role })),
@@ -42,6 +44,7 @@ router.get("/", async (_req, res) => {
 const createSchema = z.object({
   name: z.string().min(1).max(200),
   description: z.string().max(2000).optional(),
+  projectTypeId: z.string().min(1),
 });
 
 router.post("/", async (req, res) => {
@@ -50,17 +53,39 @@ router.post("/", async (req, res) => {
     return res.status(400).json({ error: parsed.error.issues[0].message });
   }
 
+  const projectType = await prisma.projectType.findUnique({ where: { id: parsed.data.projectTypeId } });
+  if (!projectType) {
+    return res.status(404).json({ error: "Project type not found" });
+  }
+
   const project = await prisma.project.create({
     data: {
       name: parsed.data.name,
       description: parsed.data.description,
+      projectTypeId: projectType.id,
       createdById: req.user!.id,
       members: {
         create: { userId: req.user!.id, role: "OWNER" },
       },
     },
-    include: { members: { include: { user: { select: { id: true, name: true, email: true } } } } },
+    include: {
+      projectType: { select: { id: true, name: true } },
+      members: { include: { user: { select: { id: true, name: true, email: true } } } },
+    },
   });
+
+  const checklistItems = await prisma.checklistItem.findMany({
+    where: { projectTypeId: projectType.id, active: true },
+  });
+  if (checklistItems.length > 0) {
+    await prisma.subProject.createMany({
+      data: checklistItems.map((item) => ({
+        projectId: project.id,
+        checklistItemId: item.id,
+        createdById: req.user!.id,
+      })),
+    });
+  }
 
   await logActivity({
     type: "PROJECT_CREATED",
@@ -79,6 +104,7 @@ router.get("/:id", async (req, res) => {
     where: { id: req.params.id },
     include: {
       createdBy: { select: { id: true, name: true } },
+      projectType: { select: { id: true, name: true } },
       members: { include: { user: { select: { id: true, name: true, email: true } } } },
     },
   });
@@ -179,7 +205,7 @@ router.get("/:id/sub-projects", async (req, res) => {
     where: { projectId: req.params.id },
     orderBy: { createdAt: "asc" },
     include: {
-      projectType: true,
+      checklistItem: true,
       createdBy: { select: { id: true, name: true } },
       _count: { select: { tasks: true } },
     },
@@ -192,7 +218,7 @@ router.get("/:id/sub-projects", async (req, res) => {
         id: sp.id,
         projectId: sp.projectId,
         name: sp.name,
-        projectType: sp.projectType,
+        checklistItem: sp.checklistItem,
         createdBy: sp.createdBy,
         createdAt: sp.createdAt,
         totalTasks: sp._count.tasks,
@@ -205,7 +231,7 @@ router.get("/:id/sub-projects", async (req, res) => {
 });
 
 const createSubProjectSchema = z.object({
-  projectTypeId: z.string().min(1),
+  checklistItemId: z.string().min(1),
   name: z.string().max(200).optional(),
 });
 
@@ -219,19 +245,22 @@ router.post("/:id/sub-projects", async (req, res) => {
     return res.status(400).json({ error: parsed.error.issues[0].message });
   }
 
-  const projectType = await prisma.projectType.findUnique({ where: { id: parsed.data.projectTypeId } });
-  if (!projectType) {
-    return res.status(404).json({ error: "Project type not found" });
+  const checklistItem = await prisma.checklistItem.findUnique({ where: { id: parsed.data.checklistItemId } });
+  if (!checklistItem) {
+    return res.status(404).json({ error: "Checklist item not found" });
+  }
+  if (checklistItem.projectTypeId !== project.projectTypeId) {
+    return res.status(400).json({ error: "That checklist item doesn't belong to this project's type" });
   }
 
   const subProject = await prisma.subProject.create({
     data: {
       projectId: project.id,
-      projectTypeId: projectType.id,
+      checklistItemId: checklistItem.id,
       name: parsed.data.name,
       createdById: req.user!.id,
     },
-    include: { projectType: true, createdBy: { select: { id: true, name: true } } },
+    include: { checklistItem: true, createdBy: { select: { id: true, name: true } } },
   });
 
   emitUpdate({ scope: "project", projectId: project.id });

@@ -10,6 +10,7 @@ import { SubProjectDetailPage } from "./pages/SubProjectDetailPage";
 import { TaskDetailPage } from "./pages/TaskDetailPage";
 import { AdminUsersPage } from "./pages/AdminUsersPage";
 import { ProjectTypesPage } from "./pages/ProjectTypesPage";
+import { ReportsPage } from "./pages/ReportsPage";
 import { useRealtimeInvalidation } from "./hooks/useRealtimeInvalidation";
 
 function App() {
@@ -29,6 +30,7 @@ function App() {
           <Route path="/tasks/:taskId" element={<TaskDetailPage />} />
           <Route element={<AdminRoute />}>
             <Route path="/admin/users" element={<AdminUsersPage />} />
+            <Route path="/reports" element={<ReportsPage />} />
           </Route>
           <Route element={<ProjectLeadRoute />}>
             <Route path="/project-types" element={<ProjectTypesPage />} />

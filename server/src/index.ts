@@ -9,11 +9,13 @@ import authRoutes from "./routes/auth";
 import userRoutes from "./routes/users";
 import projectRoutes from "./routes/projects";
 import projectTypeRoutes from "./routes/projectTypes";
+import checklistItemRoutes from "./routes/checklistItems";
 import subProjectRoutes from "./routes/subProjects";
 import taskRoutes from "./routes/tasks";
 import timeEntryRoutes from "./routes/timeEntries";
 import attachmentRoutes from "./routes/attachments";
 import dashboardRoutes from "./routes/dashboard";
+import reportRoutes from "./routes/reports";
 import { attachRealtime } from "./lib/realtime";
 
 const app = express();
@@ -32,11 +34,13 @@ app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/projects", projectRoutes);
 app.use("/api/project-types", projectTypeRoutes);
+app.use("/api/checklist-items", checklistItemRoutes);
 app.use("/api/sub-projects", subProjectRoutes);
 app.use("/api/tasks", taskRoutes);
 app.use("/api/time-entries", timeEntryRoutes);
 app.use("/api/attachments", attachmentRoutes);
 app.use("/api/dashboard", dashboardRoutes);
+app.use("/api/reports", reportRoutes);
 
 app.get("/api/health", (_req, res) => res.json({ ok: true }));
 

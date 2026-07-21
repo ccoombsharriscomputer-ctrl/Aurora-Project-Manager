@@ -143,8 +143,8 @@ export function SubProjectDetailPage() {
           <Link to={`/projects/${projectId ?? subProject.project.id}`} className="muted">
             ← {subProject.project.name}
           </Link>
-          <h1 style={{ marginTop: 6 }}>{subProject.name || subProject.projectType.name}</h1>
-          {subProject.name && <p className="muted" style={{ margin: "4px 0 0" }}>{subProject.projectType.name}</p>}
+          <h1 style={{ marginTop: 6 }}>{subProject.name || subProject.checklistItem.name}</h1>
+          {subProject.name && <p className="muted" style={{ margin: "4px 0 0" }}>{subProject.checklistItem.name}</p>}
         </div>
         <NewTaskForm subProjectId={subProject.id} members={subProject.project.members} />
       </div>

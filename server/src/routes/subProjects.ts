@@ -16,7 +16,7 @@ router.get("/:id", async (req, res) => {
   const subProject = await prisma.subProject.findUnique({
     where: { id: req.params.id },
     include: {
-      projectType: true,
+      checklistItem: true,
       project: {
         include: {
           members: { include: { user: { select: { id: true, name: true, email: true } } } },
@@ -30,7 +30,7 @@ router.get("/:id", async (req, res) => {
   res.json({
     id: subProject.id,
     name: subProject.name,
-    projectType: subProject.projectType,
+    checklistItem: subProject.checklistItem,
     createdAt: subProject.createdAt,
     project: {
       id: subProject.project.id,
@@ -107,7 +107,10 @@ const createTaskSchema = z.object({
 });
 
 router.post("/:id/tasks", async (req, res) => {
-  const subProject = await prisma.subProject.findUnique({ where: { id: req.params.id } });
+  const subProject = await prisma.subProject.findUnique({
+    where: { id: req.params.id },
+    include: { project: { select: { projectTypeId: true } } },
+  });
   if (!subProject) {
     return res.status(404).json({ error: "Sub-project not found" });
   }
@@ -120,6 +123,7 @@ router.post("/:id/tasks", async (req, res) => {
     data: {
       subProjectId: subProject.id,
       projectId: subProject.projectId,
+      projectTypeId: subProject.project.projectTypeId,
       title: parsed.data.title,
       description: parsed.data.description,
       priority: parsed.data.priority ?? "MEDIUM",

@@ -24,6 +24,11 @@ export function Layout() {
             Users
           </NavLink>
         )}
+        {user?.role === "ADMIN" && (
+          <NavLink to="/reports" className={({ isActive }) => `sidebar-link${isActive ? " active" : ""}`}>
+            Reports
+          </NavLink>
+        )}
         <div className="sidebar-footer">
           <div>{user?.name}</div>
           <div>{user?.email}</div>

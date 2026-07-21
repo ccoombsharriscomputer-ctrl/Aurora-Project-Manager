@@ -64,4 +64,42 @@ router.patch("/:id", requireProjectTypeManager, async (req, res) => {
   res.json(type);
 });
 
+// Any authenticated user can list checklist items (needed for the "new project" and
+// "add sub-project" pickers).
+router.get("/:id/checklist-items", async (req, res) => {
+  const items = await prisma.checklistItem.findMany({
+    where: { projectTypeId: req.params.id },
+    orderBy: { name: "asc" },
+  });
+  res.json(items);
+});
+
+const createChecklistItemSchema = z.object({
+  name: z.string().min(1).max(150),
+  description: z.string().max(1000).optional(),
+});
+
+router.post("/:id/checklist-items", requireProjectTypeManager, async (req, res) => {
+  const projectType = await prisma.projectType.findUnique({ where: { id: req.params.id } });
+  if (!projectType) {
+    return res.status(404).json({ error: "Project type not found" });
+  }
+  const parsed = createChecklistItemSchema.safeParse(req.body);
+  if (!parsed.success) {
+    return res.status(400).json({ error: parsed.error.issues[0].message });
+  }
+
+  const item = await prisma.checklistItem.create({
+    data: {
+      projectTypeId: projectType.id,
+      name: parsed.data.name,
+      description: parsed.data.description,
+      createdById: req.user!.id,
+    },
+  });
+
+  emitUpdate({ scope: "project-types" });
+  res.status(201).json(item);
+});
+
 export default router;

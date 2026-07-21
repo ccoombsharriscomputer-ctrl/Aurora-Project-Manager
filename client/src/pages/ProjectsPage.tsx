@@ -2,7 +2,7 @@ import { useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../api/client";
-import type { Project } from "../api/types";
+import type { Project, ProjectType } from "../api/types";
 import { extractErrorMessage } from "../context/AuthContext";
 
 export function ProjectsPage() {
@@ -12,18 +12,27 @@ export function ProjectsPage() {
     queryFn: () => api.get<Project[]>("/projects"),
   });
 
+  const { data: projectTypes } = useQuery({
+    queryKey: ["project-types"],
+    queryFn: () => api.get<ProjectType[]>("/project-types"),
+  });
+
   const [showForm, setShowForm] = useState(false);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
+  const [projectTypeId, setProjectTypeId] = useState("");
   const [error, setError] = useState<string | null>(null);
 
+  const activeTypes = (projectTypes ?? []).filter((t) => t.active);
+
   const createProject = useMutation({
-    mutationFn: () => api.post<Project>("/projects", { name, description: description || undefined }),
+    mutationFn: () => api.post<Project>("/projects", { name, description: description || undefined, projectTypeId }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["projects"] });
       queryClient.invalidateQueries({ queryKey: ["dashboard"] });
       setName("");
       setDescription("");
+      setProjectTypeId("");
       setShowForm(false);
       setError(null);
     },
@@ -32,6 +41,7 @@ export function ProjectsPage() {
 
   function handleSubmit(e: FormEvent) {
     e.preventDefault();
+    if (!projectTypeId) return;
     createProject.mutate();
   }
 
@@ -51,11 +61,32 @@ export function ProjectsPage() {
             <input id="name" type="text" required value={name} onChange={(e) => setName(e.target.value)} />
           </div>
           <div className="field">
+            <label htmlFor="projectType">Project type</label>
+            <select
+              id="projectType"
+              required
+              value={projectTypeId}
+              onChange={(e) => setProjectTypeId(e.target.value)}
+            >
+              <option value="">Select a project type…</option>
+              {activeTypes.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.name}
+                </option>
+              ))}
+            </select>
+            {activeTypes.length === 0 && (
+              <p className="muted" style={{ fontSize: 12, marginTop: 6 }}>
+                No project types yet — an admin or project lead needs to create one first.
+              </p>
+            )}
+          </div>
+          <div className="field">
             <label htmlFor="description">Description</label>
             <textarea id="description" value={description} onChange={(e) => setDescription(e.target.value)} />
           </div>
           {error && <div className="error-text">{error}</div>}
-          <button className="btn btn-primary" type="submit" disabled={createProject.isPending}>
+          <button className="btn btn-primary" type="submit" disabled={createProject.isPending || !projectTypeId}>
             Create project
           </button>
         </form>
@@ -70,6 +101,9 @@ export function ProjectsPage() {
           return (
             <Link key={p.id} to={`/projects/${p.id}`} className="card project-card">
               <h3>{p.name}</h3>
+              <p className="muted" style={{ fontSize: 12, margin: "-4px 0 8px" }}>
+                {p.projectType.name}
+              </p>
               <p>{p.description || "No description"}</p>
               <div className="progress-row-top">
                 <span className="muted">
