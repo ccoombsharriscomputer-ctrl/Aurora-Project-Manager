@@ -214,6 +214,7 @@ function ChecklistPanel({ projectTypeId }: { projectTypeId: string }) {
 export function ProjectTypesPage() {
   const queryClient = useQueryClient();
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [deleteErrors, setDeleteErrors] = useState<Record<string, string>>({});
   const { data: types, isLoading } = useQuery({
     queryKey: ["project-types"],
     queryFn: () => api.get<ProjectType[]>("/project-types"),
@@ -223,6 +224,19 @@ export function ProjectTypesPage() {
     mutationFn: ({ id, active }: { id: string; active: boolean }) =>
       api.patch(`/project-types/${id}`, { active }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["project-types"] }),
+  });
+
+  const deleteType = useMutation({
+    mutationFn: (id: string) => api.delete(`/project-types/${id}`),
+    onSuccess: (_data, id) => {
+      queryClient.invalidateQueries({ queryKey: ["project-types"] });
+      setDeleteErrors((prev) => {
+        const next = { ...prev };
+        delete next[id];
+        return next;
+      });
+    },
+    onError: (err, id) => setDeleteErrors((prev) => ({ ...prev, [id]: extractErrorMessage(err) })),
   });
 
   if (isLoading || !types) {
@@ -270,8 +284,25 @@ export function ProjectTypesPage() {
                     >
                       {t.active ? "Deactivate" : "Reactivate"}
                     </button>
+                    <button
+                      className="btn btn-sm btn-danger"
+                      onClick={() => {
+                        if (confirm(`Delete project type "${t.name}"? This also removes its checklist items and their to-do task templates. This cannot be undone.`)) {
+                          deleteType.mutate(t.id);
+                        }
+                      }}
+                    >
+                      Delete
+                    </button>
                   </td>
                 </tr>
+                {deleteErrors[t.id] && (
+                  <tr>
+                    <td colSpan={5}>
+                      <div className="error-text">{deleteErrors[t.id]}</div>
+                    </td>
+                  </tr>
+                )}
                 {expandedId === t.id && (
                   <tr>
                     <td colSpan={5} style={{ background: "var(--bg)" }}>

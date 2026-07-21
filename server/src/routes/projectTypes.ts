@@ -64,6 +64,24 @@ router.patch("/:id", requireProjectTypeManager, async (req, res) => {
   res.json(type);
 });
 
+router.delete("/:id", requireProjectTypeManager, async (req, res) => {
+  const type = await prisma.projectType.findUnique({ where: { id: req.params.id } });
+  if (!type) {
+    return res.status(404).json({ error: "Project type not found" });
+  }
+
+  const projectCount = await prisma.project.count({ where: { projectTypeId: type.id } });
+  if (projectCount > 0) {
+    return res.status(400).json({
+      error: `Can't delete "${type.name}" — ${projectCount} project${projectCount === 1 ? "" : "s"} still ${projectCount === 1 ? "uses" : "use"} it. Deactivate it instead.`,
+    });
+  }
+
+  await prisma.projectType.delete({ where: { id: type.id } });
+  emitUpdate({ scope: "project-types" });
+  res.status(204).send();
+});
+
 // Any authenticated user can list checklist items (needed for the "new project" and
 // "add sub-project" pickers).
 router.get("/:id/checklist-items", async (req, res) => {
