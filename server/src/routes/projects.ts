@@ -78,9 +78,12 @@ router.post("/", async (req, res) => {
     },
   });
 
-  const checklistItems = await prisma.checklistItem.findMany({
-    where: { projectTypeId: projectType.id, active: true },
+  const checklistItemJoins = await prisma.projectTypeChecklistItem.findMany({
+    where: { projectTypeId: projectType.id, checklistItem: { active: true } },
+    include: { checklistItem: true },
+    orderBy: { checklistItem: { name: "asc" } },
   });
+  const checklistItems = checklistItemJoins.map((j) => j.checklistItem);
 
   if (checklistItems.length > 0) {
     const taskTemplates = await prisma.taskTemplate.findMany({
@@ -277,9 +280,6 @@ router.post("/:id/sub-projects", async (req, res) => {
   const checklistItem = await prisma.checklistItem.findUnique({ where: { id: parsed.data.checklistItemId } });
   if (!checklistItem) {
     return res.status(404).json({ error: "Checklist item not found" });
-  }
-  if (checklistItem.projectTypeId !== project.projectTypeId) {
-    return res.status(400).json({ error: "That checklist item doesn't belong to this project's type" });
   }
 
   const subProject = await prisma.subProject.create({

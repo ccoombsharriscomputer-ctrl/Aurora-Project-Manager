@@ -7,6 +7,22 @@ import { emitUpdate } from "../lib/realtime";
 const router = Router();
 router.use(requireAuth);
 
+// Global catalog list — any authenticated user (needed for the Project Types checklist
+// checkboxes and the cross-type "add sub-project" picker). Includes which project types
+// currently have each item checked, so the UI can surface the shared-ness before editing.
+router.get("/", async (_req, res) => {
+  const items = await prisma.checklistItem.findMany({
+    orderBy: { name: "asc" },
+    include: { projectTypes: { include: { projectType: { select: { id: true, name: true } } } } },
+  });
+  res.json(
+    items.map((item) => ({
+      ...item,
+      projectTypes: item.projectTypes.map((pt) => pt.projectType),
+    }))
+  );
+});
+
 const updateSchema = z.object({
   name: z.string().min(1).max(150).optional(),
   description: z.string().max(1000).nullable().optional(),

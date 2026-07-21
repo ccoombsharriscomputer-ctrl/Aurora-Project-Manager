@@ -143,31 +143,53 @@ function ChecklistPanel({ projectTypeId }: { projectTypeId: string }) {
   const [editDescription, setEditDescription] = useState("");
   const [deleteErrors, setDeleteErrors] = useState<Record<string, string>>({});
 
-  const { data: items, isLoading } = useQuery({
+  // The full shared catalog — every checklist item, regardless of which type(s) use it.
+  const { data: catalog, isLoading } = useQuery({
+    queryKey: ["checklist-items"],
+    queryFn: () => api.get<ChecklistItem[]>("/checklist-items"),
+  });
+
+  // Which catalog items are currently checked (attached) for THIS type — the source of
+  // truth for checkbox state, and what auto-instantiates when a project of this type is made.
+  const { data: attachedItems } = useQuery({
     queryKey: ["checklist-items", projectTypeId],
     queryFn: () => api.get<ChecklistItem[]>(`/project-types/${projectTypeId}/checklist-items`),
   });
+  const attachedIds = new Set((attachedItems ?? []).map((i) => i.id));
+
+  function invalidateCatalog() {
+    // Bare key prefix-matches both the global catalog query and every per-type query.
+    queryClient.invalidateQueries({ queryKey: ["checklist-items"] });
+  }
 
   const createItem = useMutation({
     mutationFn: () => api.post<ChecklistItem>(`/project-types/${projectTypeId}/checklist-items`, { name }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["checklist-items", projectTypeId] });
+      invalidateCatalog();
       setName("");
       setError(null);
     },
     onError: (err) => setError(extractErrorMessage(err)),
   });
 
+  const toggleAttached = useMutation({
+    mutationFn: ({ id, attached }: { id: string; attached: boolean }) =>
+      attached
+        ? api.delete(`/project-types/${projectTypeId}/checklist-items/${id}`)
+        : api.post(`/project-types/${projectTypeId}/checklist-items/${id}`),
+    onSuccess: invalidateCatalog,
+  });
+
   const toggleActive = useMutation({
     mutationFn: ({ id, active }: { id: string; active: boolean }) => api.patch(`/checklist-items/${id}`, { active }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["checklist-items", projectTypeId] }),
+    onSuccess: invalidateCatalog,
   });
 
   const updateItem = useMutation({
     mutationFn: ({ id, data }: { id: string; data: Record<string, unknown> }) =>
       api.patch(`/checklist-items/${id}`, data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["checklist-items", projectTypeId] });
+      invalidateCatalog();
       setEditingItemId(null);
     },
   });
@@ -175,7 +197,7 @@ function ChecklistPanel({ projectTypeId }: { projectTypeId: string }) {
   const deleteItem = useMutation({
     mutationFn: (id: string) => api.delete(`/checklist-items/${id}`),
     onSuccess: (_data, id) => {
-      queryClient.invalidateQueries({ queryKey: ["checklist-items", projectTypeId] });
+      invalidateCatalog();
       setDeleteErrors((prev) => {
         const next = { ...prev };
         delete next[id];
@@ -197,79 +219,101 @@ function ChecklistPanel({ projectTypeId }: { projectTypeId: string }) {
         Checklist items
       </div>
       <p className="muted" style={{ fontSize: 12, marginTop: -8, marginBottom: 10 }}>
-        These auto-create as sub-projects whenever someone creates a project of this type.
+        Checklist items are a shared catalog across all project types. Check the ones that make up this
+        type's standard checklist — they auto-create as sub-projects whenever someone creates a project of
+        this type.
       </p>
       {isLoading && <p className="muted">Loading…</p>}
-      {items?.map((item) => (
-        <div key={item.id}>
-          {editingItemId === item.id ? (
-            <form
-              className="card"
-              style={{ marginBottom: 8 }}
-              onSubmit={(e: FormEvent) => {
-                e.preventDefault();
-                if (!editName.trim()) return;
-                updateItem.mutate({
-                  id: item.id,
-                  data: { name: editName, description: editDescription || null },
-                });
-              }}
-            >
-              <div className="field">
-                <label>Name</label>
-                <input type="text" required value={editName} onChange={(e) => setEditName(e.target.value)} />
+      {catalog?.map((item) => {
+        const attached = attachedIds.has(item.id);
+        const usedBy = (item.projectTypes ?? []).map((t) => t.name);
+        return (
+          <div key={item.id}>
+            {editingItemId === item.id ? (
+              <form
+                className="card"
+                style={{ marginBottom: 8 }}
+                onSubmit={(e: FormEvent) => {
+                  e.preventDefault();
+                  if (!editName.trim()) return;
+                  updateItem.mutate({
+                    id: item.id,
+                    data: { name: editName, description: editDescription || null },
+                  });
+                }}
+              >
+                <div className="field">
+                  <label>Name</label>
+                  <input type="text" required value={editName} onChange={(e) => setEditName(e.target.value)} />
+                </div>
+                <div className="field">
+                  <label>Description</label>
+                  <textarea value={editDescription} onChange={(e) => setEditDescription(e.target.value)} />
+                </div>
+                <div className="gap-8">
+                  <button className="btn btn-sm btn-primary" type="submit" disabled={updateItem.isPending}>
+                    Save
+                  </button>
+                  <button className="btn btn-sm" type="button" onClick={() => setEditingItemId(null)}>
+                    Cancel
+                  </button>
+                </div>
+              </form>
+            ) : (
+              <div className="task-list-item">
+                <label className="gap-8" style={{ margin: 0, cursor: "pointer" }}>
+                  <input
+                    type="checkbox"
+                    checked={attached}
+                    onChange={() => toggleAttached.mutate({ id: item.id, attached })}
+                  />
+                  <span>{item.name}</span>
+                </label>
+                <span className="gap-8">
+                  {usedBy.length > 0 && (
+                    <span className="muted" style={{ fontSize: 12 }}>
+                      Used by: {usedBy.join(", ")}
+                    </span>
+                  )}
+                  <span className="muted">{item.active ? "Active" : "Inactive"}</span>
+                  <button
+                    className="btn btn-sm"
+                    onClick={() => setExpandedItemId(expandedItemId === item.id ? null : item.id)}
+                  >
+                    {expandedItemId === item.id ? "Hide tasks" : "Manage tasks"}
+                  </button>
+                  <button className="btn btn-sm" onClick={() => startEdit(item)}>
+                    Edit
+                  </button>
+                  <button
+                    className="btn btn-sm"
+                    onClick={() => toggleActive.mutate({ id: item.id, active: !item.active })}
+                  >
+                    {item.active ? "Deactivate" : "Reactivate"}
+                  </button>
+                  <button
+                    className="btn btn-sm btn-danger"
+                    onClick={() => {
+                      if (
+                        confirm(
+                          `Delete checklist item "${item.name}"? This removes it from the shared catalog (and every project type using it) and deletes its to-do task templates. This cannot be undone.`
+                        )
+                      ) {
+                        deleteItem.mutate(item.id);
+                      }
+                    }}
+                  >
+                    Delete
+                  </button>
+                </span>
               </div>
-              <div className="field">
-                <label>Description</label>
-                <textarea value={editDescription} onChange={(e) => setEditDescription(e.target.value)} />
-              </div>
-              <div className="gap-8">
-                <button className="btn btn-sm btn-primary" type="submit" disabled={updateItem.isPending}>
-                  Save
-                </button>
-                <button className="btn btn-sm" type="button" onClick={() => setEditingItemId(null)}>
-                  Cancel
-                </button>
-              </div>
-            </form>
-          ) : (
-            <div className="task-list-item">
-              <span>{item.name}</span>
-              <span className="gap-8">
-                <span className="muted">{item.active ? "Active" : "Inactive"}</span>
-                <button
-                  className="btn btn-sm"
-                  onClick={() => setExpandedItemId(expandedItemId === item.id ? null : item.id)}
-                >
-                  {expandedItemId === item.id ? "Hide tasks" : "Manage tasks"}
-                </button>
-                <button className="btn btn-sm" onClick={() => startEdit(item)}>
-                  Edit
-                </button>
-                <button
-                  className="btn btn-sm"
-                  onClick={() => toggleActive.mutate({ id: item.id, active: !item.active })}
-                >
-                  {item.active ? "Deactivate" : "Reactivate"}
-                </button>
-                <button
-                  className="btn btn-sm btn-danger"
-                  onClick={() => {
-                    if (confirm(`Delete checklist item "${item.name}"? This also removes its to-do task templates. This cannot be undone.`)) {
-                      deleteItem.mutate(item.id);
-                    }
-                  }}
-                >
-                  Delete
-                </button>
-              </span>
-            </div>
-          )}
-          {deleteErrors[item.id] && <div className="error-text">{deleteErrors[item.id]}</div>}
-          {expandedItemId === item.id && <TaskTemplatesPanel checklistItemId={item.id} />}
-        </div>
-      ))}
-      {items?.length === 0 && <p className="muted">No checklist items yet.</p>}
+            )}
+            {deleteErrors[item.id] && <div className="error-text">{deleteErrors[item.id]}</div>}
+            {expandedItemId === item.id && <TaskTemplatesPanel checklistItemId={item.id} />}
+          </div>
+        );
+      })}
+      {catalog?.length === 0 && <p className="muted">No checklist items in the catalog yet — add one below.</p>}
       <form
         className="gap-8"
         style={{ marginTop: 12 }}
@@ -281,7 +325,7 @@ function ChecklistPanel({ projectTypeId }: { projectTypeId: string }) {
       >
         <input type="text" placeholder="e.g. Data Conversion" value={name} onChange={(e) => setName(e.target.value)} />
         <button className="btn btn-sm btn-primary" type="submit" disabled={createItem.isPending}>
-          Add
+          Add new &amp; attach
         </button>
       </form>
       {error && <div className="error-text">{error}</div>}
@@ -328,10 +372,10 @@ export function ProjectTypesPage() {
         <CreateTypeForm />
       </div>
       <p className="muted" style={{ marginTop: -12, marginBottom: 20 }}>
-        A project type is a program category (e.g. "Payroll Implementation"). Each type has a checklist of
-        standard phases (e.g. "Data Conversion", "Training", "Go-Live"), and each phase can have its own to-do
-        tasks. Both the phases and their to-do tasks automatically get created whenever a project of that type
-        is made.
+        A project type is a program category (e.g. "Payroll Implementation"). Checklist items (e.g. "Data
+        Conversion", "Training", "Go-Live") are a shared catalog you can reuse across any number of project
+        types — check which ones apply to each type below. Both the checked items and their to-do tasks
+        automatically get created as sub-projects whenever a project of that type is made.
       </p>
       <div className="card">
         <table className="table">
@@ -365,7 +409,7 @@ export function ProjectTypesPage() {
                     <button
                       className="btn btn-sm btn-danger"
                       onClick={() => {
-                        if (confirm(`Delete project type "${t.name}"? This also removes its checklist items and their to-do task templates. This cannot be undone.`)) {
+                        if (confirm(`Delete project type "${t.name}"? Its checklist items stay in the shared catalog (usable by other types) — only this type itself is removed. This cannot be undone.`)) {
                           deleteType.mutate(t.id);
                         }
                       }}

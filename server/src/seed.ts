@@ -30,10 +30,15 @@ async function main() {
     update: {},
     create: {
       id: `${projectType.id}-setup`,
-      projectTypeId: projectType.id,
       name: "Initial Setup",
       createdById: admin.id,
     },
+  });
+
+  await prisma.projectTypeChecklistItem.upsert({
+    where: { projectTypeId_checklistItemId: { projectTypeId: projectType.id, checklistItemId: checklistItem.id } },
+    update: {},
+    create: { projectTypeId: projectType.id, checklistItemId: checklistItem.id },
   });
 
   const project = await prisma.project.create({

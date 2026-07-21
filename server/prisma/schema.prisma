@@ -90,24 +90,33 @@ model ProjectType {
   createdBy   User     @relation(fields: [createdById], references: [id])
   createdAt   DateTime @default(now())
 
-  checklistItems ChecklistItem[]
+  checklistItems ProjectTypeChecklistItem[]
   projects       Project[]
   tasks          Task[]
 }
 
 model ChecklistItem {
-  id            String      @id @default(cuid())
-  projectTypeId String
-  projectType   ProjectType @relation(fields: [projectTypeId], references: [id], onDelete: Cascade)
-  name          String
-  description   String?
-  active        Boolean     @default(true)
-  createdById   String
-  createdBy     User        @relation(fields: [createdById], references: [id])
-  createdAt     DateTime    @default(now())
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  active      Boolean  @default(true)
+  createdById String
+  createdBy   User     @relation(fields: [createdById], references: [id])
+  createdAt   DateTime @default(now())
 
+  projectTypes  ProjectTypeChecklistItem[]
   subProjects   SubProject[]
   taskTemplates TaskTemplate[]
+}
+
+model ProjectTypeChecklistItem {
+  projectTypeId   String
+  projectType     ProjectType   @relation(fields: [projectTypeId], references: [id], onDelete: Cascade)
+  checklistItemId String
+  checklistItem   ChecklistItem @relation(fields: [checklistItemId], references: [id], onDelete: Cascade)
+  createdAt       DateTime      @default(now())
+
+  @@id([projectTypeId, checklistItemId])
 }
 
 model TaskTemplate {

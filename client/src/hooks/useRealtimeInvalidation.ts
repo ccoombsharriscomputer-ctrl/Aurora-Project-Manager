@@ -39,6 +39,8 @@ export function useRealtimeInvalidation() {
           break;
         case "project-types":
           queryClient.invalidateQueries({ queryKey: ["project-types"] });
+          // Prefix match also covers ["checklist-items", projectTypeId] per-type queries.
+          queryClient.invalidateQueries({ queryKey: ["checklist-items"] });
           break;
       }
     }

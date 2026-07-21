@@ -5,16 +5,18 @@ import { api } from "../api/client";
 import type { Attachment, ChecklistItem, Project, SubProject, UserSummary } from "../api/types";
 import { extractErrorMessage, useAuth } from "../context/AuthContext";
 
-function NewSubProjectForm({ projectId, projectTypeId }: { projectId: string; projectTypeId: string }) {
+function NewSubProjectForm({ projectId }: { projectId: string }) {
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const [checklistItemId, setChecklistItemId] = useState("");
   const [name, setName] = useState("");
   const [error, setError] = useState<string | null>(null);
 
+  // Checklist items are a shared catalog — any item can become a sub-project on any
+  // project, regardless of the project's own type.
   const { data: checklistItems } = useQuery({
-    queryKey: ["checklist-items", projectTypeId],
-    queryFn: () => api.get<ChecklistItem[]>(`/project-types/${projectTypeId}/checklist-items`),
+    queryKey: ["checklist-items"],
+    queryFn: () => api.get<ChecklistItem[]>("/checklist-items"),
     enabled: open,
   });
 
@@ -66,7 +68,7 @@ function NewSubProjectForm({ projectId, projectTypeId }: { projectId: string; pr
         </select>
         {activeItems.length === 0 && (
           <p className="muted" style={{ fontSize: 12, marginTop: 6 }}>
-            No checklist items for this project's type yet — add one on the Project Types page.
+            No checklist items in the catalog yet — add one on the Project Types page.
           </p>
         )}
       </div>
@@ -270,7 +272,7 @@ export function ProjectDetailPage() {
           </div>
         </div>
         <div className="gap-8">
-          <NewSubProjectForm projectId={project.id} projectTypeId={project.projectType.id} />
+          <NewSubProjectForm projectId={project.id} />
           {canManage && (
             <button
               className="btn btn-danger"
