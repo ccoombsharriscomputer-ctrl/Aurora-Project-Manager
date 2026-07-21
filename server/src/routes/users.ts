@@ -22,7 +22,7 @@ const createSchema = z.object({
   name: z.string().min(1).max(100),
   email: z.string().email(),
   password: z.string().min(8).max(200),
-  role: z.enum(["ADMIN", "MEMBER"]).optional(),
+  role: z.enum(["ADMIN", "PROJECT_LEAD", "MEMBER"]).optional(),
 });
 
 router.post("/", requireAdmin, async (req, res) => {
@@ -48,7 +48,7 @@ router.post("/", requireAdmin, async (req, res) => {
 });
 
 const updateSchema = z.object({
-  role: z.enum(["ADMIN", "MEMBER"]).optional(),
+  role: z.enum(["ADMIN", "PROJECT_LEAD", "MEMBER"]).optional(),
   active: z.boolean().optional(),
 });
 

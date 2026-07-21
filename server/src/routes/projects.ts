@@ -174,61 +174,68 @@ router.delete("/:id/members/:userId", async (req, res) => {
   res.status(204).send();
 });
 
-router.get("/:id/tasks", async (req, res) => {
-  const tasks = await prisma.task.findMany({
+router.get("/:id/sub-projects", async (req, res) => {
+  const subProjects = await prisma.subProject.findMany({
     where: { projectId: req.params.id },
     orderBy: { createdAt: "asc" },
     include: {
-      assignee: { select: { id: true, name: true } },
+      projectType: true,
       createdBy: { select: { id: true, name: true } },
-      _count: { select: { comments: true, attachments: true } },
+      _count: { select: { tasks: true } },
     },
   });
-  res.json(tasks);
+
+  const withProgress = await Promise.all(
+    subProjects.map(async (sp) => {
+      const doneCount = await prisma.task.count({ where: { subProjectId: sp.id, status: "DONE" } });
+      return {
+        id: sp.id,
+        projectId: sp.projectId,
+        name: sp.name,
+        projectType: sp.projectType,
+        createdBy: sp.createdBy,
+        createdAt: sp.createdAt,
+        totalTasks: sp._count.tasks,
+        doneTasks: doneCount,
+      };
+    })
+  );
+
+  res.json(withProgress);
 });
 
-const createTaskSchema = z.object({
-  title: z.string().min(1).max(300),
-  description: z.string().max(5000).optional(),
-  priority: z.enum(["LOW", "MEDIUM", "HIGH"]).optional(),
-  assigneeId: z.string().optional().nullable(),
-  dueDate: z.string().datetime().optional().nullable(),
+const createSubProjectSchema = z.object({
+  projectTypeId: z.string().min(1),
+  name: z.string().max(200).optional(),
 });
 
-router.post("/:id/tasks", async (req, res) => {
+router.post("/:id/sub-projects", async (req, res) => {
   const project = await prisma.project.findUnique({ where: { id: req.params.id } });
   if (!project) {
     return res.status(404).json({ error: "Project not found" });
   }
-  const parsed = createTaskSchema.safeParse(req.body);
+  const parsed = createSubProjectSchema.safeParse(req.body);
   if (!parsed.success) {
     return res.status(400).json({ error: parsed.error.issues[0].message });
   }
 
-  const task = await prisma.task.create({
+  const projectType = await prisma.projectType.findUnique({ where: { id: parsed.data.projectTypeId } });
+  if (!projectType) {
+    return res.status(404).json({ error: "Project type not found" });
+  }
+
+  const subProject = await prisma.subProject.create({
     data: {
-      projectId: req.params.id,
-      title: parsed.data.title,
-      description: parsed.data.description,
-      priority: parsed.data.priority ?? "MEDIUM",
-      assigneeId: parsed.data.assigneeId ?? null,
-      dueDate: parsed.data.dueDate ? new Date(parsed.data.dueDate) : null,
+      projectId: project.id,
+      projectTypeId: projectType.id,
+      name: parsed.data.name,
       createdById: req.user!.id,
     },
-    include: { assignee: { select: { id: true, name: true } } },
+    include: { projectType: true, createdBy: { select: { id: true, name: true } } },
   });
 
-  await logActivity({
-    type: "TASK_CREATED",
-    message: `${req.user!.name} created task "${task.title}" in ${project.name}`,
-    userId: req.user!.id,
-    projectId: project.id,
-    taskId: task.id,
-  });
   emitUpdate({ scope: "project", projectId: project.id });
-  emitUpdate({ scope: "dashboard" });
-
-  res.status(201).json(task);
+  res.status(201).json(subProject);
 });
 
 export default router;

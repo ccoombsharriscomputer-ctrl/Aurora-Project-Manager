@@ -24,3 +24,15 @@ export function AdminRoute() {
   }
   return <Outlet />;
 }
+
+export function ProjectLeadRoute() {
+  const { user, loading } = useAuth();
+
+  if (loading) {
+    return <div className="auth-page">Loading…</div>;
+  }
+  if (!user || (user.role !== "ADMIN" && user.role !== "PROJECT_LEAD")) {
+    return <Navigate to="/dashboard" replace />;
+  }
+  return <Outlet />;
+}

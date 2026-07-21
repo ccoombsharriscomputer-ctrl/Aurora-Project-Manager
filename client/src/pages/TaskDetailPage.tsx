@@ -8,7 +8,7 @@ import { formatDate, formatMinutes, formatRelativeTime } from "../utils/format";
 import { useActiveTimer } from "../hooks/useActiveTimer";
 
 export function TaskDetailPage() {
-  const { projectId, taskId } = useParams<{ projectId: string; taskId: string }>();
+  const { taskId } = useParams<{ taskId: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -20,9 +20,9 @@ export function TaskDetailPage() {
   });
 
   const { data: project } = useQuery({
-    queryKey: ["project", projectId],
-    queryFn: () => api.get<Project>(`/projects/${projectId}`),
-    enabled: !!projectId,
+    queryKey: ["project", task?.project.id],
+    queryFn: () => api.get<Project>(`/projects/${task!.project.id}`),
+    enabled: !!task,
   });
 
   const { activeTimer, stop } = useActiveTimer();
@@ -32,7 +32,9 @@ export function TaskDetailPage() {
 
   function invalidateTask() {
     queryClient.invalidateQueries({ queryKey: ["task", taskId] });
-    queryClient.invalidateQueries({ queryKey: ["project-tasks", projectId] });
+    if (task) {
+      queryClient.invalidateQueries({ queryKey: ["sub-project-tasks", task.subProjectId] });
+    }
     queryClient.invalidateQueries({ queryKey: ["dashboard"] });
   }
 
@@ -44,9 +46,13 @@ export function TaskDetailPage() {
   const deleteTask = useMutation({
     mutationFn: () => api.delete(`/tasks/${taskId}`),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["project-tasks", projectId] });
+      if (task) {
+        queryClient.invalidateQueries({ queryKey: ["sub-project-tasks", task.subProjectId] });
+      }
       queryClient.invalidateQueries({ queryKey: ["dashboard"] });
-      navigate(`/projects/${projectId}`);
+      if (task) {
+        navigate(`/projects/${task.project.id}/sub-projects/${task.subProjectId}`);
+      }
     },
   });
 
@@ -94,8 +100,8 @@ export function TaskDetailPage() {
     <div>
       <div className="page-header">
         <div>
-          <Link to={`/projects/${projectId}`} className="muted">
-            ← {project?.name ?? "Back to project"}
+          <Link to={`/projects/${task.project.id}/sub-projects/${task.subProjectId}`} className="muted">
+            ← {task.subProject.name || task.subProject.projectType.name} ({task.project.name})
           </Link>
           <h1 style={{ marginTop: 6 }}>{task.title}</h1>
         </div>

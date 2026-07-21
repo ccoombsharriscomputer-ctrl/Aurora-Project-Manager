@@ -2,42 +2,28 @@ import { useState, type FormEvent } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../api/client";
-import type { Project, Task, TaskPriority, UserSummary } from "../api/types";
+import type { Project, ProjectType, SubProject, UserSummary } from "../api/types";
 import { extractErrorMessage, useAuth } from "../context/AuthContext";
-import { formatDate } from "../utils/format";
 
-const COLUMNS: { status: Task["status"]; label: string }[] = [
-  { status: "TODO", label: "To Do" },
-  { status: "IN_PROGRESS", label: "In Progress" },
-  { status: "DONE", label: "Done" },
-];
-
-function NewTaskForm({ projectId, members }: { projectId: string; members: UserSummary[] }) {
+function NewSubProjectForm({ projectId, projectTypes }: { projectId: string; projectTypes: ProjectType[] }) {
   const queryClient = useQueryClient();
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
-  const [priority, setPriority] = useState<TaskPriority>("MEDIUM");
-  const [assigneeId, setAssigneeId] = useState("");
-  const [dueDate, setDueDate] = useState("");
-  const [error, setError] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
+  const [projectTypeId, setProjectTypeId] = useState("");
+  const [name, setName] = useState("");
+  const [error, setError] = useState<string | null>(null);
 
-  const createTask = useMutation({
+  const activeTypes = projectTypes.filter((t) => t.active);
+
+  const createSubProject = useMutation({
     mutationFn: () =>
-      api.post<Task>(`/projects/${projectId}/tasks`, {
-        title,
-        description: description || undefined,
-        priority,
-        assigneeId: assigneeId || undefined,
-        dueDate: dueDate ? new Date(dueDate).toISOString() : undefined,
+      api.post<SubProject>(`/projects/${projectId}/sub-projects`, {
+        projectTypeId,
+        name: name || undefined,
       }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["project-tasks", projectId] });
-      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
-      setTitle("");
-      setDescription("");
-      setAssigneeId("");
-      setDueDate("");
+      queryClient.invalidateQueries({ queryKey: ["project-sub-projects", projectId] });
+      setProjectTypeId("");
+      setName("");
       setOpen(false);
       setError(null);
     },
@@ -47,7 +33,7 @@ function NewTaskForm({ projectId, members }: { projectId: string; members: UserS
   if (!open) {
     return (
       <button className="btn btn-primary" onClick={() => setOpen(true)}>
-        New task
+        New sub-project
       </button>
     );
   }
@@ -58,46 +44,39 @@ function NewTaskForm({ projectId, members }: { projectId: string; members: UserS
       style={{ marginBottom: 16 }}
       onSubmit={(e: FormEvent) => {
         e.preventDefault();
-        createTask.mutate();
+        if (!projectTypeId) return;
+        createSubProject.mutate();
       }}
     >
       <div className="field">
-        <label>Title</label>
-        <input type="text" required value={title} onChange={(e) => setTitle(e.target.value)} />
+        <label>Type</label>
+        <select value={projectTypeId} onChange={(e) => setProjectTypeId(e.target.value)} required>
+          <option value="">Select a project type…</option>
+          {activeTypes.map((t) => (
+            <option key={t.id} value={t.id}>
+              {t.name}
+            </option>
+          ))}
+        </select>
+        {activeTypes.length === 0 && (
+          <p className="muted" style={{ fontSize: 12, marginTop: 6 }}>
+            No project types yet — an admin or project lead needs to create one first.
+          </p>
+        )}
       </div>
       <div className="field">
-        <label>Description</label>
-        <textarea value={description} onChange={(e) => setDescription(e.target.value)} />
-      </div>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
-        <div className="field">
-          <label>Priority</label>
-          <select value={priority} onChange={(e) => setPriority(e.target.value as TaskPriority)}>
-            <option value="LOW">Low</option>
-            <option value="MEDIUM">Medium</option>
-            <option value="HIGH">High</option>
-          </select>
-        </div>
-        <div className="field">
-          <label>Assignee</label>
-          <select value={assigneeId} onChange={(e) => setAssigneeId(e.target.value)}>
-            <option value="">Unassigned</option>
-            {members.map((m) => (
-              <option key={m.id} value={m.id}>
-                {m.name}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div className="field">
-          <label>Due date</label>
-          <input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
-        </div>
+        <label>Custom name (optional)</label>
+        <input
+          type="text"
+          placeholder="Defaults to the type name"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+        />
       </div>
       {error && <div className="error-text">{error}</div>}
       <div className="gap-8">
-        <button className="btn btn-primary" type="submit" disabled={createTask.isPending}>
-          Create task
+        <button className="btn btn-primary" type="submit" disabled={createSubProject.isPending || !projectTypeId}>
+          Create
         </button>
         <button className="btn" type="button" onClick={() => setOpen(false)}>
           Cancel
@@ -175,24 +154,20 @@ export function ProjectDetailPage() {
     enabled: !!projectId,
   });
 
-  const { data: tasks, isLoading: tasksLoading } = useQuery({
-    queryKey: ["project-tasks", projectId],
-    queryFn: () => api.get<Task[]>(`/projects/${projectId}/tasks`),
+  const { data: subProjects, isLoading: subProjectsLoading } = useQuery({
+    queryKey: ["project-sub-projects", projectId],
+    queryFn: () => api.get<SubProject[]>(`/projects/${projectId}/sub-projects`),
     enabled: !!projectId,
+  });
+
+  const { data: projectTypes } = useQuery({
+    queryKey: ["project-types"],
+    queryFn: () => api.get<ProjectType[]>("/project-types"),
   });
 
   const { data: allUsers } = useQuery({
     queryKey: ["users"],
     queryFn: () => api.get<UserSummary[]>("/users"),
-  });
-
-  const updateStatus = useMutation({
-    mutationFn: ({ taskId, status }: { taskId: string; status: Task["status"] }) =>
-      api.patch(`/tasks/${taskId}`, { status }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["project-tasks", projectId] });
-      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
-    },
   });
 
   const deleteProject = useMutation({
@@ -217,7 +192,7 @@ export function ProjectDetailPage() {
           {project.description && <p className="muted" style={{ margin: "4px 0 0" }}>{project.description}</p>}
         </div>
         <div className="gap-8">
-          <NewTaskForm projectId={project.id} members={project.members} />
+          <NewSubProjectForm projectId={project.id} projectTypes={projectTypes ?? []} />
           {canManage && (
             <button
               className="btn btn-danger"
@@ -235,40 +210,29 @@ export function ProjectDetailPage() {
 
       <div className="dashboard-grid">
         <div>
-          {tasksLoading && <p className="muted">Loading tasks…</p>}
-          <div className="board">
-            {COLUMNS.map((col) => (
-              <div className="board-column" key={col.status}>
-                <h3>{col.label}</h3>
-                {tasks
-                  ?.filter((t) => t.status === col.status)
-                  .map((t) => (
-                    <div className="task-card" key={t.id}>
-                      <Link to={`/projects/${project.id}/tasks/${t.id}`}>
-                        <div className="title">{t.title}</div>
-                      </Link>
-                      <div className="task-meta">
-                        <span className={`badge priority-${t.priority}`}>{t.priority}</span>
-                        <span>{t.assignee?.name ?? "Unassigned"}</span>
-                      </div>
-                      <div className="task-meta" style={{ marginTop: 6 }}>
-                        <span>{formatDate(t.dueDate)}</span>
-                        <select
-                          value={t.status}
-                          onChange={(e) =>
-                            updateStatus.mutate({ taskId: t.id, status: e.target.value as Task["status"] })
-                          }
-                          style={{ width: "auto", padding: "2px 4px", fontSize: 12 }}
-                        >
-                          <option value="TODO">To Do</option>
-                          <option value="IN_PROGRESS">In Progress</option>
-                          <option value="DONE">Done</option>
-                        </select>
-                      </div>
-                    </div>
-                  ))}
-              </div>
-            ))}
+          {subProjectsLoading && <p className="muted">Loading sub-projects…</p>}
+          {!subProjectsLoading && subProjects?.length === 0 && (
+            <p className="muted">No sub-projects yet — add one to start creating tasks.</p>
+          )}
+          <div className="project-grid">
+            {subProjects?.map((sp) => {
+              const percent = sp.totalTasks === 0 ? 0 : Math.round((sp.doneTasks / sp.totalTasks) * 100);
+              return (
+                <Link key={sp.id} to={`/projects/${project.id}/sub-projects/${sp.id}`} className="card project-card">
+                  <h3>{sp.name || sp.projectType.name}</h3>
+                  <p>{sp.name ? sp.projectType.name : " "}</p>
+                  <div className="progress-row-top">
+                    <span className="muted">
+                      {sp.doneTasks}/{sp.totalTasks} tasks
+                    </span>
+                    <span className="muted">{percent}%</span>
+                  </div>
+                  <div className="progress-bar-track">
+                    <div className="progress-bar-fill" style={{ width: `${percent}%` }} />
+                  </div>
+                </Link>
+              );
+            })}
           </div>
         </div>
 

@@ -29,6 +29,7 @@ router.get("/:id", async (req, res) => {
     where: { id: req.params.id },
     include: {
       project: { select: { id: true, name: true } },
+      subProject: { select: { id: true, name: true, projectType: { select: { id: true, name: true } } } },
       assignee: { select: { id: true, name: true } },
       createdBy: { select: { id: true, name: true } },
       comments: {
@@ -104,6 +105,7 @@ router.patch("/:id", async (req, res) => {
 
   emitUpdate({ scope: "task", taskId: task.id });
   emitUpdate({ scope: "project", projectId: task.projectId });
+  emitUpdate({ scope: "sub-project", subProjectId: task.subProjectId });
   if (parsed.data.status || parsed.data.assigneeId !== undefined) {
     emitUpdate({ scope: "dashboard" });
   }
@@ -116,6 +118,7 @@ router.delete("/:id", async (req, res) => {
   await prisma.task.delete({ where: { id: req.params.id } }).catch(() => null);
   if (task) {
     emitUpdate({ scope: "project", projectId: task.projectId });
+    emitUpdate({ scope: "sub-project", subProjectId: task.subProjectId });
     emitUpdate({ scope: "task", taskId: task.id });
     emitUpdate({ scope: "dashboard" });
   }

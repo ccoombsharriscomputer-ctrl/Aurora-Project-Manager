@@ -19,23 +19,34 @@ async function main() {
     return;
   }
 
+  const projectType = await prisma.projectType.upsert({
+    where: { name: "Onboarding" },
+    update: {},
+    create: { name: "Onboarding", description: "Getting a new project up and running", createdById: admin.id },
+  });
+
   const project = await prisma.project.create({
     data: {
       name: "Aurora Launch",
       description: "Demo project created by the seed script.",
       createdById: admin.id,
       members: { create: { userId: admin.id, role: "OWNER" } },
-      tasks: {
-        create: [
-          { title: "Set up project board", status: "DONE", priority: "MEDIUM", createdById: admin.id },
-          { title: "Invite the team", status: "IN_PROGRESS", priority: "HIGH", createdById: admin.id },
-          { title: "Plan first sprint", status: "TODO", priority: "MEDIUM", createdById: admin.id },
-        ],
-      },
     },
   });
 
-  console.log(`Seeded demo project "${project.name}" with 3 tasks.`);
+  const subProject = await prisma.subProject.create({
+    data: { projectId: project.id, projectTypeId: projectType.id, createdById: admin.id },
+  });
+
+  await prisma.task.createMany({
+    data: [
+      { title: "Set up project board", status: "DONE", priority: "MEDIUM", createdById: admin.id, projectId: project.id, subProjectId: subProject.id },
+      { title: "Invite the team", status: "IN_PROGRESS", priority: "HIGH", createdById: admin.id, projectId: project.id, subProjectId: subProject.id },
+      { title: "Plan first sprint", status: "TODO", priority: "MEDIUM", createdById: admin.id, projectId: project.id, subProjectId: subProject.id },
+    ],
+  });
+
+  console.log(`Seeded demo project "${project.name}" with 1 sub-project and 3 tasks.`);
 }
 
 main()

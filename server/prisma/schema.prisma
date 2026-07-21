@@ -9,6 +9,7 @@ datasource db {
 
 enum UserRole {
   ADMIN
+  PROJECT_LEAD
   MEMBER
 }
 
@@ -56,6 +57,8 @@ model User {
   attachments       Attachment[]
   timeEntries       TimeEntry[]
   activities        Activity[]
+  createdProjectTypes ProjectType[]
+  createdSubProjects  SubProject[]
 }
 
 model Project {
@@ -68,7 +71,34 @@ model Project {
 
   members    ProjectMember[]
   tasks      Task[]
+  subProjects SubProject[]
   activities Activity[]
+}
+
+model ProjectType {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String?
+  active      Boolean  @default(true)
+  createdById String
+  createdBy   User     @relation(fields: [createdById], references: [id])
+  createdAt   DateTime @default(now())
+
+  subProjects SubProject[]
+}
+
+model SubProject {
+  id            String      @id @default(cuid())
+  projectId     String
+  project       Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  projectTypeId String
+  projectType   ProjectType @relation(fields: [projectTypeId], references: [id])
+  name          String?
+  createdById   String
+  createdBy     User        @relation(fields: [createdById], references: [id])
+  createdAt     DateTime    @default(now())
+
+  tasks Task[]
 }
 
 model ProjectMember {
@@ -84,9 +114,11 @@ model ProjectMember {
 }
 
 model Task {
-  id          String       @id @default(cuid())
-  projectId   String
-  project     Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  id            String     @id @default(cuid())
+  projectId     String
+  project       Project    @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  subProjectId  String
+  subProject    SubProject @relation(fields: [subProjectId], references: [id], onDelete: Cascade)
   title       String
   description String?
   status      TaskStatus   @default(TODO)

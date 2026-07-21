@@ -68,6 +68,7 @@ function CreateUserForm() {
           <label>Role</label>
           <select value={role} onChange={(e) => setRole(e.target.value as UserRole)}>
             <option value="MEMBER">Member</option>
+            <option value="PROJECT_LEAD">Project Lead</option>
             <option value="ADMIN">Admin</option>
           </select>
         </div>
@@ -135,6 +136,7 @@ export function AdminUsersPage() {
                     style={{ width: "auto" }}
                   >
                     <option value="MEMBER">Member</option>
+                    <option value="PROJECT_LEAD">Project Lead</option>
                     <option value="ADMIN">Admin</option>
                   </select>
                 </td>

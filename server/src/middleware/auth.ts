@@ -6,7 +6,7 @@ export interface AuthedUser {
   id: string;
   name: string;
   email: string;
-  role: "ADMIN" | "MEMBER";
+  role: "ADMIN" | "PROJECT_LEAD" | "MEMBER";
 }
 
 declare global {
@@ -39,6 +39,13 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
 export function requireAdmin(req: Request, res: Response, next: NextFunction) {
   if (req.user?.role !== "ADMIN") {
     return res.status(403).json({ error: "Admin access required" });
+  }
+  next();
+}
+
+export function requireProjectTypeManager(req: Request, res: Response, next: NextFunction) {
+  if (req.user?.role !== "ADMIN" && req.user?.role !== "PROJECT_LEAD") {
+    return res.status(403).json({ error: "Admin or Project Lead access required" });
   }
   next();
 }

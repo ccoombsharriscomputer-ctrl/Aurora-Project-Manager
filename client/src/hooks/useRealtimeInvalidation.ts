@@ -6,8 +6,10 @@ type UpdatePayload =
   | { scope: "dashboard" }
   | { scope: "projects" }
   | { scope: "project"; projectId: string }
+  | { scope: "sub-project"; subProjectId: string }
   | { scope: "task"; taskId: string }
-  | { scope: "users" };
+  | { scope: "users" }
+  | { scope: "project-types" };
 
 export function useRealtimeInvalidation() {
   const queryClient = useQueryClient();
@@ -23,13 +25,20 @@ export function useRealtimeInvalidation() {
           break;
         case "project":
           queryClient.invalidateQueries({ queryKey: ["project", payload.projectId] });
-          queryClient.invalidateQueries({ queryKey: ["project-tasks", payload.projectId] });
+          queryClient.invalidateQueries({ queryKey: ["project-sub-projects", payload.projectId] });
+          break;
+        case "sub-project":
+          queryClient.invalidateQueries({ queryKey: ["sub-project", payload.subProjectId] });
+          queryClient.invalidateQueries({ queryKey: ["sub-project-tasks", payload.subProjectId] });
           break;
         case "task":
           queryClient.invalidateQueries({ queryKey: ["task", payload.taskId] });
           break;
         case "users":
           queryClient.invalidateQueries({ queryKey: ["users"] });
+          break;
+        case "project-types":
+          queryClient.invalidateQueries({ queryKey: ["project-types"] });
           break;
       }
     }

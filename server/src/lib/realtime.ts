@@ -5,8 +5,10 @@ export type UpdateScope =
   | { scope: "dashboard" }
   | { scope: "projects" }
   | { scope: "project"; projectId: string }
+  | { scope: "sub-project"; subProjectId: string }
   | { scope: "task"; taskId: string }
-  | { scope: "users" };
+  | { scope: "users" }
+  | { scope: "project-types" };
 
 let io: Server | null = null;
 

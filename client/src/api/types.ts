@@ -1,4 +1,4 @@
-export type UserRole = "ADMIN" | "MEMBER";
+export type UserRole = "ADMIN" | "PROJECT_LEAD" | "MEMBER";
 export type ProjectMemberRole = "OWNER" | "MEMBER";
 export type TaskStatus = "TODO" | "IN_PROGRESS" | "DONE";
 export type TaskPriority = "LOW" | "MEDIUM" | "HIGH";
@@ -45,9 +45,42 @@ export interface Project {
   doneTasks: number;
 }
 
+export interface ProjectType {
+  id: string;
+  name: string;
+  description: string | null;
+  active: boolean;
+  createdAt: string;
+}
+
+export interface SubProject {
+  id: string;
+  projectId: string;
+  name: string | null;
+  projectType: ProjectType;
+  createdBy: UserSummary;
+  createdAt: string;
+  totalTasks: number;
+  doneTasks: number;
+}
+
+export interface SubProjectDetail {
+  id: string;
+  name: string | null;
+  projectType: ProjectType;
+  createdAt: string;
+  project: {
+    id: string;
+    name: string;
+    createdById: string;
+    members: ProjectMember[];
+  };
+}
+
 export interface Task {
   id: string;
   projectId: string;
+  subProjectId: string;
   title: string;
   description: string | null;
   status: TaskStatus;
@@ -93,6 +126,7 @@ export interface TimeEntry {
 
 export interface TaskDetail extends Task {
   project: { id: string; name: string };
+  subProject: { id: string; name: string | null; projectType: { id: string; name: string } };
   comments: Comment[];
   attachments: Attachment[];
   timeEntries: TimeEntry[];

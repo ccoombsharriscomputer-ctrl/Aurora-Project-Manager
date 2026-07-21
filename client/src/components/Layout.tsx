@@ -14,6 +14,11 @@ export function Layout() {
         <NavLink to="/projects" className={({ isActive }) => `sidebar-link${isActive ? " active" : ""}`}>
           Projects
         </NavLink>
+        {(user?.role === "ADMIN" || user?.role === "PROJECT_LEAD") && (
+          <NavLink to="/project-types" className={({ isActive }) => `sidebar-link${isActive ? " active" : ""}`}>
+            Project Types
+          </NavLink>
+        )}
         {user?.role === "ADMIN" && (
           <NavLink to="/admin/users" className={({ isActive }) => `sidebar-link${isActive ? " active" : ""}`}>
             Users
