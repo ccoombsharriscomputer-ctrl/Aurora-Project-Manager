@@ -9,7 +9,7 @@ services:
     name: aurora-project-manager
     runtime: node
     plan: free
-    buildCommand: npm install && npm run build
+    buildCommand: npm install --include=dev && npm run build
     startCommand: npm run prisma:deploy -w server && npm run start -w server
     healthCheckPath: /api/health
     envVars:
