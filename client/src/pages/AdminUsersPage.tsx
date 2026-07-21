@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { Fragment, useState, type FormEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { AdminUser, UserRole } from "../api/types";
@@ -89,6 +89,7 @@ function CreateUserForm() {
 export function AdminUsersPage() {
   const { user: me } = useAuth();
   const queryClient = useQueryClient();
+  const [deleteErrors, setDeleteErrors] = useState<Record<string, string>>({});
 
   const { data: users, isLoading } = useQuery({
     queryKey: ["users"],
@@ -99,6 +100,19 @@ export function AdminUsersPage() {
     mutationFn: ({ id, data }: { id: string; data: Partial<Pick<AdminUser, "role" | "active">> }) =>
       api.patch(`/users/${id}`, data),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["users"] }),
+  });
+
+  const deleteUser = useMutation({
+    mutationFn: (id: string) => api.delete(`/users/${id}`),
+    onSuccess: (_data, id) => {
+      queryClient.invalidateQueries({ queryKey: ["users"] });
+      setDeleteErrors((prev) => {
+        const next = { ...prev };
+        delete next[id];
+        return next;
+      });
+    },
+    onError: (err, id) => setDeleteErrors((prev) => ({ ...prev, [id]: extractErrorMessage(err) })),
   });
 
   if (isLoading || !users) {
@@ -125,33 +139,53 @@ export function AdminUsersPage() {
           </thead>
           <tbody>
             {users.map((u) => (
-              <tr key={u.id}>
-                <td>{u.name}</td>
-                <td>{u.email}</td>
-                <td>
-                  <select
-                    value={u.role}
-                    disabled={u.id === me?.id}
-                    onChange={(e) => updateUser.mutate({ id: u.id, data: { role: e.target.value as AdminUser["role"] } })}
-                    style={{ width: "auto" }}
-                  >
-                    <option value="MEMBER">Member</option>
-                    <option value="PROJECT_LEAD">Project Lead</option>
-                    <option value="ADMIN">Admin</option>
-                  </select>
-                </td>
-                <td>{u.active ? "Active" : "Deactivated"}</td>
-                <td>{formatDate(u.createdAt)}</td>
-                <td>
-                  <button
-                    className="btn btn-sm"
-                    disabled={u.id === me?.id}
-                    onClick={() => updateUser.mutate({ id: u.id, data: { active: !u.active } })}
-                  >
-                    {u.active ? "Deactivate" : "Reactivate"}
-                  </button>
-                </td>
-              </tr>
+              <Fragment key={u.id}>
+                <tr>
+                  <td>{u.name}</td>
+                  <td>{u.email}</td>
+                  <td>
+                    <select
+                      value={u.role}
+                      disabled={u.id === me?.id}
+                      onChange={(e) => updateUser.mutate({ id: u.id, data: { role: e.target.value as AdminUser["role"] } })}
+                      style={{ width: "auto" }}
+                    >
+                      <option value="MEMBER">Member</option>
+                      <option value="PROJECT_LEAD">Project Lead</option>
+                      <option value="ADMIN">Admin</option>
+                    </select>
+                  </td>
+                  <td>{u.active ? "Active" : "Deactivated"}</td>
+                  <td>{formatDate(u.createdAt)}</td>
+                  <td className="gap-8">
+                    <button
+                      className="btn btn-sm"
+                      disabled={u.id === me?.id}
+                      onClick={() => updateUser.mutate({ id: u.id, data: { active: !u.active } })}
+                    >
+                      {u.active ? "Deactivate" : "Reactivate"}
+                    </button>
+                    <button
+                      className="btn btn-sm btn-danger"
+                      disabled={u.id === me?.id}
+                      onClick={() => {
+                        if (confirm(`Delete ${u.name}? This cannot be undone.`)) {
+                          deleteUser.mutate(u.id);
+                        }
+                      }}
+                    >
+                      Delete
+                    </button>
+                  </td>
+                </tr>
+                {deleteErrors[u.id] && (
+                  <tr>
+                    <td colSpan={6}>
+                      <div className="error-text">{deleteErrors[u.id]}</div>
+                    </td>
+                  </tr>
+                )}
+              </Fragment>
             ))}
           </tbody>
         </table>

@@ -70,4 +70,44 @@ router.patch("/:id", requireAdmin, async (req, res) => {
   res.json(user);
 });
 
+router.delete("/:id", requireAdmin, async (req, res) => {
+  if (req.params.id === req.user!.id) {
+    return res.status(400).json({ error: "You cannot delete your own account" });
+  }
+
+  const user = await prisma.user.findUnique({
+    where: { id: req.params.id },
+    include: {
+      _count: {
+        select: {
+          createdProjects: true,
+          createdTasks: true,
+          createdProjectTypes: true,
+          createdSubProjects: true,
+          createdChecklistItems: true,
+          createdTaskTemplates: true,
+          comments: true,
+          attachments: true,
+          timeEntries: true,
+          activities: true,
+        },
+      },
+    },
+  });
+  if (!user) {
+    return res.status(404).json({ error: "User not found" });
+  }
+
+  const totalActivity = Object.values(user._count).reduce((sum, count) => sum + count, 0);
+  if (totalActivity > 0) {
+    return res.status(400).json({
+      error: `Can't delete ${user.name} — they have activity in the app (projects, tasks, comments, time entries, etc.). Deactivate them instead.`,
+    });
+  }
+
+  await prisma.user.delete({ where: { id: user.id } });
+  emitUpdate({ scope: "users" });
+  res.status(204).send();
+});
+
 export default router;
