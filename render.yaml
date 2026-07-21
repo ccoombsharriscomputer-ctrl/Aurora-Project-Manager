@@ -7,7 +7,7 @@ databases:
 services:
   - type: web
     name: aurora-project-manager
-    env: node
+    runtime: node
     plan: free
     buildCommand: npm install && npm run build
     startCommand: npm run prisma:deploy -w server && npm run start -w server
