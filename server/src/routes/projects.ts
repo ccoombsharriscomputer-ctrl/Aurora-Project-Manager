@@ -77,14 +77,38 @@ router.post("/", async (req, res) => {
   const checklistItems = await prisma.checklistItem.findMany({
     where: { projectTypeId: projectType.id, active: true },
   });
+
   if (checklistItems.length > 0) {
-    await prisma.subProject.createMany({
-      data: checklistItems.map((item) => ({
-        projectId: project.id,
-        checklistItemId: item.id,
-        createdById: req.user!.id,
-      })),
+    const taskTemplates = await prisma.taskTemplate.findMany({
+      where: { checklistItemId: { in: checklistItems.map((item) => item.id) }, active: true },
     });
+    const templatesByChecklistItem = new Map<string, typeof taskTemplates>();
+    for (const template of taskTemplates) {
+      const list = templatesByChecklistItem.get(template.checklistItemId) ?? [];
+      list.push(template);
+      templatesByChecklistItem.set(template.checklistItemId, list);
+    }
+
+    for (const item of checklistItems) {
+      const subProject = await prisma.subProject.create({
+        data: { projectId: project.id, checklistItemId: item.id, createdById: req.user!.id },
+      });
+
+      const templates = templatesByChecklistItem.get(item.id) ?? [];
+      if (templates.length > 0) {
+        await prisma.task.createMany({
+          data: templates.map((template) => ({
+            projectId: project.id,
+            subProjectId: subProject.id,
+            projectTypeId: projectType.id,
+            title: template.title,
+            description: template.description,
+            priority: template.priority,
+            createdById: req.user!.id,
+          })),
+        });
+      }
+    }
   }
 
   await logActivity({

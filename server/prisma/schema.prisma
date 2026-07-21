@@ -60,6 +60,7 @@ model User {
   createdProjectTypes ProjectType[]
   createdSubProjects  SubProject[]
   createdChecklistItems ChecklistItem[]
+  createdTaskTemplates  TaskTemplate[]
 }
 
 model Project {
@@ -103,7 +104,21 @@ model ChecklistItem {
   createdBy     User        @relation(fields: [createdById], references: [id])
   createdAt     DateTime    @default(now())
 
-  subProjects SubProject[]
+  subProjects   SubProject[]
+  taskTemplates TaskTemplate[]
+}
+
+model TaskTemplate {
+  id              String        @id @default(cuid())
+  checklistItemId String
+  checklistItem   ChecklistItem @relation(fields: [checklistItemId], references: [id], onDelete: Cascade)
+  title           String
+  description     String?
+  priority        TaskPriority  @default(MEDIUM)
+  active          Boolean       @default(true)
+  createdById     String
+  createdBy       User          @relation(fields: [createdById], references: [id])
+  createdAt       DateTime      @default(now())
 }
 
 model SubProject {

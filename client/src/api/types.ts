@@ -63,6 +63,16 @@ export interface ChecklistItem {
   createdAt: string;
 }
 
+export interface TaskTemplate {
+  id: string;
+  checklistItemId: string;
+  title: string;
+  description: string | null;
+  priority: TaskPriority;
+  active: boolean;
+  createdAt: string;
+}
+
 export interface SubProject {
   id: string;
   projectId: string;
