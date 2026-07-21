@@ -244,8 +244,8 @@ router.post("/:id/time-entries/start", async (req, res) => {
 });
 
 const manualEntrySchema = z.object({
-  startedAt: z.string().datetime(),
-  endedAt: z.string().datetime(),
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be in YYYY-MM-DD format"),
+  hours: z.number().positive().max(24),
   note: z.string().max(1000).optional(),
 });
 
@@ -259,12 +259,9 @@ router.post("/:id/time-entries", async (req, res) => {
     return res.status(400).json({ error: parsed.error.issues[0].message });
   }
 
-  const startedAt = new Date(parsed.data.startedAt);
-  const endedAt = new Date(parsed.data.endedAt);
-  if (endedAt <= startedAt) {
-    return res.status(400).json({ error: "End time must be after start time" });
-  }
-  const durationMinutes = Math.round((endedAt.getTime() - startedAt.getTime()) / 60000);
+  const durationMinutes = Math.round(parsed.data.hours * 60);
+  const startedAt = new Date(`${parsed.data.date}T12:00:00.000Z`);
+  const endedAt = new Date(startedAt.getTime() + durationMinutes * 60000);
 
   const entry = await prisma.timeEntry.create({
     data: {

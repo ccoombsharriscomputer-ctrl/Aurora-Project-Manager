@@ -83,6 +83,29 @@ export function TaskDetailPage() {
     },
   });
 
+  const [showLogTime, setShowLogTime] = useState(false);
+  const [logDate, setLogDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [logHours, setLogHours] = useState("");
+  const [logNote, setLogNote] = useState("");
+  const [logError, setLogError] = useState<string | null>(null);
+
+  const logTime = useMutation({
+    mutationFn: () =>
+      api.post(`/tasks/${taskId}/time-entries`, {
+        date: logDate,
+        hours: Number(logHours),
+        note: logNote || undefined,
+      }),
+    onSuccess: () => {
+      setShowLogTime(false);
+      setLogHours("");
+      setLogNote("");
+      setLogError(null);
+      invalidateTask();
+    },
+    onError: (err) => setLogError(extractErrorMessage(err)),
+  });
+
   if (isLoading || !task) {
     return <div className="muted">Loading task…</div>;
   }
@@ -192,26 +215,70 @@ export function TaskDetailPage() {
               <div className="section-title" style={{ marginBottom: 0 }}>
                 Time entries
               </div>
-              {isTimerRunningHere ? (
-                <button className="btn btn-sm" onClick={() => stop.mutate(activeTimer!.id)}>
-                  Stop timer
+              <div className="gap-8">
+                <button className="btn btn-sm" onClick={() => setShowLogTime((v) => !v)}>
+                  {showLogTime ? "Cancel" : "Log time"}
                 </button>
-              ) : (
-                <button
-                  className="btn btn-primary btn-sm"
-                  onClick={() => startTimer.mutate()}
-                  disabled={isTimerRunningElsewhere || startTimer.isPending}
-                  title={isTimerRunningElsewhere ? "Stop your other running timer first" : undefined}
-                >
-                  Start timer
-                </button>
-              )}
+                {isTimerRunningHere ? (
+                  <button className="btn btn-sm" onClick={() => stop.mutate(activeTimer!.id)}>
+                    Stop timer
+                  </button>
+                ) : (
+                  <button
+                    className="btn btn-primary btn-sm"
+                    onClick={() => startTimer.mutate()}
+                    disabled={isTimerRunningElsewhere || startTimer.isPending}
+                    title={isTimerRunningElsewhere ? "Stop your other running timer first" : undefined}
+                  >
+                    Start timer
+                  </button>
+                )}
+              </div>
             </div>
+            {showLogTime && (
+              <form
+                style={{ marginTop: 12, marginBottom: 4 }}
+                onSubmit={(e: FormEvent) => {
+                  e.preventDefault();
+                  if (!logHours || Number(logHours) <= 0) return;
+                  logTime.mutate();
+                }}
+              >
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                  <div className="field">
+                    <label>Date</label>
+                    <input type="date" required value={logDate} onChange={(e) => setLogDate(e.target.value)} />
+                  </div>
+                  <div className="field">
+                    <label>Hours</label>
+                    <input
+                      type="number"
+                      required
+                      min="0.25"
+                      max="24"
+                      step="0.25"
+                      placeholder="e.g. 2.5"
+                      value={logHours}
+                      onChange={(e) => setLogHours(e.target.value)}
+                    />
+                  </div>
+                </div>
+                <div className="field">
+                  <label>Note (optional)</label>
+                  <input type="text" value={logNote} onChange={(e) => setLogNote(e.target.value)} />
+                </div>
+                {logError && <div className="error-text">{logError}</div>}
+                <button className="btn btn-primary btn-sm" type="submit" disabled={logTime.isPending}>
+                  Save
+                </button>
+              </form>
+            )}
             {task.timeEntries.length === 0 && <p className="muted" style={{ marginTop: 12 }}>No time logged yet.</p>}
             {task.timeEntries.map((entry) => (
               <div className="task-list-item" key={entry.id}>
                 <span>
                   {entry.user.name} {entry.endedAt ? "" : "(running…)"}
+                  {entry.note && <span className="muted"> — {entry.note}</span>}
                 </span>
                 <span className="muted">{formatMinutes(entry.durationMinutes)}</span>
               </div>
