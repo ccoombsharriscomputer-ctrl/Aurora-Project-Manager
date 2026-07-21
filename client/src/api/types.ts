@@ -38,6 +38,7 @@ export interface Project {
   id: string;
   name: string;
   description: string | null;
+  teamSupportTicketNumber: string | null;
   projectType: { id: string; name: string };
   createdBy: UserSummary;
   createdAt: string;

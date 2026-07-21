@@ -64,14 +64,15 @@ model User {
 }
 
 model Project {
-  id            String      @id @default(cuid())
-  name          String
-  description   String?
-  projectTypeId String
-  projectType   ProjectType @relation(fields: [projectTypeId], references: [id])
-  createdById   String
-  createdBy     User        @relation("ProjectCreatedBy", fields: [createdById], references: [id])
-  createdAt     DateTime    @default(now())
+  id                     String      @id @default(cuid())
+  name                   String
+  description            String?
+  teamSupportTicketNumber String?
+  projectTypeId          String
+  projectType            ProjectType @relation(fields: [projectTypeId], references: [id])
+  createdById            String
+  createdBy              User        @relation("ProjectCreatedBy", fields: [createdById], references: [id])
+  createdAt              DateTime    @default(now())
 
   members    ProjectMember[]
   tasks      Task[]

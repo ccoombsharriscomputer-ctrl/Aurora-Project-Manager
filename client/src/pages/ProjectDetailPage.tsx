@@ -179,6 +179,11 @@ export function ProjectDetailPage() {
     },
   });
 
+  const updateProject = useMutation({
+    mutationFn: (data: Record<string, unknown>) => api.patch(`/projects/${projectId}`, data),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["project", projectId] }),
+  });
+
   if (projectLoading || !project) {
     return <div className="muted">Loading project…</div>;
   }
@@ -194,6 +199,24 @@ export function ProjectDetailPage() {
             {project.projectType.name}
             {project.description ? ` · ${project.description}` : ""}
           </p>
+          <div className="gap-8" style={{ marginTop: 8 }}>
+            <label style={{ margin: 0 }}>TeamSupport Ticket #</label>
+            {canManage ? (
+              <input
+                type="text"
+                placeholder="e.g. 255219"
+                defaultValue={project.teamSupportTicketNumber ?? ""}
+                style={{ width: 140 }}
+                onBlur={(e) => {
+                  if (e.target.value !== (project.teamSupportTicketNumber ?? "")) {
+                    updateProject.mutate({ teamSupportTicketNumber: e.target.value || null });
+                  }
+                }}
+              />
+            ) : (
+              <span>{project.teamSupportTicketNumber || "—"}</span>
+            )}
+          </div>
         </div>
         <div className="gap-8">
           <NewSubProjectForm projectId={project.id} projectTypeId={project.projectType.id} />

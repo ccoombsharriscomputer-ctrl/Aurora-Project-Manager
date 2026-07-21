@@ -20,18 +20,26 @@ export function ProjectsPage() {
   const [showForm, setShowForm] = useState(false);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
+  const [teamSupportTicketNumber, setTeamSupportTicketNumber] = useState("");
   const [projectTypeId, setProjectTypeId] = useState("");
   const [error, setError] = useState<string | null>(null);
 
   const activeTypes = (projectTypes ?? []).filter((t) => t.active);
 
   const createProject = useMutation({
-    mutationFn: () => api.post<Project>("/projects", { name, description: description || undefined, projectTypeId }),
+    mutationFn: () =>
+      api.post<Project>("/projects", {
+        name,
+        description: description || undefined,
+        teamSupportTicketNumber: teamSupportTicketNumber || undefined,
+        projectTypeId,
+      }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["projects"] });
       queryClient.invalidateQueries({ queryKey: ["dashboard"] });
       setName("");
       setDescription("");
+      setTeamSupportTicketNumber("");
       setProjectTypeId("");
       setShowForm(false);
       setError(null);
@@ -84,6 +92,15 @@ export function ProjectsPage() {
           <div className="field">
             <label htmlFor="description">Description</label>
             <textarea id="description" value={description} onChange={(e) => setDescription(e.target.value)} />
+          </div>
+          <div className="field">
+            <label htmlFor="teamSupportTicketNumber">TeamSupport ticket # (optional)</label>
+            <input
+              id="teamSupportTicketNumber"
+              type="text"
+              value={teamSupportTicketNumber}
+              onChange={(e) => setTeamSupportTicketNumber(e.target.value)}
+            />
           </div>
           {error && <div className="error-text">{error}</div>}
           <button className="btn btn-primary" type="submit" disabled={createProject.isPending || !projectTypeId}>

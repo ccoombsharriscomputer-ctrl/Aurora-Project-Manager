@@ -28,6 +28,7 @@ router.get("/", async (_req, res) => {
         id: p.id,
         name: p.name,
         description: p.description,
+        teamSupportTicketNumber: p.teamSupportTicketNumber,
         projectType: p.projectType,
         createdBy: p.createdBy,
         createdAt: p.createdAt,
@@ -44,6 +45,7 @@ router.get("/", async (_req, res) => {
 const createSchema = z.object({
   name: z.string().min(1).max(200),
   description: z.string().max(2000).optional(),
+  teamSupportTicketNumber: z.string().max(50).optional(),
   projectTypeId: z.string().min(1),
 });
 
@@ -62,6 +64,7 @@ router.post("/", async (req, res) => {
     data: {
       name: parsed.data.name,
       description: parsed.data.description,
+      teamSupportTicketNumber: parsed.data.teamSupportTicketNumber,
       projectTypeId: projectType.id,
       createdById: req.user!.id,
       members: {
@@ -148,6 +151,7 @@ function canManageProject(projectCreatedById: string, req: import("express").Req
 const updateSchema = z.object({
   name: z.string().min(1).max(200).optional(),
   description: z.string().max(2000).nullable().optional(),
+  teamSupportTicketNumber: z.string().max(50).nullable().optional(),
 });
 
 router.patch("/:id", async (req, res) => {
