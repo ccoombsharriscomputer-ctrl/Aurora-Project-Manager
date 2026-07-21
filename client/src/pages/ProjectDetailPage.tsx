@@ -1,8 +1,8 @@
-import { useState, type FormEvent } from "react";
+import { useRef, useState, type FormEvent } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../api/client";
-import type { ChecklistItem, Project, SubProject, UserSummary } from "../api/types";
+import type { Attachment, ChecklistItem, Project, SubProject, UserSummary } from "../api/types";
 import { extractErrorMessage, useAuth } from "../context/AuthContext";
 
 function NewSubProjectForm({ projectId, projectTypeId }: { projectId: string; projectTypeId: string }) {
@@ -148,6 +148,57 @@ function MembersPanel({ project, allUsers }: { project: Project; allUsers: UserS
   );
 }
 
+function AttachmentsPanel({ projectId }: { projectId: string }) {
+  const queryClient = useQueryClient();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const { data: attachments } = useQuery({
+    queryKey: ["project-attachments", projectId],
+    queryFn: () => api.get<Attachment[]>(`/projects/${projectId}/attachments`),
+  });
+
+  const uploadAttachment = useMutation({
+    mutationFn: (file: File) => {
+      const form = new FormData();
+      form.append("file", file);
+      return api.postForm(`/projects/${projectId}/attachments`, form);
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["project-attachments", projectId] }),
+  });
+
+  return (
+    <div className="card">
+      <div className="flex-between">
+        <div className="section-title" style={{ marginBottom: 0 }}>
+          Attachments
+        </div>
+        <button className="btn btn-sm" onClick={() => fileInputRef.current?.click()} disabled={uploadAttachment.isPending}>
+          Upload file
+        </button>
+        <input
+          ref={fileInputRef}
+          type="file"
+          style={{ display: "none" }}
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            if (file) uploadAttachment.mutate(file);
+            e.target.value = "";
+          }}
+        />
+      </div>
+      {attachments?.length === 0 && <p className="muted" style={{ marginTop: 12 }}>No attachments yet.</p>}
+      {attachments?.map((a) => (
+        <div className="task-list-item" key={a.id}>
+          <a href={`/api/attachments/${a.id}/download`}>{a.originalName}</a>
+          <span className="muted">
+            {(a.size / 1024).toFixed(0)} KB · {a.uploader.name}
+          </span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export function ProjectDetailPage() {
   const { projectId } = useParams<{ projectId: string }>();
   const { user } = useAuth();
@@ -263,7 +314,12 @@ export function ProjectDetailPage() {
           </div>
         </div>
 
-        <MembersPanel project={project} allUsers={allUsers ?? []} />
+        <div>
+          <MembersPanel project={project} allUsers={allUsers ?? []} />
+          <div style={{ marginTop: 16 }}>
+            <AttachmentsPanel projectId={project.id} />
+          </div>
+        </div>
       </div>
     </div>
   );

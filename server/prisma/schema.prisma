@@ -78,6 +78,7 @@ model Project {
   tasks      Task[]
   subProjects SubProject[]
   activities Activity[]
+  attachments Attachment[]
 }
 
 model ProjectType {
@@ -186,8 +187,10 @@ model Comment {
 
 model Attachment {
   id             String   @id @default(cuid())
-  taskId         String
-  task           Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  taskId         String?
+  task           Task?    @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  projectId      String?
+  project        Project? @relation(fields: [projectId], references: [id], onDelete: Cascade)
   uploaderId     String
   uploader       User     @relation(fields: [uploaderId], references: [id])
   storedFilename String

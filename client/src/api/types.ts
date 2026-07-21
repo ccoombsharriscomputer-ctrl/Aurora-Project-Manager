@@ -126,7 +126,8 @@ export interface Comment {
 
 export interface Attachment {
   id: string;
-  taskId: string;
+  taskId: string | null;
+  projectId: string | null;
   originalName: string;
   mimeType: string;
   size: number;

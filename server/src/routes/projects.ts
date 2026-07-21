@@ -4,6 +4,7 @@ import { prisma } from "../lib/prisma";
 import { requireAuth } from "../middleware/auth";
 import { logActivity } from "../lib/activity";
 import { emitUpdate } from "../lib/realtime";
+import { upload } from "../lib/upload";
 
 const router = Router();
 
@@ -293,6 +294,48 @@ router.post("/:id/sub-projects", async (req, res) => {
 
   emitUpdate({ scope: "project", projectId: project.id });
   res.status(201).json(subProject);
+});
+
+router.get("/:id/attachments", async (req, res) => {
+  const attachments = await prisma.attachment.findMany({
+    where: { projectId: req.params.id },
+    orderBy: { createdAt: "asc" },
+    include: { uploader: { select: { id: true, name: true } } },
+  });
+  res.json(attachments);
+});
+
+router.post("/:id/attachments", upload.single("file"), async (req, res) => {
+  const project = await prisma.project.findUnique({ where: { id: req.params.id } });
+  if (!project) {
+    return res.status(404).json({ error: "Project not found" });
+  }
+  if (!req.file) {
+    return res.status(400).json({ error: "No file uploaded" });
+  }
+
+  const attachment = await prisma.attachment.create({
+    data: {
+      projectId: project.id,
+      uploaderId: req.user!.id,
+      storedFilename: req.file.filename,
+      originalName: req.file.originalname,
+      mimeType: req.file.mimetype,
+      size: req.file.size,
+    },
+    include: { uploader: { select: { id: true, name: true } } },
+  });
+
+  await logActivity({
+    type: "ATTACHMENT_ADDED",
+    message: `${req.user!.name} attached "${attachment.originalName}" to project "${project.name}"`,
+    userId: req.user!.id,
+    projectId: project.id,
+  });
+  emitUpdate({ scope: "project", projectId: project.id });
+  emitUpdate({ scope: "dashboard" });
+
+  res.status(201).json(attachment);
 });
 
 export default router;

@@ -1,28 +1,13 @@
 import { Router } from "express";
 import { z } from "zod";
-import multer from "multer";
-import path from "path";
-import crypto from "crypto";
 import { prisma } from "../lib/prisma";
 import { requireAuth } from "../middleware/auth";
 import { logActivity } from "../lib/activity";
 import { emitUpdate } from "../lib/realtime";
+import { upload } from "../lib/upload";
 
 const router = Router();
 router.use(requireAuth);
-
-const UPLOAD_DIR = path.join(__dirname, "..", "..", "uploads");
-
-const upload = multer({
-  storage: multer.diskStorage({
-    destination: (_req, _file, cb) => cb(null, UPLOAD_DIR),
-    filename: (_req, file, cb) => {
-      const unique = crypto.randomBytes(16).toString("hex");
-      cb(null, `${unique}${path.extname(file.originalname)}`);
-    },
-  }),
-  limits: { fileSize: 25 * 1024 * 1024 },
-});
 
 router.get("/:id", async (req, res) => {
   const task = await prisma.task.findUnique({
