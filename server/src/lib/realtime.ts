@@ -8,7 +8,8 @@ export type UpdateScope =
   | { scope: "sub-project"; subProjectId: string }
   | { scope: "task"; taskId: string }
   | { scope: "users" }
-  | { scope: "project-types" };
+  | { scope: "project-types" }
+  | { scope: "modules" };
 
 let io: Server | null = null;
 

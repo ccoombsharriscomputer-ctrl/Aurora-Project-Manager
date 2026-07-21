@@ -61,7 +61,6 @@ export interface ChecklistItem {
   description: string | null;
   active: boolean;
   createdAt: string;
-  projectTypes?: { id: string; name: string }[];
 }
 
 export interface TaskTemplate {

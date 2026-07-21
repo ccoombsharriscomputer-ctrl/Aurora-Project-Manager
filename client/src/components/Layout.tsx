@@ -19,6 +19,11 @@ export function Layout() {
             Project Types
           </NavLink>
         )}
+        {(user?.role === "ADMIN" || user?.role === "PROJECT_LEAD") && (
+          <NavLink to="/modules" className={({ isActive }) => `sidebar-link${isActive ? " active" : ""}`}>
+            Modules
+          </NavLink>
+        )}
         {user?.role === "ADMIN" && (
           <NavLink to="/admin/users" className={({ isActive }) => `sidebar-link${isActive ? " active" : ""}`}>
             Users

@@ -9,7 +9,8 @@ type UpdatePayload =
   | { scope: "sub-project"; subProjectId: string }
   | { scope: "task"; taskId: string }
   | { scope: "users" }
-  | { scope: "project-types" };
+  | { scope: "project-types" }
+  | { scope: "modules" };
 
 export function useRealtimeInvalidation() {
   const queryClient = useQueryClient();
@@ -39,8 +40,10 @@ export function useRealtimeInvalidation() {
           break;
         case "project-types":
           queryClient.invalidateQueries({ queryKey: ["project-types"] });
-          // Prefix match also covers ["checklist-items", projectTypeId] per-type queries.
+          break;
+        case "modules":
           queryClient.invalidateQueries({ queryKey: ["checklist-items"] });
+          queryClient.invalidateQueries({ queryKey: ["task-templates"] });
           break;
       }
     }

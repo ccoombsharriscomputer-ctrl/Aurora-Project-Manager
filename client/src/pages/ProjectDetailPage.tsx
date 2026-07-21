@@ -12,8 +12,8 @@ function NewSubProjectForm({ projectId }: { projectId: string }) {
   const [name, setName] = useState("");
   const [error, setError] = useState<string | null>(null);
 
-  // Checklist items are a shared catalog — any item can become a sub-project on any
-  // project, regardless of the project's own type.
+  // Modules are a shared catalog — any module can become a sub-project on any project,
+  // regardless of the project's own type.
   const { data: checklistItems } = useQuery({
     queryKey: ["checklist-items"],
     queryFn: () => api.get<ChecklistItem[]>("/checklist-items"),
@@ -57,9 +57,9 @@ function NewSubProjectForm({ projectId }: { projectId: string }) {
       }}
     >
       <div className="field">
-        <label>Checklist item</label>
+        <label>Module</label>
         <select value={checklistItemId} onChange={(e) => setChecklistItemId(e.target.value)} required>
-          <option value="">Select a checklist item…</option>
+          <option value="">Select a module…</option>
           {activeItems.map((i) => (
             <option key={i.id} value={i.id}>
               {i.name}
@@ -68,7 +68,7 @@ function NewSubProjectForm({ projectId }: { projectId: string }) {
         </select>
         {activeItems.length === 0 && (
           <p className="muted" style={{ fontSize: 12, marginTop: 6 }}>
-            No checklist items in the catalog yet — add one on the Project Types page.
+            No modules in the catalog yet — add one on the Modules page.
           </p>
         )}
       </div>
@@ -76,7 +76,7 @@ function NewSubProjectForm({ projectId }: { projectId: string }) {
         <label>Custom name (optional)</label>
         <input
           type="text"
-          placeholder="Defaults to the checklist item's name"
+          placeholder="Defaults to the module's name"
           value={name}
           onChange={(e) => setName(e.target.value)}
         />

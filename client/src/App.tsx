@@ -10,6 +10,7 @@ import { SubProjectDetailPage } from "./pages/SubProjectDetailPage";
 import { TaskDetailPage } from "./pages/TaskDetailPage";
 import { AdminUsersPage } from "./pages/AdminUsersPage";
 import { ProjectTypesPage } from "./pages/ProjectTypesPage";
+import { ModulesPage } from "./pages/ModulesPage";
 import { ReportsPage } from "./pages/ReportsPage";
 import { useRealtimeInvalidation } from "./hooks/useRealtimeInvalidation";
 
@@ -34,6 +35,7 @@ function App() {
           </Route>
           <Route element={<ProjectLeadRoute />}>
             <Route path="/project-types" element={<ProjectTypesPage />} />
+            <Route path="/modules" element={<ModulesPage />} />
           </Route>
         </Route>
       </Route>

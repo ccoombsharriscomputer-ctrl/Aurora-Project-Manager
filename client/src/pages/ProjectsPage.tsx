@@ -2,7 +2,7 @@ import { useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../api/client";
-import type { Project, ProjectType } from "../api/types";
+import type { ChecklistItem, Project, ProjectType } from "../api/types";
 import { extractErrorMessage } from "../context/AuthContext";
 
 export function ProjectsPage() {
@@ -17,14 +17,25 @@ export function ProjectsPage() {
     queryFn: () => api.get<ProjectType[]>("/project-types"),
   });
 
+  const { data: modules } = useQuery({
+    queryKey: ["checklist-items"],
+    queryFn: () => api.get<ChecklistItem[]>("/checklist-items"),
+  });
+
   const [showForm, setShowForm] = useState(false);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [teamSupportTicketNumber, setTeamSupportTicketNumber] = useState("");
   const [projectTypeId, setProjectTypeId] = useState("");
+  const [checklistItemIds, setChecklistItemIds] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
 
   const activeTypes = (projectTypes ?? []).filter((t) => t.active);
+  const activeModules = (modules ?? []).filter((m) => m.active);
+
+  function toggleModule(id: string) {
+    setChecklistItemIds((prev) => (prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]));
+  }
 
   const createProject = useMutation({
     mutationFn: () =>
@@ -33,6 +44,7 @@ export function ProjectsPage() {
         description: description || undefined,
         teamSupportTicketNumber: teamSupportTicketNumber || undefined,
         projectTypeId,
+        checklistItemIds,
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["projects"] });
@@ -41,6 +53,7 @@ export function ProjectsPage() {
       setDescription("");
       setTeamSupportTicketNumber("");
       setProjectTypeId("");
+      setChecklistItemIds([]);
       setShowForm(false);
       setError(null);
     },
@@ -88,6 +101,24 @@ export function ProjectsPage() {
                 No project types yet — an admin or project lead needs to create one first.
               </p>
             )}
+          </div>
+          <div className="field">
+            <label>Modules to include</label>
+            {activeModules.length === 0 && (
+              <p className="muted" style={{ fontSize: 12, marginTop: 6 }}>
+                No modules yet — an admin or project lead can add some on the Modules page.
+              </p>
+            )}
+            {activeModules.map((m) => (
+              <label key={m.id} className="gap-8" style={{ display: "flex", margin: "4px 0", cursor: "pointer" }}>
+                <input
+                  type="checkbox"
+                  checked={checklistItemIds.includes(m.id)}
+                  onChange={() => toggleModule(m.id)}
+                />
+                <span>{m.name}</span>
+              </label>
+            ))}
           </div>
           <div className="field">
             <label htmlFor="description">Description</label>

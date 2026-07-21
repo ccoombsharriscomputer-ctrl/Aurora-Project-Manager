@@ -48,6 +48,7 @@ const createSchema = z.object({
   description: z.string().max(2000).optional(),
   teamSupportTicketNumber: z.string().max(50).optional(),
   projectTypeId: z.string().min(1),
+  checklistItemIds: z.array(z.string().min(1)).optional(),
 });
 
 router.post("/", async (req, res) => {
@@ -59,6 +60,15 @@ router.post("/", async (req, res) => {
   const projectType = await prisma.projectType.findUnique({ where: { id: parsed.data.projectTypeId } });
   if (!projectType) {
     return res.status(404).json({ error: "Project type not found" });
+  }
+
+  const requestedIds = parsed.data.checklistItemIds ?? [];
+  const checklistItems =
+    requestedIds.length > 0
+      ? await prisma.checklistItem.findMany({ where: { id: { in: requestedIds } } })
+      : [];
+  if (checklistItems.length !== requestedIds.length) {
+    return res.status(404).json({ error: "One or more selected modules were not found" });
   }
 
   const project = await prisma.project.create({
@@ -77,13 +87,6 @@ router.post("/", async (req, res) => {
       members: { include: { user: { select: { id: true, name: true, email: true } } } },
     },
   });
-
-  const checklistItemJoins = await prisma.projectTypeChecklistItem.findMany({
-    where: { projectTypeId: projectType.id, checklistItem: { active: true } },
-    include: { checklistItem: true },
-    orderBy: { checklistItem: { name: "asc" } },
-  });
-  const checklistItems = checklistItemJoins.map((j) => j.checklistItem);
 
   if (checklistItems.length > 0) {
     const taskTemplates = await prisma.taskTemplate.findMany({

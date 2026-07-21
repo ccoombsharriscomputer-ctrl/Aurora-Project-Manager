@@ -35,12 +35,6 @@ async function main() {
     },
   });
 
-  await prisma.projectTypeChecklistItem.upsert({
-    where: { projectTypeId_checklistItemId: { projectTypeId: projectType.id, checklistItemId: checklistItem.id } },
-    update: {},
-    create: { projectTypeId: projectType.id, checklistItemId: checklistItem.id },
-  });
-
   const project = await prisma.project.create({
     data: {
       name: "Aurora Launch",
