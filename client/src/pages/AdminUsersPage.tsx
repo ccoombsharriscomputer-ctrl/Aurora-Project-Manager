@@ -1,8 +1,89 @@
+import { useState, type FormEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../api/client";
-import type { AdminUser } from "../api/types";
-import { useAuth } from "../context/AuthContext";
+import type { AdminUser, UserRole } from "../api/types";
+import { extractErrorMessage, useAuth } from "../context/AuthContext";
 import { formatDate } from "../utils/format";
+
+function CreateUserForm() {
+  const queryClient = useQueryClient();
+  const [open, setOpen] = useState(false);
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [role, setRole] = useState<UserRole>("MEMBER");
+  const [error, setError] = useState<string | null>(null);
+
+  const createUser = useMutation({
+    mutationFn: () => api.post<AdminUser>("/users", { name, email, password, role }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["users"] });
+      setName("");
+      setEmail("");
+      setPassword("");
+      setRole("MEMBER");
+      setOpen(false);
+      setError(null);
+    },
+    onError: (err) => setError(extractErrorMessage(err)),
+  });
+
+  if (!open) {
+    return (
+      <button className="btn btn-primary" onClick={() => setOpen(true)}>
+        Add user
+      </button>
+    );
+  }
+
+  return (
+    <form
+      className="card"
+      style={{ marginBottom: 16 }}
+      onSubmit={(e: FormEvent) => {
+        e.preventDefault();
+        createUser.mutate();
+      }}
+    >
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+        <div className="field">
+          <label>Name</label>
+          <input type="text" required value={name} onChange={(e) => setName(e.target.value)} />
+        </div>
+        <div className="field">
+          <label>Email</label>
+          <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
+        </div>
+        <div className="field">
+          <label>Initial password</label>
+          <input
+            type="password"
+            required
+            minLength={8}
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+          />
+        </div>
+        <div className="field">
+          <label>Role</label>
+          <select value={role} onChange={(e) => setRole(e.target.value as UserRole)}>
+            <option value="MEMBER">Member</option>
+            <option value="ADMIN">Admin</option>
+          </select>
+        </div>
+      </div>
+      {error && <div className="error-text">{error}</div>}
+      <div className="gap-8">
+        <button className="btn btn-primary" type="submit" disabled={createUser.isPending}>
+          Create user
+        </button>
+        <button className="btn" type="button" onClick={() => setOpen(false)}>
+          Cancel
+        </button>
+      </div>
+    </form>
+  );
+}
 
 export function AdminUsersPage() {
   const { user: me } = useAuth();
@@ -27,6 +108,7 @@ export function AdminUsersPage() {
     <div>
       <div className="page-header">
         <h1>Users</h1>
+        <CreateUserForm />
       </div>
       <div className="card">
         <table className="table">

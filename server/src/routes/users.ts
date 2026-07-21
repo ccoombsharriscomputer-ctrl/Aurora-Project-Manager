@@ -3,6 +3,7 @@ import { z } from "zod";
 import { prisma } from "../lib/prisma";
 import { requireAdmin, requireAuth } from "../middleware/auth";
 import { emitUpdate } from "../lib/realtime";
+import { hashPassword } from "../lib/auth";
 
 const router = Router();
 
@@ -15,6 +16,35 @@ router.get("/", async (_req, res) => {
     orderBy: { name: "asc" },
   });
   res.json(users);
+});
+
+const createSchema = z.object({
+  name: z.string().min(1).max(100),
+  email: z.string().email(),
+  password: z.string().min(8).max(200),
+  role: z.enum(["ADMIN", "MEMBER"]).optional(),
+});
+
+router.post("/", requireAdmin, async (req, res) => {
+  const parsed = createSchema.safeParse(req.body);
+  if (!parsed.success) {
+    return res.status(400).json({ error: parsed.error.issues[0].message });
+  }
+  const { name, email, password, role } = parsed.data;
+
+  const existing = await prisma.user.findUnique({ where: { email } });
+  if (existing) {
+    return res.status(409).json({ error: "An account with that email already exists" });
+  }
+
+  const passwordHash = await hashPassword(password);
+  const user = await prisma.user.create({
+    data: { name, email, passwordHash, role: role ?? "MEMBER" },
+    select: { id: true, name: true, email: true, role: true, active: true, createdAt: true },
+  });
+
+  emitUpdate({ scope: "users" });
+  res.status(201).json(user);
 });
 
 const updateSchema = z.object({
