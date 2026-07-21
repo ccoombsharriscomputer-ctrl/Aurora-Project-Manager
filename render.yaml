@@ -1,0 +1,25 @@
+databases:
+  - name: aurora-pm-db
+    plan: free
+    databaseName: aurora_pm
+    user: aurora_app
+
+services:
+  - type: web
+    name: aurora-project-manager
+    env: node
+    plan: free
+    buildCommand: npm install && npm run build
+    startCommand: npm run prisma:deploy -w server && npm run start -w server
+    healthCheckPath: /api/health
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: aurora-pm-db
+          property: connectionString
+      - key: JWT_SECRET
+        generateValue: true
+      - key: NODE_ENV
+        value: production
+      - key: NODE_VERSION
+        value: "22"
