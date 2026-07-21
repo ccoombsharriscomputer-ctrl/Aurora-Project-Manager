@@ -28,6 +28,24 @@ router.patch("/:id", requireProjectTypeManager, async (req, res) => {
   res.json(item);
 });
 
+router.delete("/:id", requireProjectTypeManager, async (req, res) => {
+  const item = await prisma.checklistItem.findUnique({ where: { id: req.params.id } });
+  if (!item) {
+    return res.status(404).json({ error: "Checklist item not found" });
+  }
+
+  const subProjectCount = await prisma.subProject.count({ where: { checklistItemId: item.id } });
+  if (subProjectCount > 0) {
+    return res.status(400).json({
+      error: `Can't delete "${item.name}" — ${subProjectCount} sub-project${subProjectCount === 1 ? "" : "s"} still use${subProjectCount === 1 ? "s" : ""} it. Deactivate it instead.`,
+    });
+  }
+
+  await prisma.checklistItem.delete({ where: { id: item.id } });
+  emitUpdate({ scope: "project-types" });
+  res.status(204).send();
+});
+
 // Any authenticated user can list task templates (not needed for a picker today, but
 // consistent with how checklist items themselves are readable by everyone).
 router.get("/:id/task-templates", async (req, res) => {

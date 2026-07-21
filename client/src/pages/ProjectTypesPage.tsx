@@ -138,6 +138,10 @@ function ChecklistPanel({ projectTypeId }: { projectTypeId: string }) {
   const [name, setName] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [expandedItemId, setExpandedItemId] = useState<string | null>(null);
+  const [editingItemId, setEditingItemId] = useState<string | null>(null);
+  const [editName, setEditName] = useState("");
+  const [editDescription, setEditDescription] = useState("");
+  const [deleteErrors, setDeleteErrors] = useState<Record<string, string>>({});
 
   const { data: items, isLoading } = useQuery({
     queryKey: ["checklist-items", projectTypeId],
@@ -159,6 +163,34 @@ function ChecklistPanel({ projectTypeId }: { projectTypeId: string }) {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["checklist-items", projectTypeId] }),
   });
 
+  const updateItem = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Record<string, unknown> }) =>
+      api.patch(`/checklist-items/${id}`, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["checklist-items", projectTypeId] });
+      setEditingItemId(null);
+    },
+  });
+
+  const deleteItem = useMutation({
+    mutationFn: (id: string) => api.delete(`/checklist-items/${id}`),
+    onSuccess: (_data, id) => {
+      queryClient.invalidateQueries({ queryKey: ["checklist-items", projectTypeId] });
+      setDeleteErrors((prev) => {
+        const next = { ...prev };
+        delete next[id];
+        return next;
+      });
+    },
+    onError: (err, id) => setDeleteErrors((prev) => ({ ...prev, [id]: extractErrorMessage(err) })),
+  });
+
+  function startEdit(item: ChecklistItem) {
+    setEditingItemId(item.id);
+    setEditName(item.name);
+    setEditDescription(item.description ?? "");
+  }
+
   return (
     <div style={{ padding: "12px 4px" }}>
       <div className="section-title" style={{ fontSize: 13 }}>
@@ -170,24 +202,70 @@ function ChecklistPanel({ projectTypeId }: { projectTypeId: string }) {
       {isLoading && <p className="muted">Loading…</p>}
       {items?.map((item) => (
         <div key={item.id}>
-          <div className="task-list-item">
-            <span>{item.name}</span>
-            <span className="gap-8">
-              <span className="muted">{item.active ? "Active" : "Inactive"}</span>
-              <button
-                className="btn btn-sm"
-                onClick={() => setExpandedItemId(expandedItemId === item.id ? null : item.id)}
-              >
-                {expandedItemId === item.id ? "Hide tasks" : "Manage tasks"}
-              </button>
-              <button
-                className="btn btn-sm"
-                onClick={() => toggleActive.mutate({ id: item.id, active: !item.active })}
-              >
-                {item.active ? "Deactivate" : "Reactivate"}
-              </button>
-            </span>
-          </div>
+          {editingItemId === item.id ? (
+            <form
+              className="card"
+              style={{ marginBottom: 8 }}
+              onSubmit={(e: FormEvent) => {
+                e.preventDefault();
+                if (!editName.trim()) return;
+                updateItem.mutate({
+                  id: item.id,
+                  data: { name: editName, description: editDescription || null },
+                });
+              }}
+            >
+              <div className="field">
+                <label>Name</label>
+                <input type="text" required value={editName} onChange={(e) => setEditName(e.target.value)} />
+              </div>
+              <div className="field">
+                <label>Description</label>
+                <textarea value={editDescription} onChange={(e) => setEditDescription(e.target.value)} />
+              </div>
+              <div className="gap-8">
+                <button className="btn btn-sm btn-primary" type="submit" disabled={updateItem.isPending}>
+                  Save
+                </button>
+                <button className="btn btn-sm" type="button" onClick={() => setEditingItemId(null)}>
+                  Cancel
+                </button>
+              </div>
+            </form>
+          ) : (
+            <div className="task-list-item">
+              <span>{item.name}</span>
+              <span className="gap-8">
+                <span className="muted">{item.active ? "Active" : "Inactive"}</span>
+                <button
+                  className="btn btn-sm"
+                  onClick={() => setExpandedItemId(expandedItemId === item.id ? null : item.id)}
+                >
+                  {expandedItemId === item.id ? "Hide tasks" : "Manage tasks"}
+                </button>
+                <button className="btn btn-sm" onClick={() => startEdit(item)}>
+                  Edit
+                </button>
+                <button
+                  className="btn btn-sm"
+                  onClick={() => toggleActive.mutate({ id: item.id, active: !item.active })}
+                >
+                  {item.active ? "Deactivate" : "Reactivate"}
+                </button>
+                <button
+                  className="btn btn-sm btn-danger"
+                  onClick={() => {
+                    if (confirm(`Delete checklist item "${item.name}"? This also removes its to-do task templates. This cannot be undone.`)) {
+                      deleteItem.mutate(item.id);
+                    }
+                  }}
+                >
+                  Delete
+                </button>
+              </span>
+            </div>
+          )}
+          {deleteErrors[item.id] && <div className="error-text">{deleteErrors[item.id]}</div>}
           {expandedItemId === item.id && <TaskTemplatesPanel checklistItemId={item.id} />}
         </div>
       ))}
