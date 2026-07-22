@@ -4,10 +4,11 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { api } from "../api/client";
 import type { ChecklistItem, Project, ProjectType } from "../api/types";
-import { extractErrorMessage } from "../context/AuthContext";
+import { extractErrorMessage, useAuth } from "../context/AuthContext";
 
 export function ProjectsPage() {
   const { t } = useTranslation();
+  const { canWrite } = useAuth();
   const queryClient = useQueryClient();
   const [showArchived, setShowArchived] = useState(false);
   const { data: projects, isLoading } = useQuery({
@@ -78,13 +79,15 @@ export function ProjectsPage() {
             <input type="checkbox" checked={showArchived} onChange={(e) => setShowArchived(e.target.checked)} />
             <span>{t("projects.showArchived")}</span>
           </label>
-          <button className="btn btn-primary" onClick={() => setShowForm((v) => !v)}>
-            {showForm ? t("common.cancel") : t("projects.newProject")}
-          </button>
+          {canWrite && (
+            <button className="btn btn-primary" onClick={() => setShowForm((v) => !v)}>
+              {showForm ? t("common.cancel") : t("projects.newProject")}
+            </button>
+          )}
         </div>
       </div>
 
-      {showForm && (
+      {showForm && canWrite && (
         <form className="card" style={{ marginBottom: 20 }} onSubmit={handleSubmit}>
           <div className="field">
             <label htmlFor="name">{t("common.name")}</label>

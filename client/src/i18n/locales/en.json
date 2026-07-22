@@ -21,6 +21,7 @@
     "roleMember": "Member",
     "roleProjectLead": "Project Lead",
     "roleAdmin": "Admin",
+    "roleReadOnly": "Read Only",
     "priorityLow": "Low",
     "priorityMedium": "Medium",
     "priorityHigh": "High",

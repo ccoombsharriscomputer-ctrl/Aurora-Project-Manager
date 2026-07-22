@@ -8,6 +8,7 @@ import { extractErrorMessage, useAuth } from "../context/AuthContext";
 
 function NewSubProjectForm({ projectId }: { projectId: string }) {
   const { t } = useTranslation();
+  const { canWrite } = useAuth();
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const [checklistItemId, setChecklistItemId] = useState("");
@@ -39,6 +40,10 @@ function NewSubProjectForm({ projectId }: { projectId: string }) {
     },
     onError: (err) => setError(extractErrorMessage(err)),
   });
+
+  if (!canWrite) {
+    return null;
+  }
 
   if (!open) {
     return (
@@ -98,6 +103,7 @@ function NewSubProjectForm({ projectId }: { projectId: string }) {
 
 function MembersPanel({ project, allUsers }: { project: Project; allUsers: UserSummary[] }) {
   const { t } = useTranslation();
+  const { canWrite } = useAuth();
   const queryClient = useQueryClient();
   const [selectedUserId, setSelectedUserId] = useState("");
 
@@ -125,12 +131,14 @@ function MembersPanel({ project, allUsers }: { project: Project; allUsers: UserS
           <span>
             {m.name} <span className="muted">({m.role})</span>
           </span>
-          <button className="btn btn-sm" onClick={() => removeMember.mutate(m.id)}>
-            {t("projectDetail.remove")}
-          </button>
+          {canWrite && (
+            <button className="btn btn-sm" onClick={() => removeMember.mutate(m.id)}>
+              {t("projectDetail.remove")}
+            </button>
+          )}
         </div>
       ))}
-      {nonMembers.length > 0 && (
+      {canWrite && nonMembers.length > 0 && (
         <div className="gap-8" style={{ marginTop: 12 }}>
           <select value={selectedUserId} onChange={(e) => setSelectedUserId(e.target.value)}>
             <option value="">{t("projectDetail.addMember")}</option>
@@ -155,6 +163,7 @@ function MembersPanel({ project, allUsers }: { project: Project; allUsers: UserS
 
 function AttachmentsPanel({ projectId }: { projectId: string }) {
   const { t } = useTranslation();
+  const { canWrite } = useAuth();
   const queryClient = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -178,9 +187,11 @@ function AttachmentsPanel({ projectId }: { projectId: string }) {
         <div className="section-title" style={{ marginBottom: 0 }}>
           {t("projectDetail.attachments")}
         </div>
-        <button className="btn btn-sm" onClick={() => fileInputRef.current?.click()} disabled={uploadAttachment.isPending}>
-          {t("projectDetail.uploadFile")}
-        </button>
+        {canWrite && (
+          <button className="btn btn-sm" onClick={() => fileInputRef.current?.click()} disabled={uploadAttachment.isPending}>
+            {t("projectDetail.uploadFile")}
+          </button>
+        )}
         <input
           ref={fileInputRef}
           type="file"

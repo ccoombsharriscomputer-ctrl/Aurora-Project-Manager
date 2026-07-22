@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { z } from "zod";
 import { prisma } from "../lib/prisma";
-import { effectiveSoftwareLineId, requireAuth } from "../middleware/auth";
+import { blockReadOnly, effectiveSoftwareLineId, requireAuth } from "../middleware/auth";
 import { logActivity } from "../lib/activity";
 import { emitUpdate } from "../lib/realtime";
 import { upload } from "../lib/upload";
@@ -48,7 +48,7 @@ const updateSchema = z.object({
   dueDate: z.string().datetime().nullable().optional(),
 });
 
-router.patch("/:id", async (req, res) => {
+router.patch("/:id", blockReadOnly, async (req, res) => {
   const existing = await loadTaskInScope(req.params.id, effectiveSoftwareLineId(req.user!));
   if (!existing) {
     return res.status(404).json({ error: "Task not found" });
@@ -107,7 +107,7 @@ router.patch("/:id", async (req, res) => {
   res.json(task);
 });
 
-router.delete("/:id", async (req, res) => {
+router.delete("/:id", blockReadOnly, async (req, res) => {
   const task = await loadTaskInScope(req.params.id, effectiveSoftwareLineId(req.user!));
   if (!task) {
     return res.status(404).json({ error: "Task not found" });
@@ -137,7 +137,7 @@ router.get("/:id/comments", async (req, res) => {
 
 const commentSchema = z.object({ body: z.string().min(1).max(5000) });
 
-router.post("/:id/comments", async (req, res) => {
+router.post("/:id/comments", blockReadOnly, async (req, res) => {
   const task = await loadTaskInScope(req.params.id, effectiveSoftwareLineId(req.user!));
   if (!task) {
     return res.status(404).json({ error: "Task not found" });
@@ -180,7 +180,7 @@ router.get("/:id/attachments", async (req, res) => {
   res.json(attachments);
 });
 
-router.post("/:id/attachments", upload.single("file"), async (req, res) => {
+router.post("/:id/attachments", blockReadOnly, upload.single("file"), async (req, res) => {
   const task = await loadTaskInScope(req.params.id, effectiveSoftwareLineId(req.user!));
   if (!task) {
     return res.status(404).json({ error: "Task not found" });
@@ -229,7 +229,7 @@ router.get("/:id/time-entries", async (req, res) => {
   res.json(entries);
 });
 
-router.post("/:id/time-entries/start", async (req, res) => {
+router.post("/:id/time-entries/start", blockReadOnly, async (req, res) => {
   const task = await loadTaskInScope(req.params.id, effectiveSoftwareLineId(req.user!));
   if (!task) {
     return res.status(404).json({ error: "Task not found" });
@@ -256,7 +256,7 @@ const manualEntrySchema = z.object({
   note: z.string().max(1000).optional(),
 });
 
-router.post("/:id/time-entries", async (req, res) => {
+router.post("/:id/time-entries", blockReadOnly, async (req, res) => {
   const task = await loadTaskInScope(req.params.id, effectiveSoftwareLineId(req.user!));
   if (!task) {
     return res.status(404).json({ error: "Task not found" });

@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { z } from "zod";
 import { prisma } from "../lib/prisma";
-import { effectiveSoftwareLineId, requireAuth } from "../middleware/auth";
+import { blockReadOnly, effectiveSoftwareLineId, requireAuth } from "../middleware/auth";
 import { logActivity } from "../lib/activity";
 import { emitUpdate } from "../lib/realtime";
 import { upload } from "../lib/upload";
@@ -59,7 +59,7 @@ const createSchema = z.object({
   checklistItemIds: z.array(z.string().min(1)).optional(),
 });
 
-router.post("/", async (req, res) => {
+router.post("/", blockReadOnly, async (req, res) => {
   const parsed = createSchema.safeParse(req.body);
   if (!parsed.success) {
     return res.status(400).json({ error: parsed.error.issues[0].message });
@@ -173,7 +173,7 @@ const updateSchema = z.object({
   archived: z.boolean().optional(),
 });
 
-router.patch("/:id", async (req, res) => {
+router.patch("/:id", blockReadOnly, async (req, res) => {
   const project = await loadProjectInScope(req.params.id, effectiveSoftwareLineId(req.user!));
   if (!project) {
     return res.status(404).json({ error: "Project not found" });
@@ -200,7 +200,7 @@ router.patch("/:id", async (req, res) => {
   res.json(updated);
 });
 
-router.delete("/:id", async (req, res) => {
+router.delete("/:id", blockReadOnly, async (req, res) => {
   const project = await loadProjectInScope(req.params.id, effectiveSoftwareLineId(req.user!));
   if (!project) {
     return res.status(404).json({ error: "Project not found" });
@@ -220,7 +220,7 @@ const addMemberSchema = z.object({
   role: z.enum(["OWNER", "MEMBER"]).optional(),
 });
 
-router.post("/:id/members", async (req, res) => {
+router.post("/:id/members", blockReadOnly, async (req, res) => {
   const project = await loadProjectInScope(req.params.id, effectiveSoftwareLineId(req.user!));
   if (!project) {
     return res.status(404).json({ error: "Project not found" });
@@ -252,7 +252,7 @@ router.post("/:id/members", async (req, res) => {
   res.status(201).json(member);
 });
 
-router.delete("/:id/members/:userId", async (req, res) => {
+router.delete("/:id/members/:userId", blockReadOnly, async (req, res) => {
   const project = await loadProjectInScope(req.params.id, effectiveSoftwareLineId(req.user!));
   if (!project) {
     return res.status(404).json({ error: "Project not found" });
@@ -304,7 +304,7 @@ const createSubProjectSchema = z.object({
   name: z.string().max(200).optional(),
 });
 
-router.post("/:id/sub-projects", async (req, res) => {
+router.post("/:id/sub-projects", blockReadOnly, async (req, res) => {
   const lineId = effectiveSoftwareLineId(req.user!);
   const project = await loadProjectInScope(req.params.id, lineId);
   if (!project) {
@@ -348,7 +348,7 @@ router.get("/:id/attachments", async (req, res) => {
   res.json(attachments);
 });
 
-router.post("/:id/attachments", upload.single("file"), async (req, res) => {
+router.post("/:id/attachments", blockReadOnly, upload.single("file"), async (req, res) => {
   const project = await loadProjectInScope(req.params.id, effectiveSoftwareLineId(req.user!));
   if (!project) {
     return res.status(404).json({ error: "Project not found" });

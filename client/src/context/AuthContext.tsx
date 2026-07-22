@@ -6,6 +6,7 @@ import i18n, { LOCALE_TO_I18N_LANGUAGE } from "../i18n";
 interface AuthContextValue {
   user: CurrentUser | null;
   loading: boolean;
+  canWrite: boolean;
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   updateUser: (u: CurrentUser) => void;
@@ -42,8 +43,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
   }
 
+  const canWrite = user?.role !== "READ_ONLY";
+
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout, updateUser: setUser }}>
+    <AuthContext.Provider value={{ user, loading, canWrite, login, logout, updateUser: setUser }}>
       {children}
     </AuthContext.Provider>
   );

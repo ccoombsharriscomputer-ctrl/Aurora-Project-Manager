@@ -1,4 +1,4 @@
-export type UserRole = "ADMIN" | "PROJECT_LEAD" | "MEMBER";
+export type UserRole = "ADMIN" | "PROJECT_LEAD" | "MEMBER" | "READ_ONLY";
 export type ProjectMemberRole = "OWNER" | "MEMBER";
 export type TaskStatus = "TODO" | "IN_PROGRESS" | "DONE";
 export type TaskPriority = "LOW" | "MEDIUM" | "HIGH";

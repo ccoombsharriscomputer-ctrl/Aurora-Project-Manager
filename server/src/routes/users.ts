@@ -34,7 +34,7 @@ const createSchema = z.object({
   name: z.string().min(1).max(100),
   email: z.string().email(),
   password: z.string().min(8).max(200),
-  role: z.enum(["ADMIN", "PROJECT_LEAD", "MEMBER"]).optional(),
+  role: z.enum(["ADMIN", "PROJECT_LEAD", "MEMBER", "READ_ONLY"]).optional(),
   softwareLineId: z.string().min(1),
   accessRequestId: z.string().min(1).optional(),
 });
@@ -119,7 +119,7 @@ const updateSchema = z.object({
   name: z.string().min(1).max(100).optional(),
   email: z.string().email().optional(),
   password: z.string().min(8).max(200).optional(),
-  role: z.enum(["ADMIN", "PROJECT_LEAD", "MEMBER"]).optional(),
+  role: z.enum(["ADMIN", "PROJECT_LEAD", "MEMBER", "READ_ONLY"]).optional(),
   active: z.boolean().optional(),
   softwareLineId: z.string().min(1).optional(),
 });

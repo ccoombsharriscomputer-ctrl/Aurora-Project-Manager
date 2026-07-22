@@ -110,6 +110,7 @@ function CreateUserForm({
             <option value="MEMBER">{t("common.roleMember")}</option>
             <option value="PROJECT_LEAD">{t("common.roleProjectLead")}</option>
             <option value="ADMIN">{t("common.roleAdmin")}</option>
+            <option value="READ_ONLY">{t("common.roleReadOnly")}</option>
           </select>
         </div>
         <div className="field">

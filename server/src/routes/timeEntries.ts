@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { z } from "zod";
 import { prisma } from "../lib/prisma";
-import { requireAuth } from "../middleware/auth";
+import { blockReadOnly, requireAuth } from "../middleware/auth";
 import { logActivity } from "../lib/activity";
 import { emitUpdate } from "../lib/realtime";
 
@@ -18,7 +18,7 @@ router.get("/active", async (req, res) => {
 
 const stopSchema = z.object({ note: z.string().max(1000).optional() });
 
-router.post("/:id/stop", async (req, res) => {
+router.post("/:id/stop", blockReadOnly, async (req, res) => {
   const entry = await prisma.timeEntry.findUnique({ where: { id: req.params.id }, include: { task: true } });
   if (!entry) {
     return res.status(404).json({ error: "Time entry not found" });

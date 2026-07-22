@@ -6,7 +6,7 @@ export interface AuthedUser {
   id: string;
   name: string;
   email: string;
-  role: "ADMIN" | "PROJECT_LEAD" | "MEMBER";
+  role: "ADMIN" | "PROJECT_LEAD" | "MEMBER" | "READ_ONLY";
   theme: "LIGHT" | "DARK" | "SYSTEM";
   accentColor: "BLUE" | "GREEN" | "PURPLE" | "ORANGE" | "RED" | "TEAL";
   locale: "EN" | "ES" | "FR_CA";
@@ -87,6 +87,16 @@ export function requireAdmin(req: Request, res: Response, next: NextFunction) {
 export function requireProjectTypeManager(req: Request, res: Response, next: NextFunction) {
   if (req.user?.role !== "ADMIN" && req.user?.role !== "PROJECT_LEAD") {
     return res.status(403).json({ error: "Admin or Project Lead access required" });
+  }
+  next();
+}
+
+// Blocks every mutating route for READ_ONLY accounts — they can view everything an
+// authenticated user can see, but never create/edit/delete data. Not applied to a user's
+// own account settings (theme/locale/password), since those aren't app data.
+export function blockReadOnly(req: Request, res: Response, next: NextFunction) {
+  if (req.user?.role === "READ_ONLY") {
+    return res.status(403).json({ error: "Read-only accounts can't make changes" });
   }
   next();
 }

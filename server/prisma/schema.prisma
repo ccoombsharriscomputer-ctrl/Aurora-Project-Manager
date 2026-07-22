@@ -11,6 +11,7 @@ enum UserRole {
   ADMIN
   PROJECT_LEAD
   MEMBER
+  READ_ONLY
 }
 
 enum ProjectMemberRole {

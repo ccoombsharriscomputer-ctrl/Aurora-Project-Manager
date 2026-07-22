@@ -5,7 +5,7 @@ import { useTranslation } from "react-i18next";
 import type { TFunction } from "i18next";
 import { api } from "../api/client";
 import type { SubProjectDetail, Task, TaskPriority, UserSummary } from "../api/types";
-import { extractErrorMessage } from "../context/AuthContext";
+import { extractErrorMessage, useAuth } from "../context/AuthContext";
 import { formatDueDate } from "../utils/format";
 
 const COLUMNS: { status: Task["status"]; labelKey: string }[] = [
@@ -22,6 +22,7 @@ function priorityLabel(t: TFunction, priority: TaskPriority): string {
 
 function NewTaskForm({ subProjectId, members }: { subProjectId: string; members: UserSummary[] }) {
   const { t } = useTranslation();
+  const { canWrite } = useAuth();
   const queryClient = useQueryClient();
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -52,6 +53,10 @@ function NewTaskForm({ subProjectId, members }: { subProjectId: string; members:
     },
     onError: (err) => setError(extractErrorMessage(err)),
   });
+
+  if (!canWrite) {
+    return null;
+  }
 
   if (!open) {
     return (
@@ -118,6 +123,7 @@ function NewTaskForm({ subProjectId, members }: { subProjectId: string; members:
 
 export function SubProjectDetailPage() {
   const { t } = useTranslation();
+  const { canWrite } = useAuth();
   const { projectId, subProjectId } = useParams<{ projectId: string; subProjectId: string }>();
   const queryClient = useQueryClient();
 
@@ -177,15 +183,17 @@ export function SubProjectDetailPage() {
                   </div>
                   <div className="task-meta" style={{ marginTop: 6 }}>
                     <span>{formatDueDate(task.dueDate)}</span>
-                    <select
-                      value={task.status}
-                      onChange={(e) => updateStatus.mutate({ taskId: task.id, status: e.target.value as Task["status"] })}
-                      style={{ width: "auto", padding: "2px 4px", fontSize: 12 }}
-                    >
-                      <option value="TODO">{t("common.statusTodo")}</option>
-                      <option value="IN_PROGRESS">{t("common.statusInProgress")}</option>
-                      <option value="DONE">{t("common.statusDone")}</option>
-                    </select>
+                    {canWrite ? (
+                      <select
+                        value={task.status}
+                        onChange={(e) => updateStatus.mutate({ taskId: task.id, status: e.target.value as Task["status"] })}
+                        style={{ width: "auto", padding: "2px 4px", fontSize: 12 }}
+                      >
+                        <option value="TODO">{t("common.statusTodo")}</option>
+                        <option value="IN_PROGRESS">{t("common.statusInProgress")}</option>
+                        <option value="DONE">{t("common.statusDone")}</option>
+                      </select>
+                    ) : null}
                   </div>
                 </div>
               ))}

@@ -4,12 +4,25 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { api } from "../api/client";
 import type { Project, TaskDetail, TaskPriority, TaskStatus, UserSummary } from "../api/types";
-import { extractErrorMessage } from "../context/AuthContext";
+import { extractErrorMessage, useAuth } from "../context/AuthContext";
 import { formatDate, formatMinutes, formatRelativeTime } from "../utils/format";
 import { useActiveTimer } from "../hooks/useActiveTimer";
 
+function statusLabel(t: (key: string) => string, status: TaskStatus): string {
+  if (status === "IN_PROGRESS") return t("common.statusInProgress");
+  if (status === "DONE") return t("common.statusDone");
+  return t("common.statusTodo");
+}
+
+function priorityLabel(t: (key: string) => string, priority: TaskPriority): string {
+  if (priority === "HIGH") return t("common.priorityHigh");
+  if (priority === "LOW") return t("common.priorityLow");
+  return t("common.priorityMedium");
+}
+
 export function TaskDetailPage() {
   const { t } = useTranslation();
+  const { canWrite } = useAuth();
   const { taskId } = useParams<{ taskId: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -130,16 +143,18 @@ export function TaskDetailPage() {
           </Link>
           <h1 style={{ marginTop: 6 }}>{task.title}</h1>
         </div>
-        <button
-          className="btn btn-danger"
-          onClick={() => {
-            if (confirm(t("taskDetail.confirmDeleteTask"))) {
-              deleteTask.mutate();
-            }
-          }}
-        >
-          {t("taskDetail.deleteTask")}
-        </button>
+        {canWrite && (
+          <button
+            className="btn btn-danger"
+            onClick={() => {
+              if (confirm(t("taskDetail.confirmDeleteTask"))) {
+                deleteTask.mutate();
+              }
+            }}
+          >
+            {t("taskDetail.deleteTask")}
+          </button>
+        )}
       </div>
 
       <div className="dashboard-grid">
@@ -149,6 +164,7 @@ export function TaskDetailPage() {
               <label>{t("common.description")}</label>
               <textarea
                 defaultValue={task.description ?? ""}
+                disabled={!canWrite}
                 onBlur={(e) => {
                   if (e.target.value !== (task.description ?? "")) {
                     updateTask.mutate({ description: e.target.value || null });
@@ -169,17 +185,19 @@ export function TaskDetailPage() {
               </div>
             ))}
             {task.comments.length === 0 && <p className="muted">{t("taskDetail.noCommentsYet")}</p>}
-            <form onSubmit={handleCommentSubmit} style={{ marginTop: 12 }}>
-              <textarea
-                placeholder={t("taskDetail.addAComment")}
-                value={commentBody}
-                onChange={(e) => setCommentBody(e.target.value)}
-              />
-              {commentError && <div className="error-text">{commentError}</div>}
-              <button className="btn btn-primary btn-sm" type="submit" disabled={addComment.isPending} style={{ marginTop: 8 }}>
-                {t("taskDetail.comment")}
-              </button>
-            </form>
+            {canWrite && (
+              <form onSubmit={handleCommentSubmit} style={{ marginTop: 12 }}>
+                <textarea
+                  placeholder={t("taskDetail.addAComment")}
+                  value={commentBody}
+                  onChange={(e) => setCommentBody(e.target.value)}
+                />
+                {commentError && <div className="error-text">{commentError}</div>}
+                <button className="btn btn-primary btn-sm" type="submit" disabled={addComment.isPending} style={{ marginTop: 8 }}>
+                  {t("taskDetail.comment")}
+                </button>
+              </form>
+            )}
           </div>
 
           <div className="card" style={{ marginBottom: 16 }}>
@@ -187,9 +205,11 @@ export function TaskDetailPage() {
               <div className="section-title" style={{ marginBottom: 0 }}>
                 {t("projectDetail.attachments")}
               </div>
-              <button className="btn btn-sm" onClick={() => fileInputRef.current?.click()} disabled={uploadAttachment.isPending}>
-                {t("projectDetail.uploadFile")}
-              </button>
+              {canWrite && (
+                <button className="btn btn-sm" onClick={() => fileInputRef.current?.click()} disabled={uploadAttachment.isPending}>
+                  {t("projectDetail.uploadFile")}
+                </button>
+              )}
               <input
                 ref={fileInputRef}
                 type="file"
@@ -217,27 +237,29 @@ export function TaskDetailPage() {
               <div className="section-title" style={{ marginBottom: 0 }}>
                 {t("taskDetail.timeEntries")}
               </div>
-              <div className="gap-8">
-                <button className="btn btn-sm" onClick={() => setShowLogTime((v) => !v)}>
-                  {showLogTime ? t("common.cancel") : t("taskDetail.logTime")}
-                </button>
-                {isTimerRunningHere ? (
-                  <button className="btn btn-sm" onClick={() => stop.mutate(activeTimer!.id)}>
-                    {t("taskDetail.stopTimer")}
+              {canWrite && (
+                <div className="gap-8">
+                  <button className="btn btn-sm" onClick={() => setShowLogTime((v) => !v)}>
+                    {showLogTime ? t("common.cancel") : t("taskDetail.logTime")}
                   </button>
-                ) : (
-                  <button
-                    className="btn btn-primary btn-sm"
-                    onClick={() => startTimer.mutate()}
-                    disabled={isTimerRunningElsewhere || startTimer.isPending}
-                    title={isTimerRunningElsewhere ? t("taskDetail.stopOtherTimerFirst") : undefined}
-                  >
-                    {t("taskDetail.startTimer")}
-                  </button>
-                )}
-              </div>
+                  {isTimerRunningHere ? (
+                    <button className="btn btn-sm" onClick={() => stop.mutate(activeTimer!.id)}>
+                      {t("taskDetail.stopTimer")}
+                    </button>
+                  ) : (
+                    <button
+                      className="btn btn-primary btn-sm"
+                      onClick={() => startTimer.mutate()}
+                      disabled={isTimerRunningElsewhere || startTimer.isPending}
+                      title={isTimerRunningElsewhere ? t("taskDetail.stopOtherTimerFirst") : undefined}
+                    >
+                      {t("taskDetail.startTimer")}
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
-            {showLogTime && (
+            {showLogTime && canWrite && (
               <form
                 style={{ marginTop: 12, marginBottom: 4 }}
                 onSubmit={(e: FormEvent) => {
@@ -292,49 +314,65 @@ export function TaskDetailPage() {
           <div className="section-title">{t("taskDetail.details")}</div>
           <div className="field">
             <label>{t("common.status")}</label>
-            <select
-              value={task.status}
-              onChange={(e) => updateTask.mutate({ status: e.target.value as TaskStatus })}
-            >
-              <option value="TODO">{t("common.statusTodo")}</option>
-              <option value="IN_PROGRESS">{t("common.statusInProgress")}</option>
-              <option value="DONE">{t("common.statusDone")}</option>
-            </select>
+            {canWrite ? (
+              <select
+                value={task.status}
+                onChange={(e) => updateTask.mutate({ status: e.target.value as TaskStatus })}
+              >
+                <option value="TODO">{t("common.statusTodo")}</option>
+                <option value="IN_PROGRESS">{t("common.statusInProgress")}</option>
+                <option value="DONE">{t("common.statusDone")}</option>
+              </select>
+            ) : (
+              <span>{statusLabel(t, task.status)}</span>
+            )}
           </div>
           <div className="field">
             <label>{t("subProjectDetail.priority")}</label>
-            <select
-              value={task.priority}
-              onChange={(e) => updateTask.mutate({ priority: e.target.value as TaskPriority })}
-            >
-              <option value="LOW">{t("common.priorityLow")}</option>
-              <option value="MEDIUM">{t("common.priorityMedium")}</option>
-              <option value="HIGH">{t("common.priorityHigh")}</option>
-            </select>
+            {canWrite ? (
+              <select
+                value={task.priority}
+                onChange={(e) => updateTask.mutate({ priority: e.target.value as TaskPriority })}
+              >
+                <option value="LOW">{t("common.priorityLow")}</option>
+                <option value="MEDIUM">{t("common.priorityMedium")}</option>
+                <option value="HIGH">{t("common.priorityHigh")}</option>
+              </select>
+            ) : (
+              <span>{priorityLabel(t, task.priority)}</span>
+            )}
           </div>
           <div className="field">
             <label>{t("subProjectDetail.assignee")}</label>
-            <select
-              value={task.assignee?.id ?? ""}
-              onChange={(e) => updateTask.mutate({ assigneeId: e.target.value || null })}
-            >
-              <option value="">{t("subProjectDetail.unassigned")}</option>
-              {project?.members.map((m: UserSummary) => (
-                <option key={m.id} value={m.id}>
-                  {m.name}
-                </option>
-              ))}
-            </select>
+            {canWrite ? (
+              <select
+                value={task.assignee?.id ?? ""}
+                onChange={(e) => updateTask.mutate({ assigneeId: e.target.value || null })}
+              >
+                <option value="">{t("subProjectDetail.unassigned")}</option>
+                {project?.members.map((m: UserSummary) => (
+                  <option key={m.id} value={m.id}>
+                    {m.name}
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <span>{task.assignee?.name ?? t("subProjectDetail.unassigned")}</span>
+            )}
           </div>
           <div className="field">
             <label>{t("subProjectDetail.dueDate")}</label>
-            <input
-              type="date"
-              defaultValue={task.dueDate ? task.dueDate.slice(0, 10) : ""}
-              onChange={(e) =>
-                updateTask.mutate({ dueDate: e.target.value ? new Date(e.target.value).toISOString() : null })
-              }
-            />
+            {canWrite ? (
+              <input
+                type="date"
+                defaultValue={task.dueDate ? task.dueDate.slice(0, 10) : ""}
+                onChange={(e) =>
+                  updateTask.mutate({ dueDate: e.target.value ? new Date(e.target.value).toISOString() : null })
+                }
+              />
+            ) : (
+              <span>{formatDate(task.dueDate)}</span>
+            )}
           </div>
           <div className="muted" style={{ fontSize: 12, marginTop: 12 }}>
             {t("taskDetail.createdBy", { name: task.createdBy.name })} · {formatDate(task.createdAt)}

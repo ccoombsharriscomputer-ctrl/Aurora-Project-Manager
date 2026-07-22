@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { z } from "zod";
 import { prisma } from "../lib/prisma";
-import { effectiveSoftwareLineId, requireAuth } from "../middleware/auth";
+import { blockReadOnly, effectiveSoftwareLineId, requireAuth } from "../middleware/auth";
 import { logActivity } from "../lib/activity";
 import { emitUpdate } from "../lib/realtime";
 import { loadSubProjectInScope } from "../lib/scope";
@@ -48,7 +48,7 @@ const updateSchema = z.object({
   name: z.string().max(200).nullable().optional(),
 });
 
-router.patch("/:id", async (req, res) => {
+router.patch("/:id", blockReadOnly, async (req, res) => {
   const subProject = await loadSubProjectInScope(req.params.id, effectiveSoftwareLineId(req.user!));
   if (!subProject) {
     return res.status(404).json({ error: "Sub-project not found" });
@@ -68,7 +68,7 @@ router.patch("/:id", async (req, res) => {
   res.json(updated);
 });
 
-router.delete("/:id", async (req, res) => {
+router.delete("/:id", blockReadOnly, async (req, res) => {
   const subProject = await loadSubProjectInScope(req.params.id, effectiveSoftwareLineId(req.user!));
   if (!subProject) {
     return res.status(404).json({ error: "Sub-project not found" });
@@ -108,7 +108,7 @@ const createTaskSchema = z.object({
   dueDate: z.string().datetime().optional().nullable(),
 });
 
-router.post("/:id/tasks", async (req, res) => {
+router.post("/:id/tasks", blockReadOnly, async (req, res) => {
   const subProject = await loadSubProjectInScope(req.params.id, effectiveSoftwareLineId(req.user!));
   if (!subProject) {
     return res.status(404).json({ error: "Sub-project not found" });
