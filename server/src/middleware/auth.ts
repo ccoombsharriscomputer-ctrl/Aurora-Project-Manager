@@ -17,23 +17,41 @@ declare global {
   }
 }
 
-export async function requireAuth(req: Request, res: Response, next: NextFunction) {
+async function getUserFromRequest(req: Request): Promise<AuthedUser | null> {
   const token = req.cookies?.[COOKIE_NAME];
   if (!token) {
-    return res.status(401).json({ error: "Not authenticated" });
+    return null;
   }
-
   try {
     const { userId } = verifyToken(token);
     const user = await prisma.user.findUnique({ where: { id: userId } });
     if (!user || !user.active) {
-      return res.status(401).json({ error: "Not authenticated" });
+      return null;
     }
-    req.user = { id: user.id, name: user.name, email: user.email, role: user.role };
-    next();
+    return { id: user.id, name: user.name, email: user.email, role: user.role };
   } catch {
+    return null;
+  }
+}
+
+export async function requireAuth(req: Request, res: Response, next: NextFunction) {
+  const user = await getUserFromRequest(req);
+  if (!user) {
     return res.status(401).json({ error: "Not authenticated" });
   }
+  req.user = user;
+  next();
+}
+
+// Populates req.user from a valid cookie if present, but never rejects — for the one
+// endpoint (bootstrap admin creation) that must work both unauthenticated (empty
+// database) and authenticated (normal admin-creates-user case).
+export async function attachUserIfPresent(req: Request, _res: Response, next: NextFunction) {
+  const user = await getUserFromRequest(req);
+  if (user) {
+    req.user = user;
+  }
+  next();
 }
 
 export function requireAdmin(req: Request, res: Response, next: NextFunction) {

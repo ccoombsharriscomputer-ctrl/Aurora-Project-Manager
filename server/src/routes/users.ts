@@ -1,16 +1,14 @@
 import { Router } from "express";
 import { z } from "zod";
 import { prisma } from "../lib/prisma";
-import { requireAdmin, requireAuth } from "../middleware/auth";
+import { attachUserIfPresent, requireAdmin, requireAuth } from "../middleware/auth";
 import { emitUpdate } from "../lib/realtime";
 import { hashPassword } from "../lib/auth";
 
 const router = Router();
 
-router.use(requireAuth);
-
 // Any authenticated user can list users (needed for assignee/member pickers).
-router.get("/", async (_req, res) => {
+router.get("/", requireAuth, async (_req, res) => {
   const users = await prisma.user.findMany({
     select: { id: true, name: true, email: true, role: true, active: true, createdAt: true },
     orderBy: { name: "asc" },
@@ -34,7 +32,12 @@ class HttpError extends Error {
   }
 }
 
-router.post("/", requireAdmin, async (req, res) => {
+// Normally admin-only, but if the database has zero users at all there's no admin who
+// could possibly authorize this — so this one route allows an unauthenticated caller
+// through ONLY in that bootstrap case (checked again inside the transaction, below, to
+// close the race between an outer check and the actual insert). The moment any user
+// exists, this door closes and every request must be an authenticated admin.
+router.post("/", attachUserIfPresent, async (req, res) => {
   const parsed = createSchema.safeParse(req.body);
   if (!parsed.success) {
     return res.status(400).json({ error: parsed.error.issues[0].message });
@@ -43,10 +46,20 @@ router.post("/", requireAdmin, async (req, res) => {
 
   try {
     const user = await prisma.$transaction(async (tx) => {
-      if (accessRequestId) {
+      const isBootstrap = (await tx.user.count()) === 0;
+      if (!isBootstrap) {
+        if (!req.user) {
+          throw new HttpError(401, "Not authenticated");
+        }
+        if (req.user.role !== "ADMIN") {
+          throw new HttpError(403, "Admin access required");
+        }
+      }
+
+      if (accessRequestId && req.user) {
         const resolved = await tx.accessRequest.updateMany({
           where: { id: accessRequestId, status: "PENDING" },
-          data: { status: "APPROVED", decidedById: req.user!.id, decidedAt: new Date() },
+          data: { status: "APPROVED", decidedById: req.user.id, decidedAt: new Date() },
         });
         if (resolved.count === 0) {
           throw new HttpError(400, "This access request has already been resolved");
@@ -60,7 +73,7 @@ router.post("/", requireAdmin, async (req, res) => {
 
       const passwordHash = await hashPassword(password);
       return tx.user.create({
-        data: { name, email, passwordHash, role: role ?? "MEMBER" },
+        data: { name, email, passwordHash, role: isBootstrap ? "ADMIN" : role ?? "MEMBER" },
         select: { id: true, name: true, email: true, role: true, active: true, createdAt: true },
       });
     });
@@ -81,7 +94,7 @@ const updateSchema = z.object({
   active: z.boolean().optional(),
 });
 
-router.patch("/:id", requireAdmin, async (req, res) => {
+router.patch("/:id", requireAuth, requireAdmin, async (req, res) => {
   const parsed = updateSchema.safeParse(req.body);
   if (!parsed.success) {
     return res.status(400).json({ error: parsed.error.issues[0].message });
@@ -99,7 +112,7 @@ router.patch("/:id", requireAdmin, async (req, res) => {
   res.json(user);
 });
 
-router.delete("/:id", requireAdmin, async (req, res) => {
+router.delete("/:id", requireAuth, requireAdmin, async (req, res) => {
   if (req.params.id === req.user!.id) {
     return res.status(400).json({ error: "You cannot delete your own account" });
   }
