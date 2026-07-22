@@ -9,7 +9,8 @@ export type UpdateScope =
   | { scope: "task"; taskId: string }
   | { scope: "users" }
   | { scope: "project-types" }
-  | { scope: "modules" };
+  | { scope: "modules" }
+  | { scope: "access-requests" };
 
 let io: Server | null = null;
 

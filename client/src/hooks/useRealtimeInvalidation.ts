@@ -10,7 +10,8 @@ type UpdatePayload =
   | { scope: "task"; taskId: string }
   | { scope: "users" }
   | { scope: "project-types" }
-  | { scope: "modules" };
+  | { scope: "modules" }
+  | { scope: "access-requests" };
 
 export function useRealtimeInvalidation() {
   const queryClient = useQueryClient();
@@ -44,6 +45,9 @@ export function useRealtimeInvalidation() {
         case "modules":
           queryClient.invalidateQueries({ queryKey: ["checklist-items"] });
           queryClient.invalidateQueries({ queryKey: ["task-templates"] });
+          break;
+        case "access-requests":
+          queryClient.invalidateQueries({ queryKey: ["access-requests"] });
           break;
       }
     }

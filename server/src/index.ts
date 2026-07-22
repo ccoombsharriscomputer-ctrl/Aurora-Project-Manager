@@ -6,6 +6,7 @@ import cors from "cors";
 import cookieParser from "cookie-parser";
 
 import authRoutes from "./routes/auth";
+import accessRequestRoutes from "./routes/accessRequests";
 import userRoutes from "./routes/users";
 import projectRoutes from "./routes/projects";
 import projectTypeRoutes from "./routes/projectTypes";
@@ -32,6 +33,7 @@ app.use(express.json());
 app.use(cookieParser());
 
 app.use("/api/auth", authRoutes);
+app.use("/api/access-requests", accessRequestRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/projects", projectRoutes);
 app.use("/api/project-types", projectTypeRoutes);

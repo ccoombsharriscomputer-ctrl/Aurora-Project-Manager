@@ -1,11 +1,23 @@
-import { Fragment, useState, type FormEvent } from "react";
+import { Fragment, useEffect, useState, type FormEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../api/client";
-import type { AdminUser, UserRole } from "../api/types";
+import type { AccessRequest, AdminUser, UserRole } from "../api/types";
 import { extractErrorMessage, useAuth } from "../context/AuthContext";
 import { formatDate } from "../utils/format";
 
-function CreateUserForm() {
+interface CreateUserPrefill {
+  accessRequestId: string;
+  name: string;
+  email: string;
+}
+
+function CreateUserForm({
+  prefill,
+  onDone,
+}: {
+  prefill: CreateUserPrefill | null;
+  onDone: () => void;
+}) {
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
@@ -14,16 +26,34 @@ function CreateUserForm() {
   const [role, setRole] = useState<UserRole>("MEMBER");
   const [error, setError] = useState<string | null>(null);
 
+  useEffect(() => {
+    if (prefill) {
+      setOpen(true);
+      setName(prefill.name);
+      setEmail(prefill.email);
+      setError(null);
+    }
+  }, [prefill]);
+
   const createUser = useMutation({
-    mutationFn: () => api.post<AdminUser>("/users", { name, email, password, role }),
+    mutationFn: () =>
+      api.post<AdminUser>("/users", {
+        name,
+        email,
+        password,
+        role,
+        accessRequestId: prefill?.accessRequestId,
+      }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["users"] });
+      if (prefill) queryClient.invalidateQueries({ queryKey: ["access-requests"] });
       setName("");
       setEmail("");
       setPassword("");
       setRole("MEMBER");
       setOpen(false);
       setError(null);
+      onDone();
     },
     onError: (err) => setError(extractErrorMessage(err)),
   });
@@ -78,7 +108,14 @@ function CreateUserForm() {
         <button className="btn btn-primary" type="submit" disabled={createUser.isPending}>
           Create user
         </button>
-        <button className="btn" type="button" onClick={() => setOpen(false)}>
+        <button
+          className="btn"
+          type="button"
+          onClick={() => {
+            setOpen(false);
+            onDone();
+          }}
+        >
           Cancel
         </button>
       </div>
@@ -86,10 +123,71 @@ function CreateUserForm() {
   );
 }
 
+function PendingAccessRequests({
+  onApprove,
+}: {
+  onApprove: (prefill: CreateUserPrefill) => void;
+}) {
+  const queryClient = useQueryClient();
+  const [denyErrors, setDenyErrors] = useState<Record<string, string>>({});
+
+  const { data: requests } = useQuery({
+    queryKey: ["access-requests"],
+    queryFn: () => api.get<AccessRequest[]>("/access-requests"),
+  });
+
+  const deny = useMutation({
+    mutationFn: (id: string) => api.post(`/access-requests/${id}/deny`),
+    onSuccess: (_data, id) => {
+      queryClient.invalidateQueries({ queryKey: ["access-requests"] });
+      setDenyErrors((prev) => {
+        const next = { ...prev };
+        delete next[id];
+        return next;
+      });
+    },
+    onError: (err, id) => setDenyErrors((prev) => ({ ...prev, [id]: extractErrorMessage(err) })),
+  });
+
+  if (!requests || requests.length === 0) {
+    return null;
+  }
+
+  return (
+    <div className="card" style={{ marginBottom: 20 }}>
+      <div className="section-title">Pending access requests</div>
+      {requests.map((r) => (
+        <div key={r.id}>
+          <div className="task-list-item">
+            <span>
+              {r.name} <span className="muted">({r.email})</span>
+              {r.message && <span className="muted"> — {r.message}</span>}
+            </span>
+            <span className="gap-8">
+              <span className="muted">{formatDate(r.createdAt)}</span>
+              <button
+                className="btn btn-sm btn-primary"
+                onClick={() => onApprove({ accessRequestId: r.id, name: r.name, email: r.email })}
+              >
+                Approve
+              </button>
+              <button className="btn btn-sm btn-danger" onClick={() => deny.mutate(r.id)}>
+                Deny
+              </button>
+            </span>
+          </div>
+          {denyErrors[r.id] && <div className="error-text">{denyErrors[r.id]}</div>}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export function AdminUsersPage() {
   const { user: me } = useAuth();
   const queryClient = useQueryClient();
   const [deleteErrors, setDeleteErrors] = useState<Record<string, string>>({});
+  const [prefill, setPrefill] = useState<CreateUserPrefill | null>(null);
 
   const { data: users, isLoading } = useQuery({
     queryKey: ["users"],
@@ -123,8 +221,9 @@ export function AdminUsersPage() {
     <div>
       <div className="page-header">
         <h1>Users</h1>
-        <CreateUserForm />
+        <CreateUserForm prefill={prefill} onDone={() => setPrefill(null)} />
       </div>
+      <PendingAccessRequests onApprove={setPrefill} />
       <div className="card">
         <table className="table">
           <thead>

@@ -30,6 +30,16 @@ export interface AdminUser extends UserSummary {
   createdAt: string;
 }
 
+export interface AccessRequest {
+  id: string;
+  name: string;
+  email: string;
+  message: string | null;
+  status: "PENDING" | "APPROVED" | "DENIED";
+  createdAt: string;
+  decidedAt: string | null;
+}
+
 export interface ProjectMember extends UserSummary {
   role: ProjectMemberRole;
 }

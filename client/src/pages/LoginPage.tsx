@@ -54,7 +54,7 @@ export function LoginPage() {
           </button>
         </form>
         <p style={{ marginTop: 16, fontSize: 13 }}>
-          No account yet? <Link to="/register">Register</Link>
+          Need access? <Link to="/request-access">Request an account</Link>
         </p>
       </div>
     </div>

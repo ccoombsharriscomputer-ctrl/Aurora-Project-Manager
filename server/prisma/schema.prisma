@@ -40,6 +40,12 @@ enum ActivityType {
   TIME_LOGGED
 }
 
+enum AccessRequestStatus {
+  PENDING
+  APPROVED
+  DENIED
+}
+
 model User {
   id           String   @id @default(cuid())
   name         String
@@ -61,6 +67,7 @@ model User {
   createdSubProjects  SubProject[]
   createdChecklistItems ChecklistItem[]
   createdTaskTemplates  TaskTemplate[]
+  decidedAccessRequests AccessRequest[]
 }
 
 model Project {
@@ -221,4 +228,18 @@ model Activity {
   taskId    String?
   task      Task?        @relation(fields: [taskId], references: [id], onDelete: Cascade)
   createdAt DateTime     @default(now())
+}
+
+model AccessRequest {
+  id          String              @id @default(cuid())
+  name        String
+  email       String
+  message     String?
+  status      AccessRequestStatus @default(PENDING)
+  createdAt   DateTime            @default(now())
+  decidedAt   DateTime?
+  decidedById String?
+  decidedBy   User?               @relation(fields: [decidedById], references: [id], onDelete: SetNull)
+
+  @@index([status])
 }

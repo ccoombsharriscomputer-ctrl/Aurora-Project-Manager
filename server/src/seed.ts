@@ -3,7 +3,7 @@ import { prisma } from "./lib/prisma";
 async function main() {
   const userCount = await prisma.user.count();
   if (userCount === 0) {
-    console.log("No users yet — register through the app first, then re-run the seed if you want demo data.");
+    console.log("No users yet — create the first admin directly in the database (e.g. via Prisma Studio or psql), then re-run the seed if you want demo data.");
     return;
   }
 

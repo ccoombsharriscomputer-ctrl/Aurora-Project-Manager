@@ -1,39 +1,50 @@
 import { useState, type FormEvent } from "react";
-import { Link, Navigate, useNavigate } from "react-router-dom";
-import { useAuth, extractErrorMessage } from "../context/AuthContext";
+import { Link } from "react-router-dom";
+import { api, ApiError } from "../api/client";
 
-export function RegisterPage() {
-  const { user, register } = useAuth();
-  const navigate = useNavigate();
+export function RequestAccessPage() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const [message, setMessage] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
-
-  if (user) {
-    return <Navigate to="/dashboard" replace />;
-  }
+  const [submitted, setSubmitted] = useState(false);
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setError(null);
     setSubmitting(true);
     try {
-      await register(name, email, password);
-      navigate("/dashboard");
+      await api.post("/access-requests", { name, email, message: message || undefined });
+      setSubmitted(true);
     } catch (err) {
-      setError(extractErrorMessage(err));
+      setError(err instanceof ApiError ? err.message : "Something went wrong");
     } finally {
       setSubmitting(false);
     }
   }
 
+  if (submitted) {
+    return (
+      <div className="auth-page">
+        <div className="card auth-card">
+          <h1>Request received</h1>
+          <div className="subtitle">
+            Thanks — an admin will review your request and reach out if you're granted access.
+          </div>
+          <p style={{ marginTop: 16, fontSize: 13 }}>
+            <Link to="/login">Back to log in</Link>
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="auth-page">
       <div className="card auth-card">
-        <h1>Create your account</h1>
-        <div className="subtitle">Join the team on Aurora Project Manager</div>
+        <h1>Request access</h1>
+        <div className="subtitle">Ask an admin to set up an account for you on Aurora Project Manager</div>
         <form onSubmit={handleSubmit}>
           <div className="field">
             <label htmlFor="name">Name</label>
@@ -44,19 +55,12 @@ export function RegisterPage() {
             <input id="email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
           </div>
           <div className="field">
-            <label htmlFor="password">Password</label>
-            <input
-              id="password"
-              type="password"
-              required
-              minLength={8}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-            />
+            <label htmlFor="message">Message (optional)</label>
+            <textarea id="message" value={message} onChange={(e) => setMessage(e.target.value)} />
           </div>
           {error && <div className="error-text">{error}</div>}
           <button className="btn btn-primary" type="submit" disabled={submitting} style={{ width: "100%" }}>
-            {submitting ? "Creating account…" : "Create account"}
+            {submitting ? "Sending…" : "Request access"}
           </button>
         </form>
         <p style={{ marginTop: 16, fontSize: 13 }}>

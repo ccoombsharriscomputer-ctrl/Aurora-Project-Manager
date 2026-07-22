@@ -23,28 +23,57 @@ const createSchema = z.object({
   email: z.string().email(),
   password: z.string().min(8).max(200),
   role: z.enum(["ADMIN", "PROJECT_LEAD", "MEMBER"]).optional(),
+  accessRequestId: z.string().min(1).optional(),
 });
+
+class HttpError extends Error {
+  status: number;
+  constructor(status: number, message: string) {
+    super(message);
+    this.status = status;
+  }
+}
 
 router.post("/", requireAdmin, async (req, res) => {
   const parsed = createSchema.safeParse(req.body);
   if (!parsed.success) {
     return res.status(400).json({ error: parsed.error.issues[0].message });
   }
-  const { name, email, password, role } = parsed.data;
+  const { name, email, password, role, accessRequestId } = parsed.data;
 
-  const existing = await prisma.user.findUnique({ where: { email } });
-  if (existing) {
-    return res.status(409).json({ error: "An account with that email already exists" });
+  try {
+    const user = await prisma.$transaction(async (tx) => {
+      if (accessRequestId) {
+        const resolved = await tx.accessRequest.updateMany({
+          where: { id: accessRequestId, status: "PENDING" },
+          data: { status: "APPROVED", decidedById: req.user!.id, decidedAt: new Date() },
+        });
+        if (resolved.count === 0) {
+          throw new HttpError(400, "This access request has already been resolved");
+        }
+      }
+
+      const existing = await tx.user.findUnique({ where: { email } });
+      if (existing) {
+        throw new HttpError(409, "An account with that email already exists");
+      }
+
+      const passwordHash = await hashPassword(password);
+      return tx.user.create({
+        data: { name, email, passwordHash, role: role ?? "MEMBER" },
+        select: { id: true, name: true, email: true, role: true, active: true, createdAt: true },
+      });
+    });
+
+    emitUpdate({ scope: "users" });
+    if (accessRequestId) emitUpdate({ scope: "access-requests" });
+    res.status(201).json(user);
+  } catch (err) {
+    if (err instanceof HttpError) {
+      return res.status(err.status).json({ error: err.message });
+    }
+    throw err;
   }
-
-  const passwordHash = await hashPassword(password);
-  const user = await prisma.user.create({
-    data: { name, email, passwordHash, role: role ?? "MEMBER" },
-    select: { id: true, name: true, email: true, role: true, active: true, createdAt: true },
-  });
-
-  emitUpdate({ scope: "users" });
-  res.status(201).json(user);
 });
 
 const updateSchema = z.object({
