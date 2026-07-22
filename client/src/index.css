@@ -443,6 +443,12 @@ label {
   color: var(--danger);
 }
 
+.badge-archived {
+  background: var(--bg);
+  color: var(--muted);
+  flex-shrink: 0;
+}
+
 .project-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));

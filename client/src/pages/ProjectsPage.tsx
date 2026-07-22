@@ -9,9 +9,10 @@ import { extractErrorMessage } from "../context/AuthContext";
 export function ProjectsPage() {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
+  const [showArchived, setShowArchived] = useState(false);
   const { data: projects, isLoading } = useQuery({
-    queryKey: ["projects"],
-    queryFn: () => api.get<Project[]>("/projects"),
+    queryKey: ["projects", showArchived],
+    queryFn: () => api.get<Project[]>(`/projects${showArchived ? "?includeArchived=true" : ""}`),
   });
 
   const { data: projectTypes } = useQuery({
@@ -72,9 +73,15 @@ export function ProjectsPage() {
     <div>
       <div className="page-header">
         <h1>{t("layout.projects")}</h1>
-        <button className="btn btn-primary" onClick={() => setShowForm((v) => !v)}>
-          {showForm ? t("common.cancel") : t("projects.newProject")}
-        </button>
+        <div className="gap-8">
+          <label className="gap-8" style={{ cursor: "pointer" }}>
+            <input type="checkbox" checked={showArchived} onChange={(e) => setShowArchived(e.target.checked)} />
+            <span>{t("projects.showArchived")}</span>
+          </label>
+          <button className="btn btn-primary" onClick={() => setShowForm((v) => !v)}>
+            {showForm ? t("common.cancel") : t("projects.newProject")}
+          </button>
+        </div>
       </div>
 
       {showForm && (
@@ -150,7 +157,10 @@ export function ProjectsPage() {
           const percent = p.totalTasks === 0 ? 0 : Math.round((p.doneTasks / p.totalTasks) * 100);
           return (
             <Link key={p.id} to={`/projects/${p.id}`} className="card project-card">
-              <h3>{p.name}</h3>
+              <div className="flex-between">
+                <h3>{p.name}</h3>
+                {p.archivedAt && <span className="badge badge-archived">{t("projects.archived")}</span>}
+              </div>
               <p className="muted" style={{ fontSize: 12, margin: "-4px 0 8px" }}>
                 {p.projectType.name}
               </p>

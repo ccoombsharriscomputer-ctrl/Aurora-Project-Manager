@@ -67,6 +67,7 @@ export interface Project {
   projectType: { id: string; name: string };
   createdBy: UserSummary;
   createdAt: string;
+  archivedAt: string | null;
   members: ProjectMember[];
   totalTasks: number;
   doneTasks: number;

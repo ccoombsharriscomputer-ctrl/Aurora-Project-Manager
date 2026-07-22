@@ -12,9 +12,14 @@ const router = Router();
 router.use(requireAuth);
 
 // All authenticated users can see every project in their (effective) software line.
+// Archived projects are hidden by default; ?includeArchived=true adds them back in.
 router.get("/", async (req, res) => {
+  const includeArchived = req.query.includeArchived === "true";
   const projects = await prisma.project.findMany({
-    where: { softwareLineId: effectiveSoftwareLineId(req.user!) },
+    where: {
+      softwareLineId: effectiveSoftwareLineId(req.user!),
+      ...(includeArchived ? {} : { archivedAt: null }),
+    },
     orderBy: { createdAt: "desc" },
     include: {
       createdBy: { select: { id: true, name: true } },
@@ -35,6 +40,7 @@ router.get("/", async (req, res) => {
         projectType: p.projectType,
         createdBy: p.createdBy,
         createdAt: p.createdAt,
+        archivedAt: p.archivedAt,
         members: p.members.map((m) => ({ ...m.user, role: m.role })),
         totalTasks: p._count.tasks,
         doneTasks: doneCount,
@@ -164,6 +170,7 @@ const updateSchema = z.object({
   name: z.string().min(1).max(200).optional(),
   description: z.string().max(2000).nullable().optional(),
   teamSupportTicketNumber: z.string().max(50).nullable().optional(),
+  archived: z.boolean().optional(),
 });
 
 router.patch("/:id", async (req, res) => {
@@ -180,9 +187,16 @@ router.patch("/:id", async (req, res) => {
     return res.status(400).json({ error: parsed.error.issues[0].message });
   }
 
-  const updated = await prisma.project.update({ where: { id: req.params.id }, data: parsed.data });
+  const { archived, ...rest } = parsed.data;
+  const data: Record<string, unknown> = { ...rest };
+  if (archived !== undefined) {
+    data.archivedAt = archived ? new Date() : null;
+  }
+
+  const updated = await prisma.project.update({ where: { id: req.params.id }, data });
   emitUpdate({ scope: "project", projectId: updated.id });
   emitUpdate({ scope: "projects" });
+  emitUpdate({ scope: "dashboard" });
   res.json(updated);
 });
 

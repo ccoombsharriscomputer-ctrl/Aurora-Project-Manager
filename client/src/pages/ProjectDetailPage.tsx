@@ -252,7 +252,10 @@ export function ProjectDetailPage() {
     <div>
       <div className="page-header">
         <div>
-          <h1>{project.name}</h1>
+          <div className="gap-8">
+            <h1 style={{ margin: 0 }}>{project.name}</h1>
+            {project.archivedAt && <span className="badge badge-archived">{t("projects.archived")}</span>}
+          </div>
           <p className="muted" style={{ margin: "4px 0 0" }}>
             {project.projectType.name}
             {project.description ? ` · ${project.description}` : ""}
@@ -278,6 +281,15 @@ export function ProjectDetailPage() {
         </div>
         <div className="gap-8">
           <NewSubProjectForm projectId={project.id} />
+          {canManage && (
+            <button
+              className="btn"
+              onClick={() => updateProject.mutate({ archived: !project.archivedAt })}
+              disabled={updateProject.isPending}
+            >
+              {project.archivedAt ? t("projectDetail.unarchiveProject") : t("projectDetail.archiveProject")}
+            </button>
+          )}
           {canManage && (
             <button
               className="btn btn-danger"

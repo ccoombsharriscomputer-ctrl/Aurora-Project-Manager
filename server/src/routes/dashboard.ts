@@ -8,7 +8,8 @@ router.use(requireAuth);
 router.get("/summary", async (req, res) => {
   const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
   const lineId = effectiveSoftwareLineId(req.user!);
-  const inLine = { project: { softwareLineId: lineId } };
+  // Archived projects drop out of every "what's active right now" view.
+  const inLine = { project: { softwareLineId: lineId, archivedAt: null } };
 
   const [
     totalProjects,
@@ -20,7 +21,7 @@ router.get("/summary", async (req, res) => {
     myTasks,
     recentActivity,
   ] = await Promise.all([
-    prisma.project.count({ where: { softwareLineId: lineId } }),
+    prisma.project.count({ where: { softwareLineId: lineId, archivedAt: null } }),
     prisma.task.count({ where: { status: { not: "DONE" }, ...inLine } }),
     prisma.task.count({ where: { status: "DONE", updatedAt: { gte: weekAgo }, ...inLine } }),
     prisma.timeEntry.findMany({
@@ -28,7 +29,7 @@ router.get("/summary", async (req, res) => {
       select: { durationMinutes: true },
     }),
     prisma.task.groupBy({ by: ["status"], _count: { status: true }, where: inLine }),
-    prisma.project.findMany({ where: { softwareLineId: lineId }, select: { id: true, name: true } }),
+    prisma.project.findMany({ where: { softwareLineId: lineId, archivedAt: null }, select: { id: true, name: true } }),
     prisma.task.findMany({
       where: { assigneeId: req.user!.id, status: { not: "DONE" }, ...inLine },
       orderBy: [{ dueDate: "asc" }, { createdAt: "asc" }],

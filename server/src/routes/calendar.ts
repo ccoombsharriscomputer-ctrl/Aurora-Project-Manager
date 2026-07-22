@@ -22,7 +22,7 @@ router.get("/", async (req, res) => {
     where: {
       status: { not: "DONE" },
       dueDate: { gte: new Date(start), lte: new Date(end) },
-      project: { softwareLineId: effectiveSoftwareLineId(req.user!) },
+      project: { softwareLineId: effectiveSoftwareLineId(req.user!), archivedAt: null },
     },
     orderBy: { dueDate: "asc" },
     include: {

@@ -123,6 +123,7 @@ model Project {
   createdById            String
   createdBy              User        @relation("ProjectCreatedBy", fields: [createdById], references: [id])
   createdAt              DateTime    @default(now())
+  archivedAt             DateTime?
 
   members    ProjectMember[]
   tasks      Task[]

@@ -94,10 +94,14 @@
     "noProjectsYet": "Aún no hay proyectos — crea el primero.",
     "noDescription": "Sin descripción",
     "memberCount_one": "{{count}} miembro",
-    "memberCount_other": "{{count}} miembros"
+    "memberCount_other": "{{count}} miembros",
+    "showArchived": "Mostrar proyectos archivados",
+    "archived": "Archivado"
   },
   "projectDetail": {
     "newSubProject": "Nuevo subproyecto",
+    "archiveProject": "Archivar proyecto",
+    "unarchiveProject": "Desarchivar proyecto",
     "product": "Producto",
     "selectProduct": "Selecciona un producto…",
     "noProductsInCatalog": "Aún no hay productos en el catálogo — añade uno en la página de Productos.",
