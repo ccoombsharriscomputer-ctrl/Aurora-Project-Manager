@@ -93,10 +93,6 @@ export function DashboardPage() {
         </div>
       </div>
 
-      <div style={{ marginBottom: 20 }}>
-        <DeadlinesCalendar />
-      </div>
-
       <div className="dashboard-grid">
         <div>
           <div className="card" style={{ marginBottom: 20 }}>
@@ -141,6 +137,10 @@ export function DashboardPage() {
             </div>
           ))}
         </div>
+      </div>
+
+      <div style={{ marginTop: 20 }}>
+        <DeadlinesCalendar />
       </div>
     </div>
   );
