@@ -70,7 +70,7 @@ function TaskPill({ task }: { task: Task }) {
 
 export function DeadlinesCalendar() {
   const { t } = useTranslation();
-  const [view, setView] = useState<ViewMode>("month");
+  const [view, setView] = useState<ViewMode>("week");
   const [cursor, setCursor] = useState(() => startOfDay(new Date()));
 
   const days = useMemo(() => {
