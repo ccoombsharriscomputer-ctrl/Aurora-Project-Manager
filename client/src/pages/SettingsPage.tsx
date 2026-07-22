@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type FormEvent } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { api } from "../api/client";
@@ -14,6 +14,79 @@ const ACCENT_SWATCH_COLOR: Record<AccentColor, string> = {
   RED: "#d64545",
   TEAL: "#0d9488",
 };
+
+function ChangePasswordCard() {
+  const { t } = useTranslation();
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [saved, setSaved] = useState(false);
+
+  const changePassword = useMutation({
+    mutationFn: () => api.patch("/auth/password", { currentPassword, newPassword }),
+    onSuccess: () => {
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+      setError(null);
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2000);
+    },
+    onError: (err) => setError(extractErrorMessage(err)),
+  });
+
+  function handleSubmit(e: FormEvent) {
+    e.preventDefault();
+    if (newPassword !== confirmPassword) {
+      setError(t("settings.passwordsDoNotMatch"));
+      return;
+    }
+    changePassword.mutate();
+  }
+
+  return (
+    <form className="card" style={{ maxWidth: 480 }} onSubmit={handleSubmit}>
+      <div className="section-title">{t("settings.changePassword")}</div>
+      <div className="field">
+        <label>{t("settings.currentPassword")}</label>
+        <input
+          type="password"
+          required
+          value={currentPassword}
+          onChange={(e) => setCurrentPassword(e.target.value)}
+        />
+      </div>
+      <div className="field">
+        <label>{t("settings.newPassword")}</label>
+        <input
+          type="password"
+          required
+          minLength={8}
+          value={newPassword}
+          onChange={(e) => setNewPassword(e.target.value)}
+        />
+      </div>
+      <div className="field">
+        <label>{t("settings.confirmNewPassword")}</label>
+        <input
+          type="password"
+          required
+          minLength={8}
+          value={confirmPassword}
+          onChange={(e) => setConfirmPassword(e.target.value)}
+        />
+      </div>
+      {error && <div className="error-text">{error}</div>}
+      <div className="gap-8">
+        <button className="btn btn-primary" type="submit" disabled={changePassword.isPending}>
+          {t("common.save")}
+        </button>
+        {saved && <span className="muted">{t("settings.saved")}</span>}
+      </div>
+    </form>
+  );
+}
 
 export function SettingsPage() {
   const { t } = useTranslation();
@@ -93,6 +166,8 @@ export function SettingsPage() {
           {saved && <span className="muted">{t("settings.saved")}</span>}
         </div>
       </div>
+
+      <ChangePasswordCard />
     </div>
   );
 }

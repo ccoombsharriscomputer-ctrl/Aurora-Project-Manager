@@ -225,6 +225,11 @@
     "accentRed": "Rouge",
     "accentTeal": "Sarcelle",
     "language": "Langue",
-    "saved": "Enregistré!"
+    "saved": "Enregistré!",
+    "changePassword": "Changer le mot de passe",
+    "currentPassword": "Mot de passe actuel",
+    "newPassword": "Nouveau mot de passe",
+    "confirmNewPassword": "Confirmer le nouveau mot de passe",
+    "passwordsDoNotMatch": "Le nouveau mot de passe et la confirmation ne correspondent pas"
   }
 }

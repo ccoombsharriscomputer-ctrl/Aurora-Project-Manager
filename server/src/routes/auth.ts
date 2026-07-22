@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { z } from "zod";
 import { prisma } from "../lib/prisma";
-import { COOKIE_NAME, comparePassword, signToken } from "../lib/auth";
+import { COOKIE_NAME, comparePassword, hashPassword, signToken } from "../lib/auth";
 import { requireAdmin, requireAuth } from "../middleware/auth";
 
 const router = Router();
@@ -87,6 +87,28 @@ router.patch("/me", requireAuth, async (req, res) => {
     },
   });
   res.json(user);
+});
+
+const changePasswordSchema = z.object({
+  currentPassword: z.string().min(1),
+  newPassword: z.string().min(8).max(200),
+});
+
+router.patch("/password", requireAuth, async (req, res) => {
+  const parsed = changePasswordSchema.safeParse(req.body);
+  if (!parsed.success) {
+    return res.status(400).json({ error: parsed.error.issues[0].message });
+  }
+
+  const user = await prisma.user.findUnique({ where: { id: req.user!.id } });
+  const valid = user && (await comparePassword(parsed.data.currentPassword, user.passwordHash));
+  if (!valid) {
+    return res.status(401).json({ error: "Current password is incorrect" });
+  }
+
+  const passwordHash = await hashPassword(parsed.data.newPassword);
+  await prisma.user.update({ where: { id: req.user!.id }, data: { passwordHash } });
+  res.status(204).send();
 });
 
 const updateActiveLineSchema = z.object({

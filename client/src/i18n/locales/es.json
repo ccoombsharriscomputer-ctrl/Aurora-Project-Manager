@@ -225,6 +225,11 @@
     "accentRed": "Rojo",
     "accentTeal": "Turquesa",
     "language": "Idioma",
-    "saved": "¡Guardado!"
+    "saved": "¡Guardado!",
+    "changePassword": "Cambiar contraseña",
+    "currentPassword": "Contraseña actual",
+    "newPassword": "Nueva contraseña",
+    "confirmNewPassword": "Confirmar nueva contraseña",
+    "passwordsDoNotMatch": "La nueva contraseña y la confirmación no coinciden"
   }
 }

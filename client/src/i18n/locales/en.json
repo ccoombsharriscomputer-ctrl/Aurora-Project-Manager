@@ -225,6 +225,11 @@
     "accentRed": "Red",
     "accentTeal": "Teal",
     "language": "Language",
-    "saved": "Saved!"
+    "saved": "Saved!",
+    "changePassword": "Change password",
+    "currentPassword": "Current password",
+    "newPassword": "New password",
+    "confirmNewPassword": "Confirm new password",
+    "passwordsDoNotMatch": "New password and confirmation don't match"
   }
 }
