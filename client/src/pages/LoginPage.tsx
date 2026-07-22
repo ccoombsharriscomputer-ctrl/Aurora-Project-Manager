@@ -33,6 +33,7 @@ export function LoginPage() {
   return (
     <div className="auth-page">
       <div className="card auth-card">
+        <img src="/logo.png" alt="" className="auth-logo" />
         <h1>{t("login.title")}</h1>
         <div className="subtitle">{t("login.subtitle")}</div>
         <form onSubmit={handleSubmit}>

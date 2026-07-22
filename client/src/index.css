@@ -127,10 +127,20 @@ select {
 }
 
 .sidebar-brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   font-weight: 700;
   font-size: 18px;
   margin-bottom: 8px;
   padding: 0 8px;
+}
+
+.sidebar-brand-logo {
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  flex-shrink: 0;
 }
 
 .sidebar-line-label {
@@ -537,6 +547,14 @@ label {
 .auth-card h1 {
   font-size: 20px;
   margin-bottom: 4px;
+}
+
+.auth-logo {
+  display: block;
+  width: 56px;
+  height: 56px;
+  border-radius: 12px;
+  margin: 0 auto 16px;
 }
 
 .auth-card .subtitle {

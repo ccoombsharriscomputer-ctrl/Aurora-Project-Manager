@@ -10,7 +10,10 @@ export function Layout() {
   return (
     <div className="app-shell">
       <aside className="sidebar">
-        <div className="sidebar-brand">Aurora PM</div>
+        <div className="sidebar-brand">
+          <img src="/logo.png" alt="" className="sidebar-brand-logo" />
+          Aurora PM
+        </div>
         <SoftwareLineSwitcher />
         <NavLink to="/dashboard" className={({ isActive }) => `sidebar-link${isActive ? " active" : ""}`}>
           {t("layout.dashboard")}
