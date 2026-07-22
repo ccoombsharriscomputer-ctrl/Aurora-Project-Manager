@@ -42,7 +42,7 @@ function TaskTemplatesPanel({ checklistItemId }: { checklistItemId: string }) {
   return (
     <div style={{ marginLeft: 20, marginTop: 6, marginBottom: 10, paddingLeft: 12, borderLeft: "2px solid var(--border)" }}>
       <p className="muted" style={{ fontSize: 12, marginBottom: 8 }}>
-        {t("modules.taskTemplatesIntro")}
+        {t("products.taskTemplatesIntro")}
       </p>
       {isLoading && <p className="muted">{t("common.loading")}</p>}
       {templates?.map((template) => (
@@ -58,7 +58,7 @@ function TaskTemplatesPanel({ checklistItemId }: { checklistItemId: string }) {
           </span>
         </div>
       ))}
-      {templates?.length === 0 && <p className="muted">{t("modules.noTaskTemplatesYet")}</p>}
+      {templates?.length === 0 && <p className="muted">{t("products.noTaskTemplatesYet")}</p>}
       <form
         className="gap-8"
         style={{ marginTop: 10 }}
@@ -68,7 +68,7 @@ function TaskTemplatesPanel({ checklistItemId }: { checklistItemId: string }) {
           createTemplate.mutate();
         }}
       >
-        <input type="text" placeholder={t("modules.taskTitlePlaceholder")} value={title} onChange={(e) => setTitle(e.target.value)} />
+        <input type="text" placeholder={t("products.taskTitlePlaceholder")} value={title} onChange={(e) => setTitle(e.target.value)} />
         <select value={priority} onChange={(e) => setPriority(e.target.value as TaskPriority)} style={{ width: "auto" }}>
           <option value="LOW">{t("common.priorityLow")}</option>
           <option value="MEDIUM">{t("common.priorityMedium")}</option>
@@ -83,7 +83,7 @@ function TaskTemplatesPanel({ checklistItemId }: { checklistItemId: string }) {
   );
 }
 
-function CreateModuleForm() {
+function CreateProductForm() {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const [name, setName] = useState("");
@@ -109,16 +109,16 @@ function CreateModuleForm() {
         createItem.mutate();
       }}
     >
-      <input type="text" placeholder={t("modules.moduleNamePlaceholder")} value={name} onChange={(e) => setName(e.target.value)} />
+      <input type="text" placeholder={t("products.productNamePlaceholder")} value={name} onChange={(e) => setName(e.target.value)} />
       <button className="btn btn-sm btn-primary" type="submit" disabled={createItem.isPending}>
-        {t("modules.addModule")}
+        {t("products.addProduct")}
       </button>
       {error && <div className="error-text">{error}</div>}
     </form>
   );
 }
 
-export function ModulesPage() {
+export function ProductsPage() {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const [expandedItemId, setExpandedItemId] = useState<string | null>(null);
@@ -127,7 +127,7 @@ export function ModulesPage() {
   const [editDescription, setEditDescription] = useState("");
   const [deleteErrors, setDeleteErrors] = useState<Record<string, string>>({});
 
-  const { data: modules, isLoading } = useQuery({
+  const { data: products, isLoading } = useQuery({
     queryKey: ["checklist-items"],
     queryFn: () => api.get<ChecklistItem[]>("/checklist-items"),
   });
@@ -165,20 +165,20 @@ export function ModulesPage() {
     setEditDescription(item.description ?? "");
   }
 
-  if (isLoading || !modules) {
-    return <div className="muted">{t("modules.loadingModules")}</div>;
+  if (isLoading || !products) {
+    return <div className="muted">{t("products.loadingProducts")}</div>;
   }
 
   return (
     <div>
       <div className="page-header">
-        <h1>{t("layout.modules")}</h1>
+        <h1>{t("layout.products")}</h1>
       </div>
       <p className="muted" style={{ marginTop: -12, marginBottom: 20 }}>
-        {t("modules.intro")}
+        {t("products.intro")}
       </p>
       <div className="card">
-        {modules.map((item) => (
+        {products.map((item) => (
           <div key={item.id}>
             {editingItemId === item.id ? (
               <form
@@ -219,7 +219,7 @@ export function ModulesPage() {
                     className="btn btn-sm"
                     onClick={() => setExpandedItemId(expandedItemId === item.id ? null : item.id)}
                   >
-                    {expandedItemId === item.id ? t("modules.hideTasks") : t("modules.manageTasks")}
+                    {expandedItemId === item.id ? t("products.hideTasks") : t("products.manageTasks")}
                   </button>
                   <button className="btn btn-sm" onClick={() => startEdit(item)}>
                     {t("common.edit")}
@@ -233,7 +233,7 @@ export function ModulesPage() {
                   <button
                     className="btn btn-sm btn-danger"
                     onClick={() => {
-                      if (confirm(t("modules.confirmDeleteModule", { name: item.name }))) {
+                      if (confirm(t("products.confirmDeleteProduct", { name: item.name }))) {
                         deleteItem.mutate(item.id);
                       }
                     }}
@@ -247,8 +247,8 @@ export function ModulesPage() {
             {expandedItemId === item.id && <TaskTemplatesPanel checklistItemId={item.id} />}
           </div>
         ))}
-        {modules.length === 0 && <p className="muted">{t("modules.noModulesYetAddFirst")}</p>}
-        <CreateModuleForm />
+        {products.length === 0 && <p className="muted">{t("products.noProductsYetAddFirst")}</p>}
+        <CreateProductForm />
       </div>
     </div>
   );

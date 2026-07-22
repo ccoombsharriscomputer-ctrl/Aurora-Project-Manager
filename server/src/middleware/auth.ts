@@ -10,6 +10,16 @@ export interface AuthedUser {
   theme: "LIGHT" | "DARK" | "SYSTEM";
   accentColor: "BLUE" | "GREEN" | "PURPLE" | "ORANGE" | "RED" | "TEAL";
   locale: "EN" | "ES" | "FR_CA";
+  softwareLineId: string;
+  activeSoftwareLineId: string | null;
+}
+
+// The software line whose data this request should operate on. Only admins can ever
+// differ from their home line (via activeSoftwareLineId) — everyone else is permanently
+// scoped to softwareLineId. Always derived server-side from the authenticated user, never
+// from client input, so a non-admin can never see another line's data.
+export function effectiveSoftwareLineId(user: AuthedUser): string {
+  return user.role === "ADMIN" ? user.activeSoftwareLineId ?? user.softwareLineId : user.softwareLineId;
 }
 
 declare global {
@@ -39,6 +49,8 @@ async function getUserFromRequest(req: Request): Promise<AuthedUser | null> {
       theme: user.theme,
       accentColor: user.accentColor,
       locale: user.locale,
+      softwareLineId: user.softwareLineId,
+      activeSoftwareLineId: user.activeSoftwareLineId,
     };
   } catch {
     return null;

@@ -32,13 +32,14 @@
     "justNow": "just now",
     "minutesAgo": "{{count}}m ago",
     "hoursAgo": "{{count}}h ago",
-    "daysAgo": "{{count}}d ago"
+    "daysAgo": "{{count}}d ago",
+    "softwareLine": "Software line"
   },
   "layout": {
     "dashboard": "Dashboard",
     "projects": "Projects",
     "projectTypes": "Project Types",
-    "modules": "Modules",
+    "products": "Products",
     "users": "Users",
     "reports": "Reports",
     "settings": "Settings",
@@ -55,6 +56,7 @@
   "requestAccess": {
     "title": "Request access",
     "subtitle": "Ask an admin to set up an account for you on Aurora Project Manager",
+    "selectSoftwareLine": "Select a software line…",
     "messageOptional": "Message (optional)",
     "sending": "Sending…",
     "requestAccess": "Request access",
@@ -84,8 +86,8 @@
     "projectType": "Project type",
     "selectProjectType": "Select a project type…",
     "noProjectTypesYet": "No project types yet — an admin or project lead needs to create one first.",
-    "modulesToInclude": "Modules to include",
-    "noModulesYet": "No modules yet — an admin or project lead can add some on the Modules page.",
+    "productsToInclude": "Products to include",
+    "noProductsYet": "No products yet — an admin or project lead can add some on the Products page.",
     "teamSupportTicketNumber": "TeamSupport ticket # (optional)",
     "createProject": "Create project",
     "loadingProjects": "Loading projects…",
@@ -96,11 +98,11 @@
   },
   "projectDetail": {
     "newSubProject": "New sub-project",
-    "module": "Module",
-    "selectModule": "Select a module…",
-    "noModulesInCatalog": "No modules in the catalog yet — add one on the Modules page.",
+    "product": "Product",
+    "selectProduct": "Select a product…",
+    "noProductsInCatalog": "No products in the catalog yet — add one on the Products page.",
     "customNameOptional": "Custom name (optional)",
-    "defaultsToModuleName": "Defaults to the module's name",
+    "defaultsToProductName": "Defaults to the product's name",
     "members": "Members",
     "remove": "Remove",
     "addMember": "Add member…",
@@ -150,6 +152,7 @@
     "addUser": "Add user",
     "initialPassword": "Initial password",
     "createUser": "Create user",
+    "selectSoftwareLine": "Select a software line…",
     "pendingAccessRequests": "Pending access requests",
     "approve": "Approve",
     "deny": "Deny",
@@ -161,22 +164,22 @@
   "projectTypes": {
     "newProjectType": "New project type",
     "loadingProjectTypes": "Loading project types…",
-    "intro": "A project type is a program category (e.g. \"Payroll Implementation\") used to organize and report on projects. When creating a project, you'll separately choose which modules to include as its sub-projects on the Modules page.",
+    "intro": "A project type is a program category (e.g. \"Payroll Implementation\") used to organize and report on projects. When creating a project, you'll separately choose which products to include as its sub-projects on the Products page.",
     "confirmDeleteType": "Delete project type \"{{name}}\"? This cannot be undone.",
     "noProjectTypesYet": "No project types yet — create the first one."
   },
-  "modules": {
-    "taskTemplatesIntro": "These to-do tasks auto-create under the sub-project whenever this module is used on a project.",
+  "products": {
+    "taskTemplatesIntro": "These to-do tasks auto-create under the sub-project whenever this product is used on a project.",
     "noTaskTemplatesYet": "No to-do tasks yet.",
     "taskTitlePlaceholder": "e.g. Export legacy data",
-    "moduleNamePlaceholder": "e.g. Data Conversion",
-    "addModule": "Add module",
-    "loadingModules": "Loading modules…",
-    "intro": "Modules (e.g. \"Payroll\", \"Utility Billing\", \"Data Conversion\") are a shared catalog of reusable sub-projects. They aren't tied to any project type — when creating a new project, you pick which modules to include as its sub-projects. Each module can have its own standard to-do tasks that auto-create whenever it's used.",
+    "productNamePlaceholder": "e.g. Data Conversion",
+    "addProduct": "Add product",
+    "loadingProducts": "Loading products…",
+    "intro": "Products (e.g. \"Payroll\", \"Utility Billing\", \"Data Conversion\") are a shared catalog of reusable sub-projects. They aren't tied to any project type — when creating a new project, you pick which products to include as its sub-projects. Each product can have its own standard to-do tasks that auto-create whenever it's used.",
     "hideTasks": "Hide tasks",
     "manageTasks": "Manage tasks",
-    "confirmDeleteModule": "Delete module \"{{name}}\"? This deletes it from the catalog and its to-do task templates. This cannot be undone.",
-    "noModulesYetAddFirst": "No modules yet — add the first one below."
+    "confirmDeleteProduct": "Delete product \"{{name}}\"? This deletes it from the catalog and its to-do task templates. This cannot be undone.",
+    "noProductsYetAddFirst": "No products yet — add the first one below."
   },
   "reports": {
     "projects": "Projects",

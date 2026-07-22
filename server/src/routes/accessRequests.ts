@@ -11,6 +11,7 @@ const createSchema = z.object({
   name: z.string().min(1).max(100),
   email: z.string().email(),
   message: z.string().max(2000).optional(),
+  softwareLineId: z.string().min(1),
 });
 
 // Public — the only unauthenticated write endpoint in the app. Never creates an
@@ -19,6 +20,11 @@ router.post("/", async (req, res) => {
   const parsed = createSchema.safeParse(req.body);
   if (!parsed.success) {
     return res.status(400).json({ error: parsed.error.issues[0].message });
+  }
+
+  const line = await prisma.softwareLine.findUnique({ where: { id: parsed.data.softwareLineId } });
+  if (!line) {
+    return res.status(400).json({ error: "Please choose a valid software line" });
   }
 
   const request = await prisma.accessRequest.create({ data: parsed.data });
@@ -38,6 +44,7 @@ router.get("/", requireAuth, requireAdmin, async (_req, res) => {
     where: { status: "PENDING" },
     orderBy: { createdAt: "desc" },
     take: 200,
+    include: { softwareLine: { select: { id: true, name: true } } },
   });
   res.json(requests);
 });

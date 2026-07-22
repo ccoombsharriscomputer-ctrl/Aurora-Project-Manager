@@ -14,6 +14,11 @@ export type ActivityType =
   | "ATTACHMENT_ADDED"
   | "TIME_LOGGED";
 
+export interface SoftwareLine {
+  id: string;
+  name: string;
+}
+
 export interface CurrentUser {
   id: string;
   name: string;
@@ -22,6 +27,8 @@ export interface CurrentUser {
   theme: ThemeMode;
   accentColor: AccentColor;
   locale: Locale;
+  softwareLineId: string;
+  activeSoftwareLineId: string | null;
 }
 
 export interface UserSummary {
@@ -34,6 +41,7 @@ export interface AdminUser extends UserSummary {
   role: UserRole;
   active: boolean;
   createdAt: string;
+  softwareLine: SoftwareLine;
 }
 
 export interface AccessRequest {
@@ -44,6 +52,7 @@ export interface AccessRequest {
   status: "PENDING" | "APPROVED" | "DENIED";
   createdAt: string;
   decidedAt: string | null;
+  softwareLine: SoftwareLine;
 }
 
 export interface ProjectMember extends UserSummary {

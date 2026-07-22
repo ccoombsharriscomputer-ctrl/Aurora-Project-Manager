@@ -1,15 +1,20 @@
 import { Router } from "express";
 import { z } from "zod";
 import { prisma } from "../lib/prisma";
-import { requireAuth } from "../middleware/auth";
+import { effectiveSoftwareLineId, requireAuth } from "../middleware/auth";
 import { logActivity } from "../lib/activity";
 import { emitUpdate } from "../lib/realtime";
 import { upload } from "../lib/upload";
+import { loadTaskInScope } from "../lib/scope";
 
 const router = Router();
 router.use(requireAuth);
 
 router.get("/:id", async (req, res) => {
+  const scoped = await loadTaskInScope(req.params.id, effectiveSoftwareLineId(req.user!));
+  if (!scoped) {
+    return res.status(404).json({ error: "Task not found" });
+  }
   const task = await prisma.task.findUnique({
     where: { id: req.params.id },
     include: {
@@ -31,9 +36,6 @@ router.get("/:id", async (req, res) => {
       },
     },
   });
-  if (!task) {
-    return res.status(404).json({ error: "Task not found" });
-  }
   res.json(task);
 });
 
@@ -47,13 +49,20 @@ const updateSchema = z.object({
 });
 
 router.patch("/:id", async (req, res) => {
-  const existing = await prisma.task.findUnique({ where: { id: req.params.id } });
+  const existing = await loadTaskInScope(req.params.id, effectiveSoftwareLineId(req.user!));
   if (!existing) {
     return res.status(404).json({ error: "Task not found" });
   }
   const parsed = updateSchema.safeParse(req.body);
   if (!parsed.success) {
     return res.status(400).json({ error: parsed.error.issues[0].message });
+  }
+
+  if (parsed.data.assigneeId) {
+    const assignee = await prisma.user.findUnique({ where: { id: parsed.data.assigneeId } });
+    if (!assignee || (assignee.role !== "ADMIN" && assignee.softwareLineId !== existing.project.softwareLineId)) {
+      return res.status(400).json({ error: "Assignee belongs to a different software line" });
+    }
   }
 
   const data: Record<string, unknown> = { ...parsed.data };
@@ -99,20 +108,25 @@ router.patch("/:id", async (req, res) => {
 });
 
 router.delete("/:id", async (req, res) => {
-  const task = await prisma.task.findUnique({ where: { id: req.params.id } });
-  await prisma.task.delete({ where: { id: req.params.id } }).catch(() => null);
-  if (task) {
-    emitUpdate({ scope: "project", projectId: task.projectId });
-    emitUpdate({ scope: "sub-project", subProjectId: task.subProjectId });
-    emitUpdate({ scope: "task", taskId: task.id });
-    emitUpdate({ scope: "dashboard" });
+  const task = await loadTaskInScope(req.params.id, effectiveSoftwareLineId(req.user!));
+  if (!task) {
+    return res.status(404).json({ error: "Task not found" });
   }
+  await prisma.task.delete({ where: { id: req.params.id } }).catch(() => null);
+  emitUpdate({ scope: "project", projectId: task.projectId });
+  emitUpdate({ scope: "sub-project", subProjectId: task.subProjectId });
+  emitUpdate({ scope: "task", taskId: task.id });
+  emitUpdate({ scope: "dashboard" });
   res.status(204).send();
 });
 
 // --- Comments ---
 
 router.get("/:id/comments", async (req, res) => {
+  const task = await loadTaskInScope(req.params.id, effectiveSoftwareLineId(req.user!));
+  if (!task) {
+    return res.status(404).json({ error: "Task not found" });
+  }
   const comments = await prisma.comment.findMany({
     where: { taskId: req.params.id },
     orderBy: { createdAt: "asc" },
@@ -124,7 +138,7 @@ router.get("/:id/comments", async (req, res) => {
 const commentSchema = z.object({ body: z.string().min(1).max(5000) });
 
 router.post("/:id/comments", async (req, res) => {
-  const task = await prisma.task.findUnique({ where: { id: req.params.id } });
+  const task = await loadTaskInScope(req.params.id, effectiveSoftwareLineId(req.user!));
   if (!task) {
     return res.status(404).json({ error: "Task not found" });
   }
@@ -154,6 +168,10 @@ router.post("/:id/comments", async (req, res) => {
 // --- Attachments ---
 
 router.get("/:id/attachments", async (req, res) => {
+  const task = await loadTaskInScope(req.params.id, effectiveSoftwareLineId(req.user!));
+  if (!task) {
+    return res.status(404).json({ error: "Task not found" });
+  }
   const attachments = await prisma.attachment.findMany({
     where: { taskId: req.params.id },
     orderBy: { createdAt: "asc" },
@@ -163,7 +181,7 @@ router.get("/:id/attachments", async (req, res) => {
 });
 
 router.post("/:id/attachments", upload.single("file"), async (req, res) => {
-  const task = await prisma.task.findUnique({ where: { id: req.params.id } });
+  const task = await loadTaskInScope(req.params.id, effectiveSoftwareLineId(req.user!));
   if (!task) {
     return res.status(404).json({ error: "Task not found" });
   }
@@ -199,6 +217,10 @@ router.post("/:id/attachments", upload.single("file"), async (req, res) => {
 // --- Time entries ---
 
 router.get("/:id/time-entries", async (req, res) => {
+  const task = await loadTaskInScope(req.params.id, effectiveSoftwareLineId(req.user!));
+  if (!task) {
+    return res.status(404).json({ error: "Task not found" });
+  }
   const entries = await prisma.timeEntry.findMany({
     where: { taskId: req.params.id },
     orderBy: { startedAt: "desc" },
@@ -208,7 +230,7 @@ router.get("/:id/time-entries", async (req, res) => {
 });
 
 router.post("/:id/time-entries/start", async (req, res) => {
-  const task = await prisma.task.findUnique({ where: { id: req.params.id } });
+  const task = await loadTaskInScope(req.params.id, effectiveSoftwareLineId(req.user!));
   if (!task) {
     return res.status(404).json({ error: "Task not found" });
   }
@@ -235,7 +257,7 @@ const manualEntrySchema = z.object({
 });
 
 router.post("/:id/time-entries", async (req, res) => {
-  const task = await prisma.task.findUnique({ where: { id: req.params.id } });
+  const task = await loadTaskInScope(req.params.id, effectiveSoftwareLineId(req.user!));
   if (!task) {
     return res.status(404).json({ error: "Task not found" });
   }

@@ -14,7 +14,7 @@ function NewSubProjectForm({ projectId }: { projectId: string }) {
   const [name, setName] = useState("");
   const [error, setError] = useState<string | null>(null);
 
-  // Modules are a shared catalog — any module can become a sub-project on any project,
+  // Products are a shared catalog — any product can become a sub-project on any project,
   // regardless of the project's own type.
   const { data: checklistItems } = useQuery({
     queryKey: ["checklist-items"],
@@ -59,9 +59,9 @@ function NewSubProjectForm({ projectId }: { projectId: string }) {
       }}
     >
       <div className="field">
-        <label>{t("projectDetail.module")}</label>
+        <label>{t("projectDetail.product")}</label>
         <select value={checklistItemId} onChange={(e) => setChecklistItemId(e.target.value)} required>
-          <option value="">{t("projectDetail.selectModule")}</option>
+          <option value="">{t("projectDetail.selectProduct")}</option>
           {activeItems.map((i) => (
             <option key={i.id} value={i.id}>
               {i.name}
@@ -70,7 +70,7 @@ function NewSubProjectForm({ projectId }: { projectId: string }) {
         </select>
         {activeItems.length === 0 && (
           <p className="muted" style={{ fontSize: 12, marginTop: 6 }}>
-            {t("projectDetail.noModulesInCatalog")}
+            {t("projectDetail.noProductsInCatalog")}
           </p>
         )}
       </div>
@@ -78,7 +78,7 @@ function NewSubProjectForm({ projectId }: { projectId: string }) {
         <label>{t("projectDetail.customNameOptional")}</label>
         <input
           type="text"
-          placeholder={t("projectDetail.defaultsToModuleName")}
+          placeholder={t("projectDetail.defaultsToProductName")}
           value={name}
           onChange={(e) => setName(e.target.value)}
         />

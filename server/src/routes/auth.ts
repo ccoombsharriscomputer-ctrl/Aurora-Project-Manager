@@ -2,7 +2,7 @@ import { Router } from "express";
 import { z } from "zod";
 import { prisma } from "../lib/prisma";
 import { COOKIE_NAME, comparePassword, signToken } from "../lib/auth";
-import { requireAuth } from "../middleware/auth";
+import { requireAdmin, requireAuth } from "../middleware/auth";
 
 const router = Router();
 
@@ -45,6 +45,8 @@ router.post("/login", async (req, res) => {
     theme: user.theme,
     accentColor: user.accentColor,
     locale: user.locale,
+    softwareLineId: user.softwareLineId,
+    activeSoftwareLineId: user.activeSoftwareLineId,
   });
 });
 
@@ -72,7 +74,50 @@ router.patch("/me", requireAuth, async (req, res) => {
   const user = await prisma.user.update({
     where: { id: req.user!.id },
     data: parsed.data,
-    select: { id: true, name: true, email: true, role: true, theme: true, accentColor: true, locale: true },
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      role: true,
+      theme: true,
+      accentColor: true,
+      locale: true,
+      softwareLineId: true,
+      activeSoftwareLineId: true,
+    },
+  });
+  res.json(user);
+});
+
+const updateActiveLineSchema = z.object({
+  softwareLineId: z.string().min(1),
+});
+
+router.patch("/active-line", requireAuth, requireAdmin, async (req, res) => {
+  const parsed = updateActiveLineSchema.safeParse(req.body);
+  if (!parsed.success) {
+    return res.status(400).json({ error: parsed.error.issues[0].message });
+  }
+
+  const line = await prisma.softwareLine.findUnique({ where: { id: parsed.data.softwareLineId } });
+  if (!line) {
+    return res.status(404).json({ error: "Software line not found" });
+  }
+
+  const user = await prisma.user.update({
+    where: { id: req.user!.id },
+    data: { activeSoftwareLineId: line.id },
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      role: true,
+      theme: true,
+      accentColor: true,
+      locale: true,
+      softwareLineId: true,
+      activeSoftwareLineId: true,
+    },
   });
   res.json(user);
 });

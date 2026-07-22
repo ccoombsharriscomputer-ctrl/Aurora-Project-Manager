@@ -1,9 +1,10 @@
 import { Router } from "express";
 import { z } from "zod";
 import { prisma } from "../lib/prisma";
-import { requireAuth } from "../middleware/auth";
+import { effectiveSoftwareLineId, requireAuth } from "../middleware/auth";
 import { logActivity } from "../lib/activity";
 import { emitUpdate } from "../lib/realtime";
+import { loadSubProjectInScope } from "../lib/scope";
 
 const router = Router();
 router.use(requireAuth);
@@ -13,7 +14,11 @@ function canManageProject(projectCreatedById: string, req: import("express").Req
 }
 
 router.get("/:id", async (req, res) => {
-  const subProject = await prisma.subProject.findUnique({
+  const subProject = await loadSubProjectInScope(req.params.id, effectiveSoftwareLineId(req.user!));
+  if (!subProject) {
+    return res.status(404).json({ error: "Sub-project not found" });
+  }
+  const withMembers = await prisma.subProject.findUnique({
     where: { id: req.params.id },
     include: {
       checklistItem: true,
@@ -24,19 +29,17 @@ router.get("/:id", async (req, res) => {
       },
     },
   });
-  if (!subProject) {
-    return res.status(404).json({ error: "Sub-project not found" });
-  }
+  const full = withMembers!;
   res.json({
-    id: subProject.id,
-    name: subProject.name,
-    checklistItem: subProject.checklistItem,
-    createdAt: subProject.createdAt,
+    id: full.id,
+    name: full.name,
+    checklistItem: full.checklistItem,
+    createdAt: full.createdAt,
     project: {
-      id: subProject.project.id,
-      name: subProject.project.name,
-      createdById: subProject.project.createdById,
-      members: subProject.project.members.map((m) => ({ ...m.user, role: m.role })),
+      id: full.project.id,
+      name: full.project.name,
+      createdById: full.project.createdById,
+      members: full.project.members.map((m) => ({ ...m.user, role: m.role })),
     },
   });
 });
@@ -46,10 +49,7 @@ const updateSchema = z.object({
 });
 
 router.patch("/:id", async (req, res) => {
-  const subProject = await prisma.subProject.findUnique({
-    where: { id: req.params.id },
-    include: { project: true },
-  });
+  const subProject = await loadSubProjectInScope(req.params.id, effectiveSoftwareLineId(req.user!));
   if (!subProject) {
     return res.status(404).json({ error: "Sub-project not found" });
   }
@@ -69,10 +69,7 @@ router.patch("/:id", async (req, res) => {
 });
 
 router.delete("/:id", async (req, res) => {
-  const subProject = await prisma.subProject.findUnique({
-    where: { id: req.params.id },
-    include: { project: true },
-  });
+  const subProject = await loadSubProjectInScope(req.params.id, effectiveSoftwareLineId(req.user!));
   if (!subProject) {
     return res.status(404).json({ error: "Sub-project not found" });
   }
@@ -86,6 +83,11 @@ router.delete("/:id", async (req, res) => {
 });
 
 router.get("/:id/tasks", async (req, res) => {
+  const subProject = await loadSubProjectInScope(req.params.id, effectiveSoftwareLineId(req.user!));
+  if (!subProject) {
+    return res.status(404).json({ error: "Sub-project not found" });
+  }
+
   const tasks = await prisma.task.findMany({
     where: { subProjectId: req.params.id },
     orderBy: { createdAt: "asc" },
@@ -107,16 +109,20 @@ const createTaskSchema = z.object({
 });
 
 router.post("/:id/tasks", async (req, res) => {
-  const subProject = await prisma.subProject.findUnique({
-    where: { id: req.params.id },
-    include: { project: { select: { projectTypeId: true } } },
-  });
+  const subProject = await loadSubProjectInScope(req.params.id, effectiveSoftwareLineId(req.user!));
   if (!subProject) {
     return res.status(404).json({ error: "Sub-project not found" });
   }
   const parsed = createTaskSchema.safeParse(req.body);
   if (!parsed.success) {
     return res.status(400).json({ error: parsed.error.issues[0].message });
+  }
+
+  if (parsed.data.assigneeId) {
+    const assignee = await prisma.user.findUnique({ where: { id: parsed.data.assigneeId } });
+    if (!assignee || (assignee.role !== "ADMIN" && assignee.softwareLineId !== subProject.project.softwareLineId)) {
+      return res.status(400).json({ error: "Assignee belongs to a different software line" });
+    }
   }
 
   const task = await prisma.task.create({

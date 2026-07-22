@@ -1,15 +1,16 @@
 import { Router } from "express";
 import { z } from "zod";
 import { prisma } from "../lib/prisma";
-import { requireAuth, requireProjectTypeManager } from "../middleware/auth";
+import { effectiveSoftwareLineId, requireAuth, requireProjectTypeManager } from "../middleware/auth";
 import { emitUpdate } from "../lib/realtime";
 
 const router = Router();
 router.use(requireAuth);
 
 // Any authenticated user can list types (needed for the "add sub-project" dropdown).
-router.get("/", async (_req, res) => {
+router.get("/", async (req, res) => {
   const types = await prisma.projectType.findMany({
+    where: { softwareLineId: effectiveSoftwareLineId(req.user!) },
     orderBy: { name: "asc" },
   });
   res.json(types);
@@ -25,8 +26,11 @@ router.post("/", requireProjectTypeManager, async (req, res) => {
   if (!parsed.success) {
     return res.status(400).json({ error: parsed.error.issues[0].message });
   }
+  const lineId = effectiveSoftwareLineId(req.user!);
 
-  const existing = await prisma.projectType.findUnique({ where: { name: parsed.data.name } });
+  const existing = await prisma.projectType.findUnique({
+    where: { softwareLineId_name: { softwareLineId: lineId, name: parsed.data.name } },
+  });
   if (existing) {
     return res.status(409).json({ error: "A project type with that name already exists" });
   }
@@ -35,6 +39,7 @@ router.post("/", requireProjectTypeManager, async (req, res) => {
     data: {
       name: parsed.data.name,
       description: parsed.data.description,
+      softwareLineId: lineId,
       createdById: req.user!.id,
     },
   });
@@ -50,13 +55,21 @@ const updateSchema = z.object({
 });
 
 router.patch("/:id", requireProjectTypeManager, async (req, res) => {
+  const lineId = effectiveSoftwareLineId(req.user!);
+  const existingType = await prisma.projectType.findUnique({ where: { id: req.params.id } });
+  if (!existingType || existingType.softwareLineId !== lineId) {
+    return res.status(404).json({ error: "Project type not found" });
+  }
+
   const parsed = updateSchema.safeParse(req.body);
   if (!parsed.success) {
     return res.status(400).json({ error: parsed.error.issues[0].message });
   }
 
   if (parsed.data.name) {
-    const existing = await prisma.projectType.findUnique({ where: { name: parsed.data.name } });
+    const existing = await prisma.projectType.findUnique({
+      where: { softwareLineId_name: { softwareLineId: lineId, name: parsed.data.name } },
+    });
     if (existing && existing.id !== req.params.id) {
       return res.status(409).json({ error: "A project type with that name already exists" });
     }
@@ -72,8 +85,9 @@ router.patch("/:id", requireProjectTypeManager, async (req, res) => {
 });
 
 router.delete("/:id", requireProjectTypeManager, async (req, res) => {
+  const lineId = effectiveSoftwareLineId(req.user!);
   const type = await prisma.projectType.findUnique({ where: { id: req.params.id } });
-  if (!type) {
+  if (!type || type.softwareLineId !== lineId) {
     return res.status(404).json({ error: "Project type not found" });
   }
 

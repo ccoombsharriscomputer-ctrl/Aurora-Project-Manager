@@ -2,7 +2,7 @@ import { Fragment, useEffect, useState, type FormEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { api } from "../api/client";
-import type { AccessRequest, AdminUser, UserRole } from "../api/types";
+import type { AccessRequest, AdminUser, SoftwareLine, UserRole } from "../api/types";
 import { extractErrorMessage, useAuth } from "../context/AuthContext";
 import { formatDate } from "../utils/format";
 
@@ -10,13 +10,16 @@ interface CreateUserPrefill {
   accessRequestId: string;
   name: string;
   email: string;
+  softwareLineId: string;
 }
 
 function CreateUserForm({
   prefill,
+  softwareLines,
   onDone,
 }: {
   prefill: CreateUserPrefill | null;
+  softwareLines: SoftwareLine[];
   onDone: () => void;
 }) {
   const { t } = useTranslation();
@@ -26,6 +29,7 @@ function CreateUserForm({
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [role, setRole] = useState<UserRole>("MEMBER");
+  const [softwareLineId, setSoftwareLineId] = useState("");
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -33,6 +37,7 @@ function CreateUserForm({
       setOpen(true);
       setName(prefill.name);
       setEmail(prefill.email);
+      setSoftwareLineId(prefill.softwareLineId);
       setError(null);
     }
   }, [prefill]);
@@ -44,6 +49,7 @@ function CreateUserForm({
         email,
         password,
         role,
+        softwareLineId,
         accessRequestId: prefill?.accessRequestId,
       }),
     onSuccess: () => {
@@ -53,6 +59,7 @@ function CreateUserForm({
       setEmail("");
       setPassword("");
       setRole("MEMBER");
+      setSoftwareLineId("");
       setOpen(false);
       setError(null);
       onDone();
@@ -74,6 +81,7 @@ function CreateUserForm({
       style={{ marginBottom: 16 }}
       onSubmit={(e: FormEvent) => {
         e.preventDefault();
+        if (!softwareLineId) return;
         createUser.mutate();
       }}
     >
@@ -104,10 +112,21 @@ function CreateUserForm({
             <option value="ADMIN">{t("common.roleAdmin")}</option>
           </select>
         </div>
+        <div className="field">
+          <label>{t("common.softwareLine")}</label>
+          <select required value={softwareLineId} onChange={(e) => setSoftwareLineId(e.target.value)}>
+            <option value="">{t("adminUsers.selectSoftwareLine")}</option>
+            {softwareLines.map((line) => (
+              <option key={line.id} value={line.id}>
+                {line.name}
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
       {error && <div className="error-text">{error}</div>}
       <div className="gap-8">
-        <button className="btn btn-primary" type="submit" disabled={createUser.isPending}>
+        <button className="btn btn-primary" type="submit" disabled={createUser.isPending || !softwareLineId}>
           {t("adminUsers.createUser")}
         </button>
         <button
@@ -164,13 +183,21 @@ function PendingAccessRequests({
           <div className="task-list-item">
             <span>
               {r.name} <span className="muted">({r.email})</span>
+              <span className="muted"> · {r.softwareLine.name}</span>
               {r.message && <span className="muted"> — {r.message}</span>}
             </span>
             <span className="gap-8">
               <span className="muted">{formatDate(r.createdAt)}</span>
               <button
                 className="btn btn-sm btn-primary"
-                onClick={() => onApprove({ accessRequestId: r.id, name: r.name, email: r.email })}
+                onClick={() =>
+                  onApprove({
+                    accessRequestId: r.id,
+                    name: r.name,
+                    email: r.email,
+                    softwareLineId: r.softwareLine.id,
+                  })
+                }
               >
                 {t("adminUsers.approve")}
               </button>
@@ -195,11 +222,16 @@ export function AdminUsersPage() {
 
   const { data: users, isLoading } = useQuery({
     queryKey: ["users"],
-    queryFn: () => api.get<AdminUser[]>("/users"),
+    queryFn: () => api.get<AdminUser[]>("/users?all=true"),
+  });
+
+  const { data: softwareLines } = useQuery({
+    queryKey: ["software-lines"],
+    queryFn: () => api.get<SoftwareLine[]>("/software-lines"),
   });
 
   const updateUser = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: Partial<Pick<AdminUser, "role" | "active">> }) =>
+    mutationFn: ({ id, data }: { id: string; data: Partial<Pick<AdminUser, "role" | "active">> & { softwareLineId?: string } }) =>
       api.patch(`/users/${id}`, data),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["users"] }),
   });
@@ -225,7 +257,7 @@ export function AdminUsersPage() {
     <div>
       <div className="page-header">
         <h1>{t("layout.users")}</h1>
-        <CreateUserForm prefill={prefill} onDone={() => setPrefill(null)} />
+        <CreateUserForm prefill={prefill} softwareLines={softwareLines ?? []} onDone={() => setPrefill(null)} />
       </div>
       <PendingAccessRequests onApprove={setPrefill} />
       <div className="card">
@@ -235,6 +267,7 @@ export function AdminUsersPage() {
               <th>{t("common.name")}</th>
               <th>{t("common.email")}</th>
               <th>{t("common.role")}</th>
+              <th>{t("common.softwareLine")}</th>
               <th>{t("common.status")}</th>
               <th>{t("adminUsers.joined")}</th>
               <th></th>
@@ -256,6 +289,19 @@ export function AdminUsersPage() {
                       <option value="MEMBER">{t("common.roleMember")}</option>
                       <option value="PROJECT_LEAD">{t("common.roleProjectLead")}</option>
                       <option value="ADMIN">{t("common.roleAdmin")}</option>
+                    </select>
+                  </td>
+                  <td>
+                    <select
+                      value={u.softwareLine.id}
+                      onChange={(e) => updateUser.mutate({ id: u.id, data: { softwareLineId: e.target.value } })}
+                      style={{ width: "auto" }}
+                    >
+                      {(softwareLines ?? []).map((line) => (
+                        <option key={line.id} value={line.id}>
+                          {line.name}
+                        </option>
+                      ))}
                     </select>
                   </td>
                   <td>{u.active ? t("common.active") : t("adminUsers.deactivated")}</td>
@@ -283,7 +329,7 @@ export function AdminUsersPage() {
                 </tr>
                 {deleteErrors[u.id] && (
                   <tr>
-                    <td colSpan={6}>
+                    <td colSpan={7}>
                       <div className="error-text">{deleteErrors[u.id]}</div>
                     </td>
                   </tr>

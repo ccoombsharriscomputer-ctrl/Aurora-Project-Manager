@@ -19,6 +19,7 @@ import attachmentRoutes from "./routes/attachments";
 import dashboardRoutes from "./routes/dashboard";
 import reportRoutes from "./routes/reports";
 import calendarRoutes from "./routes/calendar";
+import softwareLineRoutes from "./routes/softwareLines";
 import { attachRealtime } from "./lib/realtime";
 
 const app = express();
@@ -47,6 +48,7 @@ app.use("/api/attachments", attachmentRoutes);
 app.use("/api/dashboard", dashboardRoutes);
 app.use("/api/reports", reportRoutes);
 app.use("/api/calendar", calendarRoutes);
+app.use("/api/software-lines", softwareLineRoutes);
 
 app.get("/api/health", (_req, res) => res.json({ ok: true }));
 

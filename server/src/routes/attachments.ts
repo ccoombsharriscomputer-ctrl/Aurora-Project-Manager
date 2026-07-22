@@ -1,14 +1,14 @@
 import { Router } from "express";
 import path from "path";
-import { prisma } from "../lib/prisma";
-import { requireAuth } from "../middleware/auth";
+import { effectiveSoftwareLineId, requireAuth } from "../middleware/auth";
 import { UPLOAD_DIR } from "../lib/upload";
+import { loadAttachmentInScope } from "../lib/scope";
 
 const router = Router();
 router.use(requireAuth);
 
 router.get("/:id/download", async (req, res) => {
-  const attachment = await prisma.attachment.findUnique({ where: { id: req.params.id } });
+  const attachment = await loadAttachmentInScope(req.params.id, effectiveSoftwareLineId(req.user!));
   if (!attachment) {
     return res.status(404).json({ error: "Attachment not found" });
   }

@@ -67,17 +67,34 @@ enum Locale {
   FR_CA
 }
 
+model SoftwareLine {
+  id        String   @id
+  name      String   @unique
+  createdAt DateTime @default(now())
+
+  users                User[]          @relation("UserSoftwareLine")
+  activeForUsers       User[]          @relation("UserActiveSoftwareLine")
+  projects             Project[]
+  projectTypes         ProjectType[]
+  checklistItems       ChecklistItem[]
+  accessRequests       AccessRequest[]
+}
+
 model User {
-  id           String      @id @default(cuid())
-  name         String
-  email        String      @unique
-  passwordHash String
-  role         UserRole    @default(MEMBER)
-  active       Boolean     @default(true)
-  theme        ThemeMode   @default(SYSTEM)
-  accentColor  AccentColor @default(BLUE)
-  locale       Locale      @default(EN)
-  createdAt    DateTime    @default(now())
+  id                  String      @id @default(cuid())
+  name                String
+  email               String      @unique
+  passwordHash        String
+  role                UserRole    @default(MEMBER)
+  active              Boolean     @default(true)
+  theme               ThemeMode   @default(SYSTEM)
+  accentColor         AccentColor @default(BLUE)
+  locale              Locale      @default(EN)
+  softwareLineId      String
+  softwareLine        SoftwareLine  @relation("UserSoftwareLine", fields: [softwareLineId], references: [id])
+  activeSoftwareLineId String?
+  activeSoftwareLine   SoftwareLine? @relation("UserActiveSoftwareLine", fields: [activeSoftwareLineId], references: [id])
+  createdAt           DateTime    @default(now())
 
   createdProjects   Project[]       @relation("ProjectCreatedBy")
   projectMemberships ProjectMember[]
@@ -101,6 +118,8 @@ model Project {
   teamSupportTicketNumber String?
   projectTypeId          String
   projectType            ProjectType @relation(fields: [projectTypeId], references: [id])
+  softwareLineId         String
+  softwareLine           SoftwareLine @relation(fields: [softwareLineId], references: [id])
   createdById            String
   createdBy              User        @relation("ProjectCreatedBy", fields: [createdById], references: [id])
   createdAt              DateTime    @default(now())
@@ -113,26 +132,32 @@ model Project {
 }
 
 model ProjectType {
-  id          String   @id @default(cuid())
-  name        String   @unique
-  description String?
-  active      Boolean  @default(true)
-  createdById String
-  createdBy   User     @relation(fields: [createdById], references: [id])
-  createdAt   DateTime @default(now())
+  id             String   @id @default(cuid())
+  name           String
+  description    String?
+  active         Boolean  @default(true)
+  softwareLineId String
+  softwareLine   SoftwareLine @relation(fields: [softwareLineId], references: [id])
+  createdById    String
+  createdBy      User     @relation(fields: [createdById], references: [id])
+  createdAt      DateTime @default(now())
 
   projects Project[]
   tasks    Task[]
+
+  @@unique([softwareLineId, name])
 }
 
 model ChecklistItem {
-  id          String   @id @default(cuid())
-  name        String
-  description String?
-  active      Boolean  @default(true)
-  createdById String
-  createdBy   User     @relation(fields: [createdById], references: [id])
-  createdAt   DateTime @default(now())
+  id             String   @id @default(cuid())
+  name           String
+  description    String?
+  active         Boolean  @default(true)
+  softwareLineId String
+  softwareLine   SoftwareLine @relation(fields: [softwareLineId], references: [id])
+  createdById    String
+  createdBy      User     @relation(fields: [createdById], references: [id])
+  createdAt      DateTime @default(now())
 
   subProjects   SubProject[]
   taskTemplates TaskTemplate[]
@@ -255,15 +280,17 @@ model Activity {
 }
 
 model AccessRequest {
-  id          String              @id @default(cuid())
-  name        String
-  email       String
-  message     String?
-  status      AccessRequestStatus @default(PENDING)
-  createdAt   DateTime            @default(now())
-  decidedAt   DateTime?
-  decidedById String?
-  decidedBy   User?               @relation(fields: [decidedById], references: [id], onDelete: SetNull)
+  id             String              @id @default(cuid())
+  name           String
+  email          String
+  message        String?
+  status         AccessRequestStatus @default(PENDING)
+  softwareLineId String
+  softwareLine   SoftwareLine        @relation(fields: [softwareLineId], references: [id])
+  createdAt      DateTime            @default(now())
+  decidedAt      DateTime?
+  decidedById    String?
+  decidedBy      User?               @relation(fields: [decidedById], references: [id], onDelete: SetNull)
 
   @@index([status])
 }

@@ -1,16 +1,19 @@
 import { Router } from "express";
 import { z } from "zod";
 import { prisma } from "../lib/prisma";
-import { requireAuth, requireProjectTypeManager } from "../middleware/auth";
+import { effectiveSoftwareLineId, requireAuth, requireProjectTypeManager } from "../middleware/auth";
 import { emitUpdate } from "../lib/realtime";
 
 const router = Router();
 router.use(requireAuth);
 
-// Global module catalog — any authenticated user (needed for the Modules page, the
-// new-project module picker, and the cross-type "add sub-project" picker).
-router.get("/", async (_req, res) => {
-  const items = await prisma.checklistItem.findMany({ orderBy: { name: "asc" } });
+// Per-line product catalog — any authenticated user (needed for the Products page, the
+// new-project product picker, and the cross-type "add sub-project" picker).
+router.get("/", async (req, res) => {
+  const items = await prisma.checklistItem.findMany({
+    where: { softwareLineId: effectiveSoftwareLineId(req.user!) },
+    orderBy: { name: "asc" },
+  });
   res.json(items);
 });
 
@@ -29,11 +32,12 @@ router.post("/", requireProjectTypeManager, async (req, res) => {
     data: {
       name: parsed.data.name,
       description: parsed.data.description,
+      softwareLineId: effectiveSoftwareLineId(req.user!),
       createdById: req.user!.id,
     },
   });
 
-  emitUpdate({ scope: "modules" });
+  emitUpdate({ scope: "products" });
   res.status(201).json(item);
 });
 
@@ -44,6 +48,12 @@ const updateSchema = z.object({
 });
 
 router.patch("/:id", requireProjectTypeManager, async (req, res) => {
+  const lineId = effectiveSoftwareLineId(req.user!);
+  const existing = await prisma.checklistItem.findUnique({ where: { id: req.params.id } });
+  if (!existing || existing.softwareLineId !== lineId) {
+    return res.status(404).json({ error: "Product not found" });
+  }
+
   const parsed = updateSchema.safeParse(req.body);
   if (!parsed.success) {
     return res.status(400).json({ error: parsed.error.issues[0].message });
@@ -54,14 +64,15 @@ router.patch("/:id", requireProjectTypeManager, async (req, res) => {
     data: parsed.data,
   });
 
-  emitUpdate({ scope: "modules" });
+  emitUpdate({ scope: "products" });
   res.json(item);
 });
 
 router.delete("/:id", requireProjectTypeManager, async (req, res) => {
+  const lineId = effectiveSoftwareLineId(req.user!);
   const item = await prisma.checklistItem.findUnique({ where: { id: req.params.id } });
-  if (!item) {
-    return res.status(404).json({ error: "Module not found" });
+  if (!item || item.softwareLineId !== lineId) {
+    return res.status(404).json({ error: "Product not found" });
   }
 
   const subProjectCount = await prisma.subProject.count({ where: { checklistItemId: item.id } });
@@ -72,13 +83,19 @@ router.delete("/:id", requireProjectTypeManager, async (req, res) => {
   }
 
   await prisma.checklistItem.delete({ where: { id: item.id } });
-  emitUpdate({ scope: "modules" });
+  emitUpdate({ scope: "products" });
   res.status(204).send();
 });
 
 // Any authenticated user can list task templates (not needed for a picker today, but
-// consistent with how modules themselves are readable by everyone).
+// consistent with how products themselves are readable by everyone).
 router.get("/:id/task-templates", async (req, res) => {
+  const lineId = effectiveSoftwareLineId(req.user!);
+  const item = await prisma.checklistItem.findUnique({ where: { id: req.params.id } });
+  if (!item || item.softwareLineId !== lineId) {
+    return res.status(404).json({ error: "Product not found" });
+  }
+
   const templates = await prisma.taskTemplate.findMany({
     where: { checklistItemId: req.params.id },
     orderBy: { createdAt: "asc" },
@@ -93,9 +110,10 @@ const createTaskTemplateSchema = z.object({
 });
 
 router.post("/:id/task-templates", requireProjectTypeManager, async (req, res) => {
+  const lineId = effectiveSoftwareLineId(req.user!);
   const checklistItem = await prisma.checklistItem.findUnique({ where: { id: req.params.id } });
-  if (!checklistItem) {
-    return res.status(404).json({ error: "Module not found" });
+  if (!checklistItem || checklistItem.softwareLineId !== lineId) {
+    return res.status(404).json({ error: "Product not found" });
   }
   const parsed = createTaskTemplateSchema.safeParse(req.body);
   if (!parsed.success) {
@@ -112,7 +130,7 @@ router.post("/:id/task-templates", requireProjectTypeManager, async (req, res) =
     },
   });
 
-  emitUpdate({ scope: "modules" });
+  emitUpdate({ scope: "products" });
   res.status(201).json(template);
 });
 

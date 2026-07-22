@@ -19,10 +19,17 @@ async function main() {
     return;
   }
 
+  const softwareLineId = admin.activeSoftwareLineId ?? admin.softwareLineId;
+
   const projectType = await prisma.projectType.upsert({
-    where: { name: "Onboarding" },
+    where: { softwareLineId_name: { softwareLineId, name: "Onboarding" } },
     update: {},
-    create: { name: "Onboarding", description: "Getting a new project up and running", createdById: admin.id },
+    create: {
+      name: "Onboarding",
+      description: "Getting a new project up and running",
+      softwareLineId,
+      createdById: admin.id,
+    },
   });
 
   const checklistItem = await prisma.checklistItem.upsert({
@@ -31,6 +38,7 @@ async function main() {
     create: {
       id: `${projectType.id}-setup`,
       name: "Initial Setup",
+      softwareLineId,
       createdById: admin.id,
     },
   });
@@ -40,6 +48,7 @@ async function main() {
       name: "Aurora Launch",
       description: "Demo project created by the seed script.",
       projectTypeId: projectType.id,
+      softwareLineId,
       createdById: admin.id,
       members: { create: { userId: admin.id, role: "OWNER" } },
     },

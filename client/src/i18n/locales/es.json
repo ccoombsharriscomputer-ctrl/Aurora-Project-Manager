@@ -32,13 +32,14 @@
     "justNow": "justo ahora",
     "minutesAgo": "hace {{count}} min",
     "hoursAgo": "hace {{count}} h",
-    "daysAgo": "hace {{count}} d"
+    "daysAgo": "hace {{count}} d",
+    "softwareLine": "Línea de software"
   },
   "layout": {
     "dashboard": "Panel",
     "projects": "Proyectos",
     "projectTypes": "Tipos de proyecto",
-    "modules": "Módulos",
+    "products": "Productos",
     "users": "Usuarios",
     "reports": "Informes",
     "settings": "Configuración",
@@ -55,6 +56,7 @@
   "requestAccess": {
     "title": "Solicitar acceso",
     "subtitle": "Pide a un administrador que te cree una cuenta en Aurora Project Manager",
+    "selectSoftwareLine": "Selecciona una línea de software…",
     "messageOptional": "Mensaje (opcional)",
     "sending": "Enviando…",
     "requestAccess": "Solicitar acceso",
@@ -84,8 +86,8 @@
     "projectType": "Tipo de proyecto",
     "selectProjectType": "Selecciona un tipo de proyecto…",
     "noProjectTypesYet": "Aún no hay tipos de proyecto — un administrador o líder de proyecto debe crear uno primero.",
-    "modulesToInclude": "Módulos a incluir",
-    "noModulesYet": "Aún no hay módulos — un administrador o líder de proyecto puede añadir algunos en la página de Módulos.",
+    "productsToInclude": "Productos a incluir",
+    "noProductsYet": "Aún no hay productos — un administrador o líder de proyecto puede añadir algunos en la página de Productos.",
     "teamSupportTicketNumber": "N.º de ticket de TeamSupport (opcional)",
     "createProject": "Crear proyecto",
     "loadingProjects": "Cargando proyectos…",
@@ -96,11 +98,11 @@
   },
   "projectDetail": {
     "newSubProject": "Nuevo subproyecto",
-    "module": "Módulo",
-    "selectModule": "Selecciona un módulo…",
-    "noModulesInCatalog": "Aún no hay módulos en el catálogo — añade uno en la página de Módulos.",
+    "product": "Producto",
+    "selectProduct": "Selecciona un producto…",
+    "noProductsInCatalog": "Aún no hay productos en el catálogo — añade uno en la página de Productos.",
     "customNameOptional": "Nombre personalizado (opcional)",
-    "defaultsToModuleName": "Por defecto usa el nombre del módulo",
+    "defaultsToProductName": "Por defecto usa el nombre del producto",
     "members": "Miembros",
     "remove": "Quitar",
     "addMember": "Añadir miembro…",
@@ -150,6 +152,7 @@
     "addUser": "Añadir usuario",
     "initialPassword": "Contraseña inicial",
     "createUser": "Crear usuario",
+    "selectSoftwareLine": "Selecciona una línea de software…",
     "pendingAccessRequests": "Solicitudes de acceso pendientes",
     "approve": "Aprobar",
     "deny": "Rechazar",
@@ -161,22 +164,22 @@
   "projectTypes": {
     "newProjectType": "Nuevo tipo de proyecto",
     "loadingProjectTypes": "Cargando tipos de proyecto…",
-    "intro": "Un tipo de proyecto es una categoría de programa (p. ej., \"Implementación de nómina\") que se usa para organizar e informar sobre proyectos. Al crear un proyecto, elegirás por separado qué módulos incluir como sus subproyectos en la página de Módulos.",
+    "intro": "Un tipo de proyecto es una categoría de programa (p. ej., \"Implementación de nómina\") que se usa para organizar e informar sobre proyectos. Al crear un proyecto, elegirás por separado qué productos incluir como sus subproyectos en la página de Productos.",
     "confirmDeleteType": "¿Eliminar el tipo de proyecto \"{{name}}\"? Esta acción no se puede deshacer.",
     "noProjectTypesYet": "Aún no hay tipos de proyecto — crea el primero."
   },
-  "modules": {
-    "taskTemplatesIntro": "Estas tareas se crean automáticamente en el subproyecto cada vez que se usa este módulo en un proyecto.",
+  "products": {
+    "taskTemplatesIntro": "Estas tareas se crean automáticamente en el subproyecto cada vez que se usa este producto en un proyecto.",
     "noTaskTemplatesYet": "Aún no hay tareas.",
     "taskTitlePlaceholder": "p. ej., Exportar datos heredados",
-    "moduleNamePlaceholder": "p. ej., Conversión de datos",
-    "addModule": "Añadir módulo",
-    "loadingModules": "Cargando módulos…",
-    "intro": "Los módulos (p. ej., \"Nómina\", \"Facturación de servicios\", \"Conversión de datos\") son un catálogo compartido de subproyectos reutilizables. No están vinculados a ningún tipo de proyecto — al crear un nuevo proyecto, eliges qué módulos incluir como sus subproyectos. Cada módulo puede tener sus propias tareas estándar que se crean automáticamente cada vez que se usa.",
+    "productNamePlaceholder": "p. ej., Conversión de datos",
+    "addProduct": "Añadir producto",
+    "loadingProducts": "Cargando productos…",
+    "intro": "Los productos (p. ej., \"Nómina\", \"Facturación de servicios\", \"Conversión de datos\") son un catálogo compartido de subproyectos reutilizables. No están vinculados a ningún tipo de proyecto — al crear un nuevo proyecto, eliges qué productos incluir como sus subproyectos. Cada producto puede tener sus propias tareas estándar que se crean automáticamente cada vez que se usa.",
     "hideTasks": "Ocultar tareas",
     "manageTasks": "Gestionar tareas",
-    "confirmDeleteModule": "¿Eliminar el módulo \"{{name}}\"? Esto lo elimina del catálogo junto con sus plantillas de tareas. Esta acción no se puede deshacer.",
-    "noModulesYetAddFirst": "Aún no hay módulos — añade el primero a continuación."
+    "confirmDeleteProduct": "¿Eliminar el producto \"{{name}}\"? Esto lo elimina del catálogo junto con sus plantillas de tareas. Esta acción no se puede deshacer.",
+    "noProductsYetAddFirst": "Aún no hay productos — añade el primero a continuación."
   },
   "reports": {
     "projects": "Proyectos",

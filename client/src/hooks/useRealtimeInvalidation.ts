@@ -10,7 +10,7 @@ type UpdatePayload =
   | { scope: "task"; taskId: string }
   | { scope: "users" }
   | { scope: "project-types" }
-  | { scope: "modules" }
+  | { scope: "products" }
   | { scope: "access-requests" };
 
 export function useRealtimeInvalidation() {
@@ -42,7 +42,7 @@ export function useRealtimeInvalidation() {
         case "project-types":
           queryClient.invalidateQueries({ queryKey: ["project-types"] });
           break;
-        case "modules":
+        case "products":
           queryClient.invalidateQueries({ queryKey: ["checklist-items"] });
           queryClient.invalidateQueries({ queryKey: ["task-templates"] });
           break;

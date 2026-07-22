@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { prisma } from "../lib/prisma";
-import { requireAdmin, requireAuth } from "../middleware/auth";
+import { effectiveSoftwareLineId, requireAdmin, requireAuth } from "../middleware/auth";
 
 const router = Router();
 router.use(requireAuth);
@@ -10,14 +10,27 @@ function toHours(minutes: number | null | undefined): number {
   return Math.round(((minutes ?? 0) / 60) * 10) / 10;
 }
 
-router.get("/by-user", async (_req, res) => {
+// Row set is "users who are actually members of a project in this line" rather than
+// "users whose home line is this line" — an admin's home line can differ from wherever
+// they're currently active, and this way their real activity still surfaces correctly.
+router.get("/by-user", async (req, res) => {
+  const lineId = effectiveSoftwareLineId(req.user!);
+  const inLine = { project: { softwareLineId: lineId } };
+
+  const memberships = await prisma.projectMember.findMany({
+    where: inLine,
+    select: { userId: true },
+    distinct: ["userId"],
+  });
+  const userIds = memberships.map((m) => m.userId);
+
   const users = await prisma.user.findMany({
-    where: { active: true },
+    where: { id: { in: userIds }, active: true },
     orderBy: { name: "asc" },
     include: {
-      projectMemberships: { include: { project: { select: { id: true, name: true } } } },
-      assignedTasks: { select: { status: true } },
-      timeEntries: { select: { durationMinutes: true } },
+      projectMemberships: { where: inLine, include: { project: { select: { id: true, name: true } } } },
+      assignedTasks: { where: inLine, select: { status: true } },
+      timeEntries: { where: { task: inLine }, select: { durationMinutes: true } },
     },
   });
 
@@ -40,8 +53,10 @@ router.get("/by-user", async (_req, res) => {
   res.json(rows);
 });
 
-router.get("/by-project", async (_req, res) => {
+router.get("/by-project", async (req, res) => {
+  const lineId = effectiveSoftwareLineId(req.user!);
   const projects = await prisma.project.findMany({
+    where: { softwareLineId: lineId },
     orderBy: { createdAt: "desc" },
     include: {
       projectType: { select: { id: true, name: true } },
@@ -77,8 +92,10 @@ router.get("/by-project", async (_req, res) => {
   res.json(rows);
 });
 
-router.get("/by-project-type", async (_req, res) => {
+router.get("/by-project-type", async (req, res) => {
+  const lineId = effectiveSoftwareLineId(req.user!);
   const types = await prisma.projectType.findMany({
+    where: { softwareLineId: lineId },
     orderBy: { name: "asc" },
     include: { _count: { select: { projects: true } } },
   });

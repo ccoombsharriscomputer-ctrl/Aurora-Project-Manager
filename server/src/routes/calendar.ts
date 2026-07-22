@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { z } from "zod";
 import { prisma } from "../lib/prisma";
-import { requireAuth } from "../middleware/auth";
+import { effectiveSoftwareLineId, requireAuth } from "../middleware/auth";
 
 const router = Router();
 router.use(requireAuth);
@@ -22,6 +22,7 @@ router.get("/", async (req, res) => {
     where: {
       status: { not: "DONE" },
       dueDate: { gte: new Date(start), lte: new Date(end) },
+      project: { softwareLineId: effectiveSoftwareLineId(req.user!) },
     },
     orderBy: { dueDate: "asc" },
     include: {

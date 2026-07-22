@@ -1,7 +1,9 @@
 import { useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { api, ApiError } from "../api/client";
+import type { SoftwareLine } from "../api/types";
 import i18n from "../i18n";
 
 export function RequestAccessPage() {
@@ -9,16 +11,22 @@ export function RequestAccessPage() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [message, setMessage] = useState("");
+  const [softwareLineId, setSoftwareLineId] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+
+  const { data: softwareLines } = useQuery({
+    queryKey: ["software-lines"],
+    queryFn: () => api.get<SoftwareLine[]>("/software-lines"),
+  });
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setError(null);
     setSubmitting(true);
     try {
-      await api.post("/access-requests", { name, email, message: message || undefined });
+      await api.post("/access-requests", { name, email, message: message || undefined, softwareLineId });
       setSubmitted(true);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : i18n.t("common.somethingWentWrong"));
@@ -54,6 +62,22 @@ export function RequestAccessPage() {
           <div className="field">
             <label htmlFor="email">{t("common.email")}</label>
             <input id="email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
+          </div>
+          <div className="field">
+            <label htmlFor="softwareLine">{t("common.softwareLine")}</label>
+            <select
+              id="softwareLine"
+              required
+              value={softwareLineId}
+              onChange={(e) => setSoftwareLineId(e.target.value)}
+            >
+              <option value="">{t("requestAccess.selectSoftwareLine")}</option>
+              {(softwareLines ?? []).map((line) => (
+                <option key={line.id} value={line.id}>
+                  {line.name}
+                </option>
+              ))}
+            </select>
           </div>
           <div className="field">
             <label htmlFor="message">{t("requestAccess.messageOptional")}</label>

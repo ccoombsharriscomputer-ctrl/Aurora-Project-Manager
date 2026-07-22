@@ -1,6 +1,7 @@
 import { NavLink, Outlet } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "../context/AuthContext";
+import { SoftwareLineSwitcher } from "./SoftwareLineSwitcher";
 
 export function Layout() {
   const { t } = useTranslation();
@@ -10,6 +11,7 @@ export function Layout() {
     <div className="app-shell">
       <aside className="sidebar">
         <div className="sidebar-brand">Aurora PM</div>
+        <SoftwareLineSwitcher />
         <NavLink to="/dashboard" className={({ isActive }) => `sidebar-link${isActive ? " active" : ""}`}>
           {t("layout.dashboard")}
         </NavLink>
@@ -22,8 +24,8 @@ export function Layout() {
           </NavLink>
         )}
         {(user?.role === "ADMIN" || user?.role === "PROJECT_LEAD") && (
-          <NavLink to="/modules" className={({ isActive }) => `sidebar-link${isActive ? " active" : ""}`}>
-            {t("layout.modules")}
+          <NavLink to="/products" className={({ isActive }) => `sidebar-link${isActive ? " active" : ""}`}>
+            {t("layout.products")}
           </NavLink>
         )}
         {user?.role === "ADMIN" && (

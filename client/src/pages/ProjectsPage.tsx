@@ -19,7 +19,7 @@ export function ProjectsPage() {
     queryFn: () => api.get<ProjectType[]>("/project-types"),
   });
 
-  const { data: modules } = useQuery({
+  const { data: products } = useQuery({
     queryKey: ["checklist-items"],
     queryFn: () => api.get<ChecklistItem[]>("/checklist-items"),
   });
@@ -33,9 +33,9 @@ export function ProjectsPage() {
   const [error, setError] = useState<string | null>(null);
 
   const activeTypes = (projectTypes ?? []).filter((t) => t.active);
-  const activeModules = (modules ?? []).filter((m) => m.active);
+  const activeProducts = (products ?? []).filter((p) => p.active);
 
-  function toggleModule(id: string) {
+  function toggleProduct(id: string) {
     setChecklistItemIds((prev) => (prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]));
   }
 
@@ -105,20 +105,20 @@ export function ProjectsPage() {
             )}
           </div>
           <div className="field">
-            <label>{t("projects.modulesToInclude")}</label>
-            {activeModules.length === 0 && (
+            <label>{t("projects.productsToInclude")}</label>
+            {activeProducts.length === 0 && (
               <p className="muted" style={{ fontSize: 12, marginTop: 6 }}>
-                {t("projects.noModulesYet")}
+                {t("projects.noProductsYet")}
               </p>
             )}
-            {activeModules.map((m) => (
-              <label key={m.id} className="gap-8" style={{ display: "flex", margin: "4px 0", cursor: "pointer" }}>
+            {activeProducts.map((p) => (
+              <label key={p.id} className="gap-8" style={{ display: "flex", margin: "4px 0", cursor: "pointer" }}>
                 <input
                   type="checkbox"
-                  checked={checklistItemIds.includes(m.id)}
-                  onChange={() => toggleModule(m.id)}
+                  checked={checklistItemIds.includes(p.id)}
+                  onChange={() => toggleProduct(p.id)}
                 />
-                <span>{m.name}</span>
+                <span>{p.name}</span>
               </label>
             ))}
           </div>

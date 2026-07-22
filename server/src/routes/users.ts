@@ -1,16 +1,30 @@
 import { Router } from "express";
 import { z } from "zod";
 import { prisma } from "../lib/prisma";
-import { attachUserIfPresent, requireAdmin, requireAuth } from "../middleware/auth";
+import { attachUserIfPresent, effectiveSoftwareLineId, requireAdmin, requireAuth } from "../middleware/auth";
 import { emitUpdate } from "../lib/realtime";
 import { hashPassword } from "../lib/auth";
 
 const router = Router();
 
-// Any authenticated user can list users (needed for assignee/member pickers).
-router.get("/", requireAuth, async (_req, res) => {
+const userSelect = {
+  id: true,
+  name: true,
+  email: true,
+  role: true,
+  active: true,
+  createdAt: true,
+  softwareLine: { select: { id: true, name: true } },
+} as const;
+
+// Default: only users in the caller's effective line (safe for every assignee/member
+// picker, every role). `?all=true` is admin-only and returns every user across every
+// line, for the Admin > Users page — silently ignored for non-admins.
+router.get("/", requireAuth, async (req, res) => {
+  const wantsAll = req.query.all === "true" && req.user!.role === "ADMIN";
   const users = await prisma.user.findMany({
-    select: { id: true, name: true, email: true, role: true, active: true, createdAt: true },
+    where: wantsAll ? {} : { softwareLineId: effectiveSoftwareLineId(req.user!) },
+    select: userSelect,
     orderBy: { name: "asc" },
   });
   res.json(users);
@@ -21,6 +35,7 @@ const createSchema = z.object({
   email: z.string().email(),
   password: z.string().min(8).max(200),
   role: z.enum(["ADMIN", "PROJECT_LEAD", "MEMBER"]).optional(),
+  softwareLineId: z.string().min(1),
   accessRequestId: z.string().min(1).optional(),
 });
 
@@ -42,7 +57,7 @@ router.post("/", attachUserIfPresent, async (req, res) => {
   if (!parsed.success) {
     return res.status(400).json({ error: parsed.error.issues[0].message });
   }
-  const { name, email, password, role, accessRequestId } = parsed.data;
+  const { name, email, password, role, softwareLineId, accessRequestId } = parsed.data;
 
   try {
     const user = await prisma.$transaction(async (tx) => {
@@ -54,6 +69,11 @@ router.post("/", attachUserIfPresent, async (req, res) => {
         if (req.user.role !== "ADMIN") {
           throw new HttpError(403, "Admin access required");
         }
+      }
+
+      const line = await tx.softwareLine.findUnique({ where: { id: softwareLineId } });
+      if (!line) {
+        throw new HttpError(404, "Software line not found");
       }
 
       if (accessRequestId && req.user) {
@@ -73,8 +93,14 @@ router.post("/", attachUserIfPresent, async (req, res) => {
 
       const passwordHash = await hashPassword(password);
       return tx.user.create({
-        data: { name, email, passwordHash, role: isBootstrap ? "ADMIN" : role ?? "MEMBER" },
-        select: { id: true, name: true, email: true, role: true, active: true, createdAt: true },
+        data: {
+          name,
+          email,
+          passwordHash,
+          role: isBootstrap ? "ADMIN" : role ?? "MEMBER",
+          softwareLineId: line.id,
+        },
+        select: userSelect,
       });
     });
 
@@ -92,6 +118,7 @@ router.post("/", attachUserIfPresent, async (req, res) => {
 const updateSchema = z.object({
   role: z.enum(["ADMIN", "PROJECT_LEAD", "MEMBER"]).optional(),
   active: z.boolean().optional(),
+  softwareLineId: z.string().min(1).optional(),
 });
 
 router.patch("/:id", requireAuth, requireAdmin, async (req, res) => {
@@ -103,10 +130,20 @@ router.patch("/:id", requireAuth, requireAdmin, async (req, res) => {
     return res.status(400).json({ error: "You cannot deactivate your own account" });
   }
 
+  if (parsed.data.softwareLineId) {
+    const line = await prisma.softwareLine.findUnique({ where: { id: parsed.data.softwareLineId } });
+    if (!line) {
+      return res.status(404).json({ error: "Software line not found" });
+    }
+  }
+
+  // Reassigning a user's line does not retroactively touch their existing project
+  // memberships or task assignments in the old line — accepted data-hygiene debt, not a
+  // bug: the by-user report is membership-driven, so they simply stop appearing there.
   const user = await prisma.user.update({
     where: { id: req.params.id },
     data: parsed.data,
-    select: { id: true, name: true, email: true, role: true, active: true, createdAt: true },
+    select: userSelect,
   });
   emitUpdate({ scope: "users" });
   res.json(user);

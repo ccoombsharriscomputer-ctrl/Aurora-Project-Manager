@@ -32,13 +32,14 @@
     "justNow": "à l'instant",
     "minutesAgo": "il y a {{count}} min",
     "hoursAgo": "il y a {{count}} h",
-    "daysAgo": "il y a {{count}} j"
+    "daysAgo": "il y a {{count}} j",
+    "softwareLine": "Ligne de logiciel"
   },
   "layout": {
     "dashboard": "Tableau de bord",
     "projects": "Projets",
     "projectTypes": "Types de projet",
-    "modules": "Modules",
+    "products": "Produits",
     "users": "Utilisateurs",
     "reports": "Rapports",
     "settings": "Paramètres",
@@ -55,6 +56,7 @@
   "requestAccess": {
     "title": "Demander l'accès",
     "subtitle": "Demandez à un administrateur de créer un compte pour vous sur Aurora Project Manager",
+    "selectSoftwareLine": "Sélectionnez une ligne de logiciel…",
     "messageOptional": "Message (facultatif)",
     "sending": "Envoi en cours…",
     "requestAccess": "Demander l'accès",
@@ -84,8 +86,8 @@
     "projectType": "Type de projet",
     "selectProjectType": "Sélectionnez un type de projet…",
     "noProjectTypesYet": "Aucun type de projet pour l'instant — un administrateur ou un chef de projet doit en créer un d'abord.",
-    "modulesToInclude": "Modules à inclure",
-    "noModulesYet": "Aucun module pour l'instant — un administrateur ou un chef de projet peut en ajouter sur la page Modules.",
+    "productsToInclude": "Produits à inclure",
+    "noProductsYet": "Aucun produit pour l'instant — un administrateur ou un chef de projet peut en ajouter sur la page Produits.",
     "teamSupportTicketNumber": "N° de billet TeamSupport (facultatif)",
     "createProject": "Créer le projet",
     "loadingProjects": "Chargement des projets…",
@@ -96,11 +98,11 @@
   },
   "projectDetail": {
     "newSubProject": "Nouveau sous-projet",
-    "module": "Module",
-    "selectModule": "Sélectionnez un module…",
-    "noModulesInCatalog": "Aucun module dans le catalogue pour l'instant — ajoutez-en un sur la page Modules.",
+    "product": "Produit",
+    "selectProduct": "Sélectionnez un produit…",
+    "noProductsInCatalog": "Aucun produit dans le catalogue pour l'instant — ajoutez-en un sur la page Produits.",
     "customNameOptional": "Nom personnalisé (facultatif)",
-    "defaultsToModuleName": "Utilise le nom du module par défaut",
+    "defaultsToProductName": "Utilise le nom du produit par défaut",
     "members": "Membres",
     "remove": "Retirer",
     "addMember": "Ajouter un membre…",
@@ -150,6 +152,7 @@
     "addUser": "Ajouter un utilisateur",
     "initialPassword": "Mot de passe initial",
     "createUser": "Créer l'utilisateur",
+    "selectSoftwareLine": "Sélectionnez une ligne de logiciel…",
     "pendingAccessRequests": "Demandes d'accès en attente",
     "approve": "Approuver",
     "deny": "Refuser",
@@ -161,22 +164,22 @@
   "projectTypes": {
     "newProjectType": "Nouveau type de projet",
     "loadingProjectTypes": "Chargement des types de projet…",
-    "intro": "Un type de projet est une catégorie de programme (p. ex. « Implémentation de la paie ») utilisée pour organiser et générer des rapports sur les projets. Lors de la création d'un projet, vous choisirez séparément quels modules inclure comme sous-projets sur la page Modules.",
+    "intro": "Un type de projet est une catégorie de programme (p. ex. « Implémentation de la paie ») utilisée pour organiser et générer des rapports sur les projets. Lors de la création d'un projet, vous choisirez séparément quels produits inclure comme sous-projets sur la page Produits.",
     "confirmDeleteType": "Supprimer le type de projet « {{name}} »? Cette action est irréversible.",
     "noProjectTypesYet": "Aucun type de projet pour l'instant — créez le premier."
   },
-  "modules": {
-    "taskTemplatesIntro": "Ces tâches sont créées automatiquement dans le sous-projet chaque fois que ce module est utilisé sur un projet.",
+  "products": {
+    "taskTemplatesIntro": "Ces tâches sont créées automatiquement dans le sous-projet chaque fois que ce produit est utilisé sur un projet.",
     "noTaskTemplatesYet": "Aucune tâche pour l'instant.",
     "taskTitlePlaceholder": "p. ex. Exporter les données existantes",
-    "moduleNamePlaceholder": "p. ex. Conversion des données",
-    "addModule": "Ajouter un module",
-    "loadingModules": "Chargement des modules…",
-    "intro": "Les modules (p. ex. « Paie », « Facturation des services publics », « Conversion des données ») forment un catalogue partagé de sous-projets réutilisables. Ils ne sont liés à aucun type de projet — lors de la création d'un nouveau projet, vous choisissez quels modules inclure comme sous-projets. Chaque module peut avoir ses propres tâches standards qui se créent automatiquement chaque fois qu'il est utilisé.",
+    "productNamePlaceholder": "p. ex. Conversion des données",
+    "addProduct": "Ajouter un produit",
+    "loadingProducts": "Chargement des produits…",
+    "intro": "Les produits (p. ex. « Paie », « Facturation des services publics », « Conversion des données ») forment un catalogue partagé de sous-projets réutilisables. Ils ne sont liés à aucun type de projet — lors de la création d'un nouveau projet, vous choisissez quels produits inclure comme sous-projets. Chaque produit peut avoir ses propres tâches standards qui se créent automatiquement chaque fois qu'il est utilisé.",
     "hideTasks": "Masquer les tâches",
     "manageTasks": "Gérer les tâches",
-    "confirmDeleteModule": "Supprimer le module « {{name}} »? Cela le supprime du catalogue ainsi que ses modèles de tâches. Cette action est irréversible.",
-    "noModulesYetAddFirst": "Aucun module pour l'instant — ajoutez le premier ci-dessous."
+    "confirmDeleteProduct": "Supprimer le produit « {{name}} »? Cela le supprime du catalogue ainsi que ses modèles de tâches. Cette action est irréversible.",
+    "noProductsYetAddFirst": "Aucun produit pour l'instant — ajoutez le premier ci-dessous."
   },
   "reports": {
     "projects": "Projets",
