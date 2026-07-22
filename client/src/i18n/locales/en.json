@@ -157,6 +157,7 @@
     "initialPassword": "Initial password",
     "createUser": "Create user",
     "selectSoftwareLine": "Select a software line…",
+    "newPasswordOptional": "New password (optional)",
     "pendingAccessRequests": "Pending access requests",
     "approve": "Approve",
     "deny": "Deny",

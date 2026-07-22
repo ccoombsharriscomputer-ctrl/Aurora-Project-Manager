@@ -213,12 +213,26 @@ function PendingAccessRequests({
   );
 }
 
+interface UserEditData {
+  role?: AdminUser["role"];
+  active?: boolean;
+  softwareLineId?: string;
+  name?: string;
+  email?: string;
+  password?: string;
+}
+
 export function AdminUsersPage() {
   const { t } = useTranslation();
   const { user: me } = useAuth();
   const queryClient = useQueryClient();
   const [deleteErrors, setDeleteErrors] = useState<Record<string, string>>({});
   const [prefill, setPrefill] = useState<CreateUserPrefill | null>(null);
+  const [editingUserId, setEditingUserId] = useState<string | null>(null);
+  const [editName, setEditName] = useState("");
+  const [editEmail, setEditEmail] = useState("");
+  const [editPassword, setEditPassword] = useState("");
+  const [editError, setEditError] = useState<string | null>(null);
 
   const { data: users, isLoading } = useQuery({
     queryKey: ["users"],
@@ -231,10 +245,27 @@ export function AdminUsersPage() {
   });
 
   const updateUser = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: Partial<Pick<AdminUser, "role" | "active">> & { softwareLineId?: string } }) =>
-      api.patch(`/users/${id}`, data),
+    mutationFn: ({ id, data }: { id: string; data: UserEditData }) => api.patch(`/users/${id}`, data),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["users"] }),
   });
+
+  const saveEdit = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: UserEditData }) => api.patch<AdminUser>(`/users/${id}`, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["users"] });
+      setEditingUserId(null);
+      setEditError(null);
+    },
+    onError: (err) => setEditError(extractErrorMessage(err)),
+  });
+
+  function startEdit(u: AdminUser) {
+    setEditingUserId(u.id);
+    setEditName(u.name);
+    setEditEmail(u.email);
+    setEditPassword("");
+    setEditError(null);
+  }
 
   const deleteUser = useMutation({
     mutationFn: (id: string) => api.delete(`/users/${id}`),
@@ -274,68 +305,123 @@ export function AdminUsersPage() {
             </tr>
           </thead>
           <tbody>
-            {users.map((u) => (
-              <Fragment key={u.id}>
-                <tr>
-                  <td>{u.name}</td>
-                  <td>{u.email}</td>
-                  <td>
-                    <select
-                      value={u.role}
-                      disabled={u.id === me?.id}
-                      onChange={(e) => updateUser.mutate({ id: u.id, data: { role: e.target.value as AdminUser["role"] } })}
-                      style={{ width: "auto" }}
-                    >
-                      <option value="MEMBER">{t("common.roleMember")}</option>
-                      <option value="PROJECT_LEAD">{t("common.roleProjectLead")}</option>
-                      <option value="ADMIN">{t("common.roleAdmin")}</option>
-                    </select>
-                  </td>
-                  <td>
-                    <select
-                      value={u.softwareLine.id}
-                      onChange={(e) => updateUser.mutate({ id: u.id, data: { softwareLineId: e.target.value } })}
-                      style={{ width: "auto" }}
-                    >
-                      {(softwareLines ?? []).map((line) => (
-                        <option key={line.id} value={line.id}>
-                          {line.name}
-                        </option>
-                      ))}
-                    </select>
-                  </td>
-                  <td>{u.active ? t("common.active") : t("adminUsers.deactivated")}</td>
-                  <td>{formatDate(u.createdAt)}</td>
-                  <td className="gap-8">
-                    <button
-                      className="btn btn-sm"
-                      disabled={u.id === me?.id}
-                      onClick={() => updateUser.mutate({ id: u.id, data: { active: !u.active } })}
-                    >
-                      {u.active ? t("common.deactivate") : t("common.reactivate")}
-                    </button>
-                    <button
-                      className="btn btn-sm btn-danger"
-                      disabled={u.id === me?.id}
-                      onClick={() => {
-                        if (confirm(t("adminUsers.confirmDeleteUser", { name: u.name }))) {
-                          deleteUser.mutate(u.id);
-                        }
+            {users.map((u) =>
+              editingUserId === u.id ? (
+                <tr key={u.id}>
+                  <td colSpan={7}>
+                    <form
+                      className="card"
+                      style={{ margin: "8px 0" }}
+                      onSubmit={(e: FormEvent) => {
+                        e.preventDefault();
+                        if (!editName.trim() || !editEmail.trim()) return;
+                        const data: UserEditData = { name: editName, email: editEmail };
+                        if (editPassword) data.password = editPassword;
+                        saveEdit.mutate({ id: u.id, data });
                       }}
                     >
-                      {t("common.delete")}
-                    </button>
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
+                        <div className="field">
+                          <label>{t("common.name")}</label>
+                          <input type="text" required value={editName} onChange={(e) => setEditName(e.target.value)} />
+                        </div>
+                        <div className="field">
+                          <label>{t("common.email")}</label>
+                          <input
+                            type="email"
+                            required
+                            value={editEmail}
+                            onChange={(e) => setEditEmail(e.target.value)}
+                          />
+                        </div>
+                        <div className="field">
+                          <label>{t("adminUsers.newPasswordOptional")}</label>
+                          <input
+                            type="password"
+                            minLength={8}
+                            value={editPassword}
+                            onChange={(e) => setEditPassword(e.target.value)}
+                          />
+                        </div>
+                      </div>
+                      {editError && <div className="error-text">{editError}</div>}
+                      <div className="gap-8">
+                        <button className="btn btn-sm btn-primary" type="submit" disabled={saveEdit.isPending}>
+                          {t("common.save")}
+                        </button>
+                        <button className="btn btn-sm" type="button" onClick={() => setEditingUserId(null)}>
+                          {t("common.cancel")}
+                        </button>
+                      </div>
+                    </form>
                   </td>
                 </tr>
-                {deleteErrors[u.id] && (
+              ) : (
+                <Fragment key={u.id}>
                   <tr>
-                    <td colSpan={7}>
-                      <div className="error-text">{deleteErrors[u.id]}</div>
+                    <td>{u.name}</td>
+                    <td>{u.email}</td>
+                    <td>
+                      <select
+                        value={u.role}
+                        disabled={u.id === me?.id}
+                        onChange={(e) => updateUser.mutate({ id: u.id, data: { role: e.target.value as AdminUser["role"] } })}
+                        style={{ width: "auto" }}
+                      >
+                        <option value="MEMBER">{t("common.roleMember")}</option>
+                        <option value="PROJECT_LEAD">{t("common.roleProjectLead")}</option>
+                        <option value="ADMIN">{t("common.roleAdmin")}</option>
+                      </select>
+                    </td>
+                    <td>
+                      <select
+                        value={u.softwareLine.id}
+                        onChange={(e) => updateUser.mutate({ id: u.id, data: { softwareLineId: e.target.value } })}
+                        style={{ width: "auto" }}
+                      >
+                        {(softwareLines ?? []).map((line) => (
+                          <option key={line.id} value={line.id}>
+                            {line.name}
+                          </option>
+                        ))}
+                      </select>
+                    </td>
+                    <td>{u.active ? t("common.active") : t("adminUsers.deactivated")}</td>
+                    <td>{formatDate(u.createdAt)}</td>
+                    <td className="gap-8">
+                      <button className="btn btn-sm" onClick={() => startEdit(u)}>
+                        {t("common.edit")}
+                      </button>
+                      <button
+                        className="btn btn-sm"
+                        disabled={u.id === me?.id}
+                        onClick={() => updateUser.mutate({ id: u.id, data: { active: !u.active } })}
+                      >
+                        {u.active ? t("common.deactivate") : t("common.reactivate")}
+                      </button>
+                      <button
+                        className="btn btn-sm btn-danger"
+                        disabled={u.id === me?.id}
+                        onClick={() => {
+                          if (confirm(t("adminUsers.confirmDeleteUser", { name: u.name }))) {
+                            deleteUser.mutate(u.id);
+                          }
+                        }}
+                      >
+                        {t("common.delete")}
+                      </button>
                     </td>
                   </tr>
-                )}
-              </Fragment>
-            ))}
+                  {deleteErrors[u.id] && (
+                    <tr>
+                      <td colSpan={7}>
+                        <div className="error-text">{deleteErrors[u.id]}</div>
+                      </td>
+                    </tr>
+                  )}
+                </Fragment>
+              )
+            )}
           </tbody>
         </table>
       </div>

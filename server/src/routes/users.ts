@@ -116,6 +116,9 @@ router.post("/", attachUserIfPresent, async (req, res) => {
 });
 
 const updateSchema = z.object({
+  name: z.string().min(1).max(100).optional(),
+  email: z.string().email().optional(),
+  password: z.string().min(8).max(200).optional(),
   role: z.enum(["ADMIN", "PROJECT_LEAD", "MEMBER"]).optional(),
   active: z.boolean().optional(),
   softwareLineId: z.string().min(1).optional(),
@@ -137,12 +140,25 @@ router.patch("/:id", requireAuth, requireAdmin, async (req, res) => {
     }
   }
 
+  if (parsed.data.email) {
+    const existing = await prisma.user.findUnique({ where: { email: parsed.data.email } });
+    if (existing && existing.id !== req.params.id) {
+      return res.status(409).json({ error: "An account with that email already exists" });
+    }
+  }
+
+  const { password, ...rest } = parsed.data;
+  const data: Record<string, unknown> = { ...rest };
+  if (password) {
+    data.passwordHash = await hashPassword(password);
+  }
+
   // Reassigning a user's line does not retroactively touch their existing project
   // memberships or task assignments in the old line — accepted data-hygiene debt, not a
   // bug: the by-user report is membership-driven, so they simply stop appearing there.
   const user = await prisma.user.update({
     where: { id: req.params.id },
-    data: parsed.data,
+    data,
     select: userSelect,
   });
   emitUpdate({ scope: "users" });
