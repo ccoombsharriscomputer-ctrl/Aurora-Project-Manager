@@ -36,6 +36,7 @@
   },
   "layout": {
     "dashboard": "Panel",
+    "calendar": "Calendario",
     "projects": "Proyectos",
     "projectTypes": "Tipos de proyecto",
     "modules": "Módulos",
@@ -192,6 +193,11 @@
     "project": "Proyecto",
     "subProjects": "Subproyectos",
     "noProjectsYet": "Aún no hay proyectos."
+  },
+  "calendar": {
+    "today": "Hoy",
+    "loadingCalendar": "Cargando calendario…",
+    "moreCount": "+{{count}} más"
   },
   "settings": {
     "title": "Configuración",

@@ -18,6 +18,7 @@ import timeEntryRoutes from "./routes/timeEntries";
 import attachmentRoutes from "./routes/attachments";
 import dashboardRoutes from "./routes/dashboard";
 import reportRoutes from "./routes/reports";
+import calendarRoutes from "./routes/calendar";
 import { attachRealtime } from "./lib/realtime";
 
 const app = express();
@@ -45,6 +46,7 @@ app.use("/api/time-entries", timeEntryRoutes);
 app.use("/api/attachments", attachmentRoutes);
 app.use("/api/dashboard", dashboardRoutes);
 app.use("/api/reports", reportRoutes);
+app.use("/api/calendar", calendarRoutes);
 
 app.get("/api/health", (_req, res) => res.json({ ok: true }));
 

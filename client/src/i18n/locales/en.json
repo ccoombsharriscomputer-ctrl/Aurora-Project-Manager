@@ -36,6 +36,7 @@
   },
   "layout": {
     "dashboard": "Dashboard",
+    "calendar": "Calendar",
     "projects": "Projects",
     "projectTypes": "Project Types",
     "modules": "Modules",
@@ -192,6 +193,11 @@
     "project": "Project",
     "subProjects": "Sub-projects",
     "noProjectsYet": "No projects yet."
+  },
+  "calendar": {
+    "today": "Today",
+    "loadingCalendar": "Loading calendar…",
+    "moreCount": "+{{count}} more"
   },
   "settings": {
     "title": "Settings",
