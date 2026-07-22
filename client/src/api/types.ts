@@ -2,6 +2,9 @@ export type UserRole = "ADMIN" | "PROJECT_LEAD" | "MEMBER";
 export type ProjectMemberRole = "OWNER" | "MEMBER";
 export type TaskStatus = "TODO" | "IN_PROGRESS" | "DONE";
 export type TaskPriority = "LOW" | "MEDIUM" | "HIGH";
+export type ThemeMode = "LIGHT" | "DARK" | "SYSTEM";
+export type AccentColor = "BLUE" | "GREEN" | "PURPLE" | "ORANGE" | "RED" | "TEAL";
+export type Locale = "EN" | "ES" | "FR_CA";
 export type ActivityType =
   | "PROJECT_CREATED"
   | "TASK_CREATED"
@@ -16,6 +19,9 @@ export interface CurrentUser {
   name: string;
   email: string;
   role: UserRole;
+  theme: ThemeMode;
+  accentColor: AccentColor;
+  locale: Locale;
 }
 
 export interface UserSummary {

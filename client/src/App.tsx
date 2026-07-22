@@ -12,10 +12,15 @@ import { AdminUsersPage } from "./pages/AdminUsersPage";
 import { ProjectTypesPage } from "./pages/ProjectTypesPage";
 import { ModulesPage } from "./pages/ModulesPage";
 import { ReportsPage } from "./pages/ReportsPage";
+import { SettingsPage } from "./pages/SettingsPage";
 import { useRealtimeInvalidation } from "./hooks/useRealtimeInvalidation";
+import { useApplyTheme } from "./hooks/useApplyTheme";
+import { useAuth } from "./context/AuthContext";
 
 function App() {
   useRealtimeInvalidation();
+  const { user } = useAuth();
+  useApplyTheme(user);
 
   return (
     <Routes>
@@ -29,6 +34,7 @@ function App() {
           <Route path="/projects/:projectId" element={<ProjectDetailPage />} />
           <Route path="/projects/:projectId/sub-projects/:subProjectId" element={<SubProjectDetailPage />} />
           <Route path="/tasks/:taskId" element={<TaskDetailPage />} />
+          <Route path="/settings" element={<SettingsPage />} />
           <Route element={<AdminRoute />}>
             <Route path="/admin/users" element={<AdminUsersPage />} />
             <Route path="/reports" element={<ReportsPage />} />

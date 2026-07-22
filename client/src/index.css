@@ -4,8 +4,6 @@
   --border: #e1e5ea;
   --text: #1a2233;
   --muted: #6b7385;
-  --primary: #3457d5;
-  --primary-hover: #2a45b0;
   --success: #1f9d55;
   --warning: #c9820a;
   --danger: #d64545;
@@ -14,18 +12,20 @@
   --done-bg: #e6f6ec;
   --radius: 8px;
   --shadow: 0 1px 2px rgba(20, 24, 40, 0.06), 0 1px 3px rgba(20, 24, 40, 0.08);
+  --accent-color: #3457d5;
+  --primary: var(--accent-color, #3457d5);
+  --primary-hover: color-mix(in srgb, var(--primary) 85%, black);
   color-scheme: light;
 }
 
+/* System (OS) dark mode — only applies when the user hasn't explicitly forced Light. */
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme="light"]) {
     --bg: #12151c;
     --surface: #1a1f2b;
     --border: #2b3140;
     --text: #e7eaf0;
     --muted: #97a0b3;
-    --primary: #5b7cf0;
-    --primary-hover: #7691f5;
     --success: #35c072;
     --warning: #e0a53a;
     --danger: #f0605c;
@@ -33,8 +33,50 @@
     --progress-bg: #332a17;
     --done-bg: #16311f;
     --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 1px 3px rgba(0, 0, 0, 0.4);
+    --primary: color-mix(in srgb, var(--accent-color) 75%, white);
+    --primary-hover: color-mix(in srgb, var(--primary) 85%, white);
     color-scheme: dark;
   }
+}
+
+/* Explicit "Dark" choice — wins regardless of OS setting (placed after the media query
+   so it takes precedence at equal specificity). */
+:root[data-theme="dark"] {
+  --bg: #12151c;
+  --surface: #1a1f2b;
+  --border: #2b3140;
+  --text: #e7eaf0;
+  --muted: #97a0b3;
+  --success: #35c072;
+  --warning: #e0a53a;
+  --danger: #f0605c;
+  --todo-bg: #232a38;
+  --progress-bg: #332a17;
+  --done-bg: #16311f;
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 1px 3px rgba(0, 0, 0, 0.4);
+  --primary: color-mix(in srgb, var(--accent-color) 75%, white);
+  --primary-hover: color-mix(in srgb, var(--primary) 85%, white);
+  color-scheme: dark;
+}
+
+/* Accent color presets — pick a single hue; hover shade is derived automatically above. */
+:root[data-accent="blue"] {
+  --accent-color: #3457d5;
+}
+:root[data-accent="green"] {
+  --accent-color: #1f9d55;
+}
+:root[data-accent="purple"] {
+  --accent-color: #7c3aed;
+}
+:root[data-accent="orange"] {
+  --accent-color: #d97706;
+}
+:root[data-accent="red"] {
+  --accent-color: #d64545;
+}
+:root[data-accent="teal"] {
+  --accent-color: #0d9488;
 }
 
 * {

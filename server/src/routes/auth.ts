@@ -37,7 +37,15 @@ router.post("/login", async (req, res) => {
 
   const token = signToken(user.id);
   res.cookie(COOKIE_NAME, token, COOKIE_OPTIONS);
-  res.json({ id: user.id, name: user.name, email: user.email, role: user.role });
+  res.json({
+    id: user.id,
+    name: user.name,
+    email: user.email,
+    role: user.role,
+    theme: user.theme,
+    accentColor: user.accentColor,
+    locale: user.locale,
+  });
 });
 
 router.post("/logout", (_req, res) => {
@@ -47,6 +55,26 @@ router.post("/logout", (_req, res) => {
 
 router.get("/me", requireAuth, (req, res) => {
   res.json(req.user);
+});
+
+const updateMeSchema = z.object({
+  theme: z.enum(["LIGHT", "DARK", "SYSTEM"]).optional(),
+  accentColor: z.enum(["BLUE", "GREEN", "PURPLE", "ORANGE", "RED", "TEAL"]).optional(),
+  locale: z.enum(["EN", "ES", "FR_CA"]).optional(),
+});
+
+router.patch("/me", requireAuth, async (req, res) => {
+  const parsed = updateMeSchema.safeParse(req.body);
+  if (!parsed.success) {
+    return res.status(400).json({ error: parsed.error.issues[0].message });
+  }
+
+  const user = await prisma.user.update({
+    where: { id: req.user!.id },
+    data: parsed.data,
+    select: { id: true, name: true, email: true, role: true, theme: true, accentColor: true, locale: true },
+  });
+  res.json(user);
 });
 
 export default router;

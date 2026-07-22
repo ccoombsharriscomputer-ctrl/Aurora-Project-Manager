@@ -1,11 +1,13 @@
 import { useState, type FormEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import { api } from "../api/client";
 import type { ProjectType } from "../api/types";
 import { extractErrorMessage } from "../context/AuthContext";
 import { formatDate } from "../utils/format";
 
 function CreateTypeForm() {
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
@@ -27,7 +29,7 @@ function CreateTypeForm() {
   if (!open) {
     return (
       <button className="btn btn-primary" onClick={() => setOpen(true)}>
-        New project type
+        {t("projectTypes.newProjectType")}
       </button>
     );
   }
@@ -42,20 +44,20 @@ function CreateTypeForm() {
       }}
     >
       <div className="field">
-        <label>Name</label>
+        <label>{t("common.name")}</label>
         <input type="text" required value={name} onChange={(e) => setName(e.target.value)} />
       </div>
       <div className="field">
-        <label>Description</label>
+        <label>{t("common.description")}</label>
         <textarea value={description} onChange={(e) => setDescription(e.target.value)} />
       </div>
       {error && <div className="error-text">{error}</div>}
       <div className="gap-8">
         <button className="btn btn-primary" type="submit" disabled={createType.isPending}>
-          Create
+          {t("common.create")}
         </button>
         <button className="btn" type="button" onClick={() => setOpen(false)}>
-          Cancel
+          {t("common.cancel")}
         </button>
       </div>
     </form>
@@ -63,6 +65,7 @@ function CreateTypeForm() {
 }
 
 export function ProjectTypesPage() {
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const [deleteErrors, setDeleteErrors] = useState<Record<string, string>>({});
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -112,35 +115,33 @@ export function ProjectTypesPage() {
   }
 
   if (isLoading || !types) {
-    return <div className="muted">Loading project types…</div>;
+    return <div className="muted">{t("projectTypes.loadingProjectTypes")}</div>;
   }
 
   return (
     <div>
       <div className="page-header">
-        <h1>Project Types</h1>
+        <h1>{t("layout.projectTypes")}</h1>
         <CreateTypeForm />
       </div>
       <p className="muted" style={{ marginTop: -12, marginBottom: 20 }}>
-        A project type is a program category (e.g. "Payroll Implementation") used to organize and report on
-        projects. When creating a project, you'll separately choose which modules to include as its
-        sub-projects on the Modules page.
+        {t("projectTypes.intro")}
       </p>
       <div className="card">
         <table className="table">
           <thead>
             <tr>
-              <th>Name</th>
-              <th>Description</th>
-              <th>Status</th>
-              <th>Created</th>
+              <th>{t("common.name")}</th>
+              <th>{t("common.description")}</th>
+              <th>{t("common.status")}</th>
+              <th>{t("common.created")}</th>
               <th></th>
             </tr>
           </thead>
           <tbody>
-            {types.map((t) =>
-              editingId === t.id ? (
-                <tr key={t.id}>
+            {types.map((t2) =>
+              editingId === t2.id ? (
+                <tr key={t2.id}>
                   <td colSpan={5}>
                     <form
                       className="card"
@@ -149,58 +150,58 @@ export function ProjectTypesPage() {
                         e.preventDefault();
                         if (!editName.trim()) return;
                         updateType.mutate({
-                          id: t.id,
+                          id: t2.id,
                           data: { name: editName, description: editDescription || null },
                         });
                       }}
                     >
                       <div className="field">
-                        <label>Name</label>
+                        <label>{t("common.name")}</label>
                         <input type="text" required value={editName} onChange={(e) => setEditName(e.target.value)} />
                       </div>
                       <div className="field">
-                        <label>Description</label>
+                        <label>{t("common.description")}</label>
                         <textarea value={editDescription} onChange={(e) => setEditDescription(e.target.value)} />
                       </div>
                       {editError && <div className="error-text">{editError}</div>}
                       <div className="gap-8">
                         <button className="btn btn-sm btn-primary" type="submit" disabled={updateType.isPending}>
-                          Save
+                          {t("common.save")}
                         </button>
                         <button className="btn btn-sm" type="button" onClick={() => setEditingId(null)}>
-                          Cancel
+                          {t("common.cancel")}
                         </button>
                       </div>
                     </form>
                   </td>
                 </tr>
               ) : (
-                <tr key={t.id}>
-                  <td>{t.name}</td>
-                  <td>{t.description || "—"}</td>
-                  <td>{t.active ? "Active" : "Inactive"}</td>
-                  <td>{formatDate(t.createdAt)}</td>
+                <tr key={t2.id}>
+                  <td>{t2.name}</td>
+                  <td>{t2.description || "—"}</td>
+                  <td>{t2.active ? t("common.active") : t("common.inactive")}</td>
+                  <td>{formatDate(t2.createdAt)}</td>
                   <td className="gap-8">
-                    <button className="btn btn-sm" onClick={() => startEdit(t)}>
-                      Edit
+                    <button className="btn btn-sm" onClick={() => startEdit(t2)}>
+                      {t("common.edit")}
                     </button>
                     <button
                       className="btn btn-sm"
-                      onClick={() => toggleActive.mutate({ id: t.id, active: !t.active })}
+                      onClick={() => toggleActive.mutate({ id: t2.id, active: !t2.active })}
                     >
-                      {t.active ? "Deactivate" : "Reactivate"}
+                      {t2.active ? t("common.deactivate") : t("common.reactivate")}
                     </button>
                     <button
                       className="btn btn-sm btn-danger"
                       onClick={() => {
-                        if (confirm(`Delete project type "${t.name}"? This cannot be undone.`)) {
-                          deleteType.mutate(t.id);
+                        if (confirm(t("projectTypes.confirmDeleteType", { name: t2.name }))) {
+                          deleteType.mutate(t2.id);
                         }
                       }}
                     >
-                      Delete
+                      {t("common.delete")}
                     </button>
-                    {deleteErrors[t.id] && <div className="error-text">{deleteErrors[t.id]}</div>}
+                    {deleteErrors[t2.id] && <div className="error-text">{deleteErrors[t2.id]}</div>}
                   </td>
                 </tr>
               )
@@ -208,7 +209,7 @@ export function ProjectTypesPage() {
             {types.length === 0 && (
               <tr>
                 <td colSpan={5} className="muted">
-                  No project types yet — create the first one.
+                  {t("projectTypes.noProjectTypesYet")}
                 </td>
               </tr>
             )}

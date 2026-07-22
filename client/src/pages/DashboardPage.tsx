@@ -1,12 +1,14 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import { api } from "../api/client";
 import type { DashboardSummary } from "../api/types";
 import { formatDate, formatElapsed, formatRelativeTime } from "../utils/format";
 import { useActiveTimer } from "../hooks/useActiveTimer";
 
 function TimerBanner() {
+  const { t } = useTranslation();
   const { activeTimer, stop } = useActiveTimer();
   const [, setTick] = useState(0);
 
@@ -21,20 +23,21 @@ function TimerBanner() {
   return (
     <div className="timer-banner">
       <span>
-        Timer running on{" "}
+        {t("dashboard.timerRunningOn")}{" "}
         <Link to={`/projects/${activeTimer.task.project.id}/tasks/${activeTimer.taskId}`} style={{ color: "white", textDecoration: "underline" }}>
           {activeTimer.task.title}
         </Link>{" "}
         · {formatElapsed(activeTimer.startedAt)}
       </span>
       <button className="btn btn-sm" onClick={() => stop.mutate(activeTimer.id)} disabled={stop.isPending}>
-        Stop
+        {t("dashboard.stop")}
       </button>
     </div>
   );
 }
 
 export function DashboardPage() {
+  const { t } = useTranslation();
   const { data, isLoading } = useQuery({
     queryKey: ["dashboard"],
     queryFn: () => api.get<DashboardSummary>("/dashboard/summary"),
@@ -42,7 +45,7 @@ export function DashboardPage() {
   });
 
   if (isLoading || !data) {
-    return <div className="muted">Loading dashboard…</div>;
+    return <div className="muted">{t("dashboard.loadingDashboard")}</div>;
   }
 
   const { statusBreakdown } = data;
@@ -50,7 +53,7 @@ export function DashboardPage() {
   return (
     <div>
       <div className="page-header">
-        <h1>Dashboard</h1>
+        <h1>{t("layout.dashboard")}</h1>
       </div>
 
       <TimerBanner />
@@ -58,48 +61,48 @@ export function DashboardPage() {
       <div className="stat-grid">
         <div className="stat-tile">
           <div className="value">{data.totalProjects}</div>
-          <div className="label">Total projects</div>
+          <div className="label">{t("dashboard.totalProjects")}</div>
         </div>
         <div className="stat-tile">
           <div className="value">{data.totalOpenTasks}</div>
-          <div className="label">Open tasks</div>
+          <div className="label">{t("dashboard.openTasks")}</div>
         </div>
         <div className="stat-tile">
           <div className="value">{data.tasksCompletedThisWeek}</div>
-          <div className="label">Completed this week</div>
+          <div className="label">{t("dashboard.completedThisWeek")}</div>
         </div>
         <div className="stat-tile">
           <div className="value">{data.hoursLoggedThisWeek}h</div>
-          <div className="label">Logged this week</div>
+          <div className="label">{t("dashboard.loggedThisWeek")}</div>
         </div>
       </div>
 
       <div className="status-breakdown">
         <div className="status-pill todo">
           <div className="count">{statusBreakdown.TODO}</div>
-          <div className="label">To Do</div>
+          <div className="label">{t("common.statusTodo")}</div>
         </div>
         <div className="status-pill in-progress">
           <div className="count">{statusBreakdown.IN_PROGRESS}</div>
-          <div className="label">In Progress</div>
+          <div className="label">{t("common.statusInProgress")}</div>
         </div>
         <div className="status-pill done">
           <div className="count">{statusBreakdown.DONE}</div>
-          <div className="label">Done</div>
+          <div className="label">{t("common.statusDone")}</div>
         </div>
       </div>
 
       <div className="dashboard-grid">
         <div>
           <div className="card" style={{ marginBottom: 20 }}>
-            <div className="section-title">Project progress</div>
-            {data.projectProgress.length === 0 && <p className="muted">No projects yet.</p>}
+            <div className="section-title">{t("dashboard.projectProgress")}</div>
+            {data.projectProgress.length === 0 && <p className="muted">{t("dashboard.noProjectsYet")}</p>}
             {data.projectProgress.map((p) => (
               <div className="progress-row" key={p.id}>
                 <div className="progress-row-top">
                   <Link to={`/projects/${p.id}`}>{p.name}</Link>
                   <span className="muted">
-                    {p.doneTasks}/{p.totalTasks} tasks · {p.percent}%
+                    {t("dashboard.tasksCount", { done: p.doneTasks, total: p.totalTasks })} · {p.percent}%
                   </span>
                 </div>
                 <div className="progress-bar-track">
@@ -110,8 +113,8 @@ export function DashboardPage() {
           </div>
 
           <div className="card">
-            <div className="section-title">Recent activity</div>
-            {data.recentActivity.length === 0 && <p className="muted">No activity yet.</p>}
+            <div className="section-title">{t("dashboard.recentActivity")}</div>
+            {data.recentActivity.length === 0 && <p className="muted">{t("dashboard.noActivityYet")}</p>}
             <ul className="activity-list">
               {data.recentActivity.map((a) => (
                 <li className="activity-item" key={a.id}>
@@ -124,8 +127,8 @@ export function DashboardPage() {
         </div>
 
         <div className="card">
-          <div className="section-title">My tasks</div>
-          {data.myTasks.length === 0 && <p className="muted">Nothing assigned to you right now.</p>}
+          <div className="section-title">{t("dashboard.myTasks")}</div>
+          {data.myTasks.length === 0 && <p className="muted">{t("dashboard.nothingAssigned")}</p>}
           {data.myTasks.map((t) => (
             <div className="task-list-item" key={t.id}>
               <Link to={`/projects/${t.projectId}/tasks/${t.id}`}>{t.title}</Link>

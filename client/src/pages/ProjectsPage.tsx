@@ -1,11 +1,13 @@
 import { useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import { api } from "../api/client";
 import type { ChecklistItem, Project, ProjectType } from "../api/types";
 import { extractErrorMessage } from "../context/AuthContext";
 
 export function ProjectsPage() {
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const { data: projects, isLoading } = useQuery({
     queryKey: ["projects"],
@@ -69,27 +71,27 @@ export function ProjectsPage() {
   return (
     <div>
       <div className="page-header">
-        <h1>Projects</h1>
+        <h1>{t("layout.projects")}</h1>
         <button className="btn btn-primary" onClick={() => setShowForm((v) => !v)}>
-          {showForm ? "Cancel" : "New project"}
+          {showForm ? t("common.cancel") : t("projects.newProject")}
         </button>
       </div>
 
       {showForm && (
         <form className="card" style={{ marginBottom: 20 }} onSubmit={handleSubmit}>
           <div className="field">
-            <label htmlFor="name">Name</label>
+            <label htmlFor="name">{t("common.name")}</label>
             <input id="name" type="text" required value={name} onChange={(e) => setName(e.target.value)} />
           </div>
           <div className="field">
-            <label htmlFor="projectType">Project type</label>
+            <label htmlFor="projectType">{t("projects.projectType")}</label>
             <select
               id="projectType"
               required
               value={projectTypeId}
               onChange={(e) => setProjectTypeId(e.target.value)}
             >
-              <option value="">Select a project type…</option>
+              <option value="">{t("projects.selectProjectType")}</option>
               {activeTypes.map((t) => (
                 <option key={t.id} value={t.id}>
                   {t.name}
@@ -98,15 +100,15 @@ export function ProjectsPage() {
             </select>
             {activeTypes.length === 0 && (
               <p className="muted" style={{ fontSize: 12, marginTop: 6 }}>
-                No project types yet — an admin or project lead needs to create one first.
+                {t("projects.noProjectTypesYet")}
               </p>
             )}
           </div>
           <div className="field">
-            <label>Modules to include</label>
+            <label>{t("projects.modulesToInclude")}</label>
             {activeModules.length === 0 && (
               <p className="muted" style={{ fontSize: 12, marginTop: 6 }}>
-                No modules yet — an admin or project lead can add some on the Modules page.
+                {t("projects.noModulesYet")}
               </p>
             )}
             {activeModules.map((m) => (
@@ -121,11 +123,11 @@ export function ProjectsPage() {
             ))}
           </div>
           <div className="field">
-            <label htmlFor="description">Description</label>
+            <label htmlFor="description">{t("common.description")}</label>
             <textarea id="description" value={description} onChange={(e) => setDescription(e.target.value)} />
           </div>
           <div className="field">
-            <label htmlFor="teamSupportTicketNumber">TeamSupport ticket # (optional)</label>
+            <label htmlFor="teamSupportTicketNumber">{t("projects.teamSupportTicketNumber")}</label>
             <input
               id="teamSupportTicketNumber"
               type="text"
@@ -135,13 +137,13 @@ export function ProjectsPage() {
           </div>
           {error && <div className="error-text">{error}</div>}
           <button className="btn btn-primary" type="submit" disabled={createProject.isPending || !projectTypeId}>
-            Create project
+            {t("projects.createProject")}
           </button>
         </form>
       )}
 
-      {isLoading && <p className="muted">Loading projects…</p>}
-      {!isLoading && projects?.length === 0 && <p className="muted">No projects yet — create the first one.</p>}
+      {isLoading && <p className="muted">{t("projects.loadingProjects")}</p>}
+      {!isLoading && projects?.length === 0 && <p className="muted">{t("projects.noProjectsYet")}</p>}
 
       <div className="project-grid">
         {projects?.map((p) => {
@@ -152,18 +154,16 @@ export function ProjectsPage() {
               <p className="muted" style={{ fontSize: 12, margin: "-4px 0 8px" }}>
                 {p.projectType.name}
               </p>
-              <p>{p.description || "No description"}</p>
+              <p>{p.description || t("projects.noDescription")}</p>
               <div className="progress-row-top">
-                <span className="muted">
-                  {p.doneTasks}/{p.totalTasks} tasks
-                </span>
+                <span className="muted">{t("dashboard.tasksCount", { done: p.doneTasks, total: p.totalTasks })}</span>
                 <span className="muted">{percent}%</span>
               </div>
               <div className="progress-bar-track">
                 <div className="progress-bar-fill" style={{ width: `${percent}%` }} />
               </div>
               <div className="muted" style={{ marginTop: 10, fontSize: 12 }}>
-                {p.members.length} member{p.members.length === 1 ? "" : "s"}
+                {t("projects.memberCount", { count: p.members.length })}
               </div>
             </Link>
           );

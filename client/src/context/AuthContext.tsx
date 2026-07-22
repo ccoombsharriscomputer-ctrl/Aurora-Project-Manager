@@ -1,12 +1,14 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import { api, ApiError } from "../api/client";
 import type { CurrentUser } from "../api/types";
+import i18n, { LOCALE_TO_I18N_LANGUAGE } from "../i18n";
 
 interface AuthContextValue {
   user: CurrentUser | null;
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
+  updateUser: (u: CurrentUser) => void;
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -23,6 +25,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .finally(() => setLoading(false));
   }, []);
 
+  useEffect(() => {
+    const language = user ? LOCALE_TO_I18N_LANGUAGE[user.locale] : undefined;
+    if (language) {
+      i18n.changeLanguage(language);
+    }
+  }, [user?.locale]);
+
   async function login(email: string, password: string) {
     const u = await api.post<CurrentUser>("/auth/login", { email, password });
     setUser(u);
@@ -34,7 +43,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout }}>{children}</AuthContext.Provider>
+    <AuthContext.Provider value={{ user, loading, login, logout, updateUser: setUser }}>
+      {children}
+    </AuthContext.Provider>
   );
 }
 
@@ -47,5 +58,5 @@ export function useAuth(): AuthContextValue {
 export function extractErrorMessage(err: unknown): string {
   if (err instanceof ApiError) return err.message;
   if (err instanceof Error) return err.message;
-  return "Something went wrong";
+  return i18n.t("common.somethingWentWrong");
 }

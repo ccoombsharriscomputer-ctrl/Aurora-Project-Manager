@@ -1,6 +1,7 @@
 import { useRef, useState, type FormEvent } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import { api } from "../api/client";
 import type { Project, TaskDetail, TaskPriority, TaskStatus, UserSummary } from "../api/types";
 import { extractErrorMessage } from "../context/AuthContext";
@@ -8,6 +9,7 @@ import { formatDate, formatMinutes, formatRelativeTime } from "../utils/format";
 import { useActiveTimer } from "../hooks/useActiveTimer";
 
 export function TaskDetailPage() {
+  const { t } = useTranslation();
   const { taskId } = useParams<{ taskId: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -107,7 +109,7 @@ export function TaskDetailPage() {
   });
 
   if (isLoading || !task) {
-    return <div className="muted">Loading task…</div>;
+    return <div className="muted">{t("taskDetail.loadingTask")}</div>;
   }
 
   const isTimerRunningHere = activeTimer?.taskId === task.id;
@@ -131,12 +133,12 @@ export function TaskDetailPage() {
         <button
           className="btn btn-danger"
           onClick={() => {
-            if (confirm("Delete this task? This cannot be undone.")) {
+            if (confirm(t("taskDetail.confirmDeleteTask"))) {
               deleteTask.mutate();
             }
           }}
         >
-          Delete task
+          {t("taskDetail.deleteTask")}
         </button>
       </div>
 
@@ -144,7 +146,7 @@ export function TaskDetailPage() {
         <div>
           <div className="card" style={{ marginBottom: 16 }}>
             <div className="field">
-              <label>Description</label>
+              <label>{t("common.description")}</label>
               <textarea
                 defaultValue={task.description ?? ""}
                 onBlur={(e) => {
@@ -157,7 +159,7 @@ export function TaskDetailPage() {
           </div>
 
           <div className="card" style={{ marginBottom: 16 }}>
-            <div className="section-title">Comments</div>
+            <div className="section-title">{t("taskDetail.comments")}</div>
             {task.comments.map((c) => (
               <div className="comment" key={c.id}>
                 <div className="meta">
@@ -166,16 +168,16 @@ export function TaskDetailPage() {
                 <div>{c.body}</div>
               </div>
             ))}
-            {task.comments.length === 0 && <p className="muted">No comments yet.</p>}
+            {task.comments.length === 0 && <p className="muted">{t("taskDetail.noCommentsYet")}</p>}
             <form onSubmit={handleCommentSubmit} style={{ marginTop: 12 }}>
               <textarea
-                placeholder="Add a comment…"
+                placeholder={t("taskDetail.addAComment")}
                 value={commentBody}
                 onChange={(e) => setCommentBody(e.target.value)}
               />
               {commentError && <div className="error-text">{commentError}</div>}
               <button className="btn btn-primary btn-sm" type="submit" disabled={addComment.isPending} style={{ marginTop: 8 }}>
-                Comment
+                {t("taskDetail.comment")}
               </button>
             </form>
           </div>
@@ -183,10 +185,10 @@ export function TaskDetailPage() {
           <div className="card" style={{ marginBottom: 16 }}>
             <div className="flex-between">
               <div className="section-title" style={{ marginBottom: 0 }}>
-                Attachments
+                {t("projectDetail.attachments")}
               </div>
               <button className="btn btn-sm" onClick={() => fileInputRef.current?.click()} disabled={uploadAttachment.isPending}>
-                Upload file
+                {t("projectDetail.uploadFile")}
               </button>
               <input
                 ref={fileInputRef}
@@ -199,7 +201,7 @@ export function TaskDetailPage() {
                 }}
               />
             </div>
-            {task.attachments.length === 0 && <p className="muted" style={{ marginTop: 12 }}>No attachments yet.</p>}
+            {task.attachments.length === 0 && <p className="muted" style={{ marginTop: 12 }}>{t("projectDetail.noAttachmentsYet")}</p>}
             {task.attachments.map((a) => (
               <div className="task-list-item" key={a.id}>
                 <a href={`/api/attachments/${a.id}/download`}>{a.originalName}</a>
@@ -213,24 +215,24 @@ export function TaskDetailPage() {
           <div className="card">
             <div className="flex-between">
               <div className="section-title" style={{ marginBottom: 0 }}>
-                Time entries
+                {t("taskDetail.timeEntries")}
               </div>
               <div className="gap-8">
                 <button className="btn btn-sm" onClick={() => setShowLogTime((v) => !v)}>
-                  {showLogTime ? "Cancel" : "Log time"}
+                  {showLogTime ? t("common.cancel") : t("taskDetail.logTime")}
                 </button>
                 {isTimerRunningHere ? (
                   <button className="btn btn-sm" onClick={() => stop.mutate(activeTimer!.id)}>
-                    Stop timer
+                    {t("taskDetail.stopTimer")}
                   </button>
                 ) : (
                   <button
                     className="btn btn-primary btn-sm"
                     onClick={() => startTimer.mutate()}
                     disabled={isTimerRunningElsewhere || startTimer.isPending}
-                    title={isTimerRunningElsewhere ? "Stop your other running timer first" : undefined}
+                    title={isTimerRunningElsewhere ? t("taskDetail.stopOtherTimerFirst") : undefined}
                   >
-                    Start timer
+                    {t("taskDetail.startTimer")}
                   </button>
                 )}
               </div>
@@ -246,11 +248,11 @@ export function TaskDetailPage() {
               >
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
                   <div className="field">
-                    <label>Date</label>
+                    <label>{t("taskDetail.date")}</label>
                     <input type="date" required value={logDate} onChange={(e) => setLogDate(e.target.value)} />
                   </div>
                   <div className="field">
-                    <label>Hours</label>
+                    <label>{t("taskDetail.hours")}</label>
                     <input
                       type="number"
                       required
@@ -264,20 +266,20 @@ export function TaskDetailPage() {
                   </div>
                 </div>
                 <div className="field">
-                  <label>Note (optional)</label>
+                  <label>{t("taskDetail.noteOptional")}</label>
                   <input type="text" value={logNote} onChange={(e) => setLogNote(e.target.value)} />
                 </div>
                 {logError && <div className="error-text">{logError}</div>}
                 <button className="btn btn-primary btn-sm" type="submit" disabled={logTime.isPending}>
-                  Save
+                  {t("common.save")}
                 </button>
               </form>
             )}
-            {task.timeEntries.length === 0 && <p className="muted" style={{ marginTop: 12 }}>No time logged yet.</p>}
+            {task.timeEntries.length === 0 && <p className="muted" style={{ marginTop: 12 }}>{t("taskDetail.noTimeLoggedYet")}</p>}
             {task.timeEntries.map((entry) => (
               <div className="task-list-item" key={entry.id}>
                 <span>
-                  {entry.user.name} {entry.endedAt ? "" : "(running…)"}
+                  {entry.user.name} {entry.endedAt ? "" : `(${t("taskDetail.running")})`}
                   {entry.note && <span className="muted"> — {entry.note}</span>}
                 </span>
                 <span className="muted">{formatMinutes(entry.durationMinutes)}</span>
@@ -287,36 +289,36 @@ export function TaskDetailPage() {
         </div>
 
         <div className="card">
-          <div className="section-title">Details</div>
+          <div className="section-title">{t("taskDetail.details")}</div>
           <div className="field">
-            <label>Status</label>
+            <label>{t("common.status")}</label>
             <select
               value={task.status}
               onChange={(e) => updateTask.mutate({ status: e.target.value as TaskStatus })}
             >
-              <option value="TODO">To Do</option>
-              <option value="IN_PROGRESS">In Progress</option>
-              <option value="DONE">Done</option>
+              <option value="TODO">{t("common.statusTodo")}</option>
+              <option value="IN_PROGRESS">{t("common.statusInProgress")}</option>
+              <option value="DONE">{t("common.statusDone")}</option>
             </select>
           </div>
           <div className="field">
-            <label>Priority</label>
+            <label>{t("subProjectDetail.priority")}</label>
             <select
               value={task.priority}
               onChange={(e) => updateTask.mutate({ priority: e.target.value as TaskPriority })}
             >
-              <option value="LOW">Low</option>
-              <option value="MEDIUM">Medium</option>
-              <option value="HIGH">High</option>
+              <option value="LOW">{t("common.priorityLow")}</option>
+              <option value="MEDIUM">{t("common.priorityMedium")}</option>
+              <option value="HIGH">{t("common.priorityHigh")}</option>
             </select>
           </div>
           <div className="field">
-            <label>Assignee</label>
+            <label>{t("subProjectDetail.assignee")}</label>
             <select
               value={task.assignee?.id ?? ""}
               onChange={(e) => updateTask.mutate({ assigneeId: e.target.value || null })}
             >
-              <option value="">Unassigned</option>
+              <option value="">{t("subProjectDetail.unassigned")}</option>
               {project?.members.map((m: UserSummary) => (
                 <option key={m.id} value={m.id}>
                   {m.name}
@@ -325,7 +327,7 @@ export function TaskDetailPage() {
             </select>
           </div>
           <div className="field">
-            <label>Due date</label>
+            <label>{t("subProjectDetail.dueDate")}</label>
             <input
               type="date"
               defaultValue={task.dueDate ? task.dueDate.slice(0, 10) : ""}
@@ -335,7 +337,7 @@ export function TaskDetailPage() {
             />
           </div>
           <div className="muted" style={{ fontSize: 12, marginTop: 12 }}>
-            Created by {task.createdBy.name} · {formatDate(task.createdAt)}
+            {t("taskDetail.createdBy", { name: task.createdBy.name })} · {formatDate(task.createdAt)}
           </div>
         </div>
       </div>

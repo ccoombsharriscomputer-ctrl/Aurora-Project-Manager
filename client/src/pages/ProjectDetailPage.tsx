@@ -1,11 +1,13 @@
 import { useRef, useState, type FormEvent } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import { api } from "../api/client";
 import type { Attachment, ChecklistItem, Project, SubProject, UserSummary } from "../api/types";
 import { extractErrorMessage, useAuth } from "../context/AuthContext";
 
 function NewSubProjectForm({ projectId }: { projectId: string }) {
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const [checklistItemId, setChecklistItemId] = useState("");
@@ -41,7 +43,7 @@ function NewSubProjectForm({ projectId }: { projectId: string }) {
   if (!open) {
     return (
       <button className="btn btn-primary" onClick={() => setOpen(true)}>
-        New sub-project
+        {t("projectDetail.newSubProject")}
       </button>
     );
   }
@@ -57,9 +59,9 @@ function NewSubProjectForm({ projectId }: { projectId: string }) {
       }}
     >
       <div className="field">
-        <label>Module</label>
+        <label>{t("projectDetail.module")}</label>
         <select value={checklistItemId} onChange={(e) => setChecklistItemId(e.target.value)} required>
-          <option value="">Select a module…</option>
+          <option value="">{t("projectDetail.selectModule")}</option>
           {activeItems.map((i) => (
             <option key={i.id} value={i.id}>
               {i.name}
@@ -68,15 +70,15 @@ function NewSubProjectForm({ projectId }: { projectId: string }) {
         </select>
         {activeItems.length === 0 && (
           <p className="muted" style={{ fontSize: 12, marginTop: 6 }}>
-            No modules in the catalog yet — add one on the Modules page.
+            {t("projectDetail.noModulesInCatalog")}
           </p>
         )}
       </div>
       <div className="field">
-        <label>Custom name (optional)</label>
+        <label>{t("projectDetail.customNameOptional")}</label>
         <input
           type="text"
-          placeholder="Defaults to the module's name"
+          placeholder={t("projectDetail.defaultsToModuleName")}
           value={name}
           onChange={(e) => setName(e.target.value)}
         />
@@ -84,10 +86,10 @@ function NewSubProjectForm({ projectId }: { projectId: string }) {
       {error && <div className="error-text">{error}</div>}
       <div className="gap-8">
         <button className="btn btn-primary" type="submit" disabled={createSubProject.isPending || !checklistItemId}>
-          Create
+          {t("common.create")}
         </button>
         <button className="btn" type="button" onClick={() => setOpen(false)}>
-          Cancel
+          {t("common.cancel")}
         </button>
       </div>
     </form>
@@ -95,6 +97,7 @@ function NewSubProjectForm({ projectId }: { projectId: string }) {
 }
 
 function MembersPanel({ project, allUsers }: { project: Project; allUsers: UserSummary[] }) {
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const [selectedUserId, setSelectedUserId] = useState("");
 
@@ -116,21 +119,21 @@ function MembersPanel({ project, allUsers }: { project: Project; allUsers: UserS
 
   return (
     <div className="card">
-      <div className="section-title">Members</div>
+      <div className="section-title">{t("projectDetail.members")}</div>
       {project.members.map((m) => (
         <div className="task-list-item" key={m.id}>
           <span>
             {m.name} <span className="muted">({m.role})</span>
           </span>
           <button className="btn btn-sm" onClick={() => removeMember.mutate(m.id)}>
-            Remove
+            {t("projectDetail.remove")}
           </button>
         </div>
       ))}
       {nonMembers.length > 0 && (
         <div className="gap-8" style={{ marginTop: 12 }}>
           <select value={selectedUserId} onChange={(e) => setSelectedUserId(e.target.value)}>
-            <option value="">Add member…</option>
+            <option value="">{t("projectDetail.addMember")}</option>
             {nonMembers.map((u) => (
               <option key={u.id} value={u.id}>
                 {u.name}
@@ -142,7 +145,7 @@ function MembersPanel({ project, allUsers }: { project: Project; allUsers: UserS
             disabled={!selectedUserId}
             onClick={() => selectedUserId && addMember.mutate(selectedUserId)}
           >
-            Add
+            {t("common.add")}
           </button>
         </div>
       )}
@@ -151,6 +154,7 @@ function MembersPanel({ project, allUsers }: { project: Project; allUsers: UserS
 }
 
 function AttachmentsPanel({ projectId }: { projectId: string }) {
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -172,10 +176,10 @@ function AttachmentsPanel({ projectId }: { projectId: string }) {
     <div className="card">
       <div className="flex-between">
         <div className="section-title" style={{ marginBottom: 0 }}>
-          Attachments
+          {t("projectDetail.attachments")}
         </div>
         <button className="btn btn-sm" onClick={() => fileInputRef.current?.click()} disabled={uploadAttachment.isPending}>
-          Upload file
+          {t("projectDetail.uploadFile")}
         </button>
         <input
           ref={fileInputRef}
@@ -188,7 +192,7 @@ function AttachmentsPanel({ projectId }: { projectId: string }) {
           }}
         />
       </div>
-      {attachments?.length === 0 && <p className="muted" style={{ marginTop: 12 }}>No attachments yet.</p>}
+      {attachments?.length === 0 && <p className="muted" style={{ marginTop: 12 }}>{t("projectDetail.noAttachmentsYet")}</p>}
       {attachments?.map((a) => (
         <div className="task-list-item" key={a.id}>
           <a href={`/api/attachments/${a.id}/download`}>{a.originalName}</a>
@@ -202,6 +206,7 @@ function AttachmentsPanel({ projectId }: { projectId: string }) {
 }
 
 export function ProjectDetailPage() {
+  const { t } = useTranslation();
   const { projectId } = useParams<{ projectId: string }>();
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -238,7 +243,7 @@ export function ProjectDetailPage() {
   });
 
   if (projectLoading || !project) {
-    return <div className="muted">Loading project…</div>;
+    return <div className="muted">{t("projectDetail.loadingProject")}</div>;
   }
 
   const canManage = user?.role === "ADMIN" || user?.id === project.createdBy.id;
@@ -253,7 +258,7 @@ export function ProjectDetailPage() {
             {project.description ? ` · ${project.description}` : ""}
           </p>
           <div className="gap-8" style={{ marginTop: 8 }}>
-            <label style={{ margin: 0 }}>TeamSupport Ticket #</label>
+            <label style={{ margin: 0 }}>{t("projectDetail.teamSupportTicket")}</label>
             {canManage ? (
               <input
                 type="text"
@@ -277,12 +282,12 @@ export function ProjectDetailPage() {
             <button
               className="btn btn-danger"
               onClick={() => {
-                if (confirm(`Delete project "${project.name}"? This cannot be undone.`)) {
+                if (confirm(t("projectDetail.confirmDeleteProject", { name: project.name }))) {
                   deleteProject.mutate();
                 }
               }}
             >
-              Delete project
+              {t("projectDetail.deleteProject")}
             </button>
           )}
         </div>
@@ -290,9 +295,9 @@ export function ProjectDetailPage() {
 
       <div className="dashboard-grid">
         <div>
-          {subProjectsLoading && <p className="muted">Loading sub-projects…</p>}
+          {subProjectsLoading && <p className="muted">{t("projectDetail.loadingSubProjects")}</p>}
           {!subProjectsLoading && subProjects?.length === 0 && (
-            <p className="muted">No sub-projects yet — add one to start creating tasks.</p>
+            <p className="muted">{t("projectDetail.noSubProjectsYet")}</p>
           )}
           <div className="project-grid">
             {subProjects?.map((sp) => {
@@ -302,9 +307,7 @@ export function ProjectDetailPage() {
                   <h3>{sp.name || sp.checklistItem.name}</h3>
                   <p>{sp.name ? sp.checklistItem.name : " "}</p>
                   <div className="progress-row-top">
-                    <span className="muted">
-                      {sp.doneTasks}/{sp.totalTasks} tasks
-                    </span>
+                    <span className="muted">{t("dashboard.tasksCount", { done: sp.doneTasks, total: sp.totalTasks })}</span>
                     <span className="muted">{percent}%</span>
                   </div>
                   <div className="progress-bar-track">

@@ -1,8 +1,11 @@
 import { useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { api, ApiError } from "../api/client";
+import i18n from "../i18n";
 
 export function RequestAccessPage() {
+  const { t } = useTranslation();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [message, setMessage] = useState("");
@@ -18,7 +21,7 @@ export function RequestAccessPage() {
       await api.post("/access-requests", { name, email, message: message || undefined });
       setSubmitted(true);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Something went wrong");
+      setError(err instanceof ApiError ? err.message : i18n.t("common.somethingWentWrong"));
     } finally {
       setSubmitting(false);
     }
@@ -28,12 +31,10 @@ export function RequestAccessPage() {
     return (
       <div className="auth-page">
         <div className="card auth-card">
-          <h1>Request received</h1>
-          <div className="subtitle">
-            Thanks — an admin will review your request and reach out if you're granted access.
-          </div>
+          <h1>{t("requestAccess.receivedTitle")}</h1>
+          <div className="subtitle">{t("requestAccess.receivedSubtitle")}</div>
           <p style={{ marginTop: 16, fontSize: 13 }}>
-            <Link to="/login">Back to log in</Link>
+            <Link to="/login">{t("requestAccess.backToLogIn")}</Link>
           </p>
         </div>
       </div>
@@ -43,28 +44,28 @@ export function RequestAccessPage() {
   return (
     <div className="auth-page">
       <div className="card auth-card">
-        <h1>Request access</h1>
-        <div className="subtitle">Ask an admin to set up an account for you on Aurora Project Manager</div>
+        <h1>{t("requestAccess.title")}</h1>
+        <div className="subtitle">{t("requestAccess.subtitle")}</div>
         <form onSubmit={handleSubmit}>
           <div className="field">
-            <label htmlFor="name">Name</label>
+            <label htmlFor="name">{t("common.name")}</label>
             <input id="name" type="text" required value={name} onChange={(e) => setName(e.target.value)} />
           </div>
           <div className="field">
-            <label htmlFor="email">Email</label>
+            <label htmlFor="email">{t("common.email")}</label>
             <input id="email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
           </div>
           <div className="field">
-            <label htmlFor="message">Message (optional)</label>
+            <label htmlFor="message">{t("requestAccess.messageOptional")}</label>
             <textarea id="message" value={message} onChange={(e) => setMessage(e.target.value)} />
           </div>
           {error && <div className="error-text">{error}</div>}
           <button className="btn btn-primary" type="submit" disabled={submitting} style={{ width: "100%" }}>
-            {submitting ? "Sending…" : "Request access"}
+            {submitting ? t("requestAccess.sending") : t("requestAccess.requestAccess")}
           </button>
         </form>
         <p style={{ marginTop: 16, fontSize: 13 }}>
-          Already have an account? <Link to="/login">Log in</Link>
+          {t("requestAccess.alreadyHaveAccount")} <Link to="/login">{t("login.logIn")}</Link>
         </p>
       </div>
     </div>

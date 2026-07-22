@@ -7,6 +7,9 @@ export interface AuthedUser {
   name: string;
   email: string;
   role: "ADMIN" | "PROJECT_LEAD" | "MEMBER";
+  theme: "LIGHT" | "DARK" | "SYSTEM";
+  accentColor: "BLUE" | "GREEN" | "PURPLE" | "ORANGE" | "RED" | "TEAL";
+  locale: "EN" | "ES" | "FR_CA";
 }
 
 declare global {
@@ -28,7 +31,15 @@ async function getUserFromRequest(req: Request): Promise<AuthedUser | null> {
     if (!user || !user.active) {
       return null;
     }
-    return { id: user.id, name: user.name, email: user.email, role: user.role };
+    return {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      theme: user.theme,
+      accentColor: user.accentColor,
+      locale: user.locale,
+    };
   } catch {
     return null;
   }

@@ -1,10 +1,18 @@
 import { useState, type FormEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import { api } from "../api/client";
 import type { ChecklistItem, TaskPriority, TaskTemplate } from "../api/types";
 import { extractErrorMessage } from "../context/AuthContext";
 
+function priorityLabel(t: (key: string) => string, priority: TaskPriority): string {
+  if (priority === "LOW") return t("common.priorityLow");
+  if (priority === "HIGH") return t("common.priorityHigh");
+  return t("common.priorityMedium");
+}
+
 function TaskTemplatesPanel({ checklistItemId }: { checklistItemId: string }) {
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const [title, setTitle] = useState("");
   const [priority, setPriority] = useState<TaskPriority>("MEDIUM");
@@ -34,23 +42,23 @@ function TaskTemplatesPanel({ checklistItemId }: { checklistItemId: string }) {
   return (
     <div style={{ marginLeft: 20, marginTop: 6, marginBottom: 10, paddingLeft: 12, borderLeft: "2px solid var(--border)" }}>
       <p className="muted" style={{ fontSize: 12, marginBottom: 8 }}>
-        These to-do tasks auto-create under the sub-project whenever this module is used on a project.
+        {t("modules.taskTemplatesIntro")}
       </p>
-      {isLoading && <p className="muted">Loading…</p>}
-      {templates?.map((t) => (
-        <div className="task-list-item" key={t.id}>
+      {isLoading && <p className="muted">{t("common.loading")}</p>}
+      {templates?.map((template) => (
+        <div className="task-list-item" key={template.id}>
           <span>
-            {t.title} <span className={`badge priority-${t.priority}`}>{t.priority}</span>
+            {template.title} <span className={`badge priority-${template.priority}`}>{priorityLabel(t, template.priority)}</span>
           </span>
           <span className="gap-8">
-            <span className="muted">{t.active ? "Active" : "Inactive"}</span>
-            <button className="btn btn-sm" onClick={() => toggleActive.mutate({ id: t.id, active: !t.active })}>
-              {t.active ? "Deactivate" : "Reactivate"}
+            <span className="muted">{template.active ? t("common.active") : t("common.inactive")}</span>
+            <button className="btn btn-sm" onClick={() => toggleActive.mutate({ id: template.id, active: !template.active })}>
+              {template.active ? t("common.deactivate") : t("common.reactivate")}
             </button>
           </span>
         </div>
       ))}
-      {templates?.length === 0 && <p className="muted">No to-do tasks yet.</p>}
+      {templates?.length === 0 && <p className="muted">{t("modules.noTaskTemplatesYet")}</p>}
       <form
         className="gap-8"
         style={{ marginTop: 10 }}
@@ -60,14 +68,14 @@ function TaskTemplatesPanel({ checklistItemId }: { checklistItemId: string }) {
           createTemplate.mutate();
         }}
       >
-        <input type="text" placeholder="e.g. Export legacy data" value={title} onChange={(e) => setTitle(e.target.value)} />
+        <input type="text" placeholder={t("modules.taskTitlePlaceholder")} value={title} onChange={(e) => setTitle(e.target.value)} />
         <select value={priority} onChange={(e) => setPriority(e.target.value as TaskPriority)} style={{ width: "auto" }}>
-          <option value="LOW">Low</option>
-          <option value="MEDIUM">Medium</option>
-          <option value="HIGH">High</option>
+          <option value="LOW">{t("common.priorityLow")}</option>
+          <option value="MEDIUM">{t("common.priorityMedium")}</option>
+          <option value="HIGH">{t("common.priorityHigh")}</option>
         </select>
         <button className="btn btn-sm btn-primary" type="submit" disabled={createTemplate.isPending}>
-          Add
+          {t("common.add")}
         </button>
       </form>
       {error && <div className="error-text">{error}</div>}
@@ -76,6 +84,7 @@ function TaskTemplatesPanel({ checklistItemId }: { checklistItemId: string }) {
 }
 
 function CreateModuleForm() {
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const [name, setName] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -100,9 +109,9 @@ function CreateModuleForm() {
         createItem.mutate();
       }}
     >
-      <input type="text" placeholder="e.g. Data Conversion" value={name} onChange={(e) => setName(e.target.value)} />
+      <input type="text" placeholder={t("modules.moduleNamePlaceholder")} value={name} onChange={(e) => setName(e.target.value)} />
       <button className="btn btn-sm btn-primary" type="submit" disabled={createItem.isPending}>
-        Add module
+        {t("modules.addModule")}
       </button>
       {error && <div className="error-text">{error}</div>}
     </form>
@@ -110,6 +119,7 @@ function CreateModuleForm() {
 }
 
 export function ModulesPage() {
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const [expandedItemId, setExpandedItemId] = useState<string | null>(null);
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
@@ -156,19 +166,16 @@ export function ModulesPage() {
   }
 
   if (isLoading || !modules) {
-    return <div className="muted">Loading modules…</div>;
+    return <div className="muted">{t("modules.loadingModules")}</div>;
   }
 
   return (
     <div>
       <div className="page-header">
-        <h1>Modules</h1>
+        <h1>{t("layout.modules")}</h1>
       </div>
       <p className="muted" style={{ marginTop: -12, marginBottom: 20 }}>
-        Modules (e.g. "Payroll", "Utility Billing", "Data Conversion") are a shared catalog of reusable
-        sub-projects. They aren't tied to any project type — when creating a new project, you pick which
-        modules to include as its sub-projects. Each module can have its own standard to-do tasks that
-        auto-create whenever it's used.
+        {t("modules.intro")}
       </p>
       <div className="card">
         {modules.map((item) => (
@@ -187,19 +194,19 @@ export function ModulesPage() {
                 }}
               >
                 <div className="field">
-                  <label>Name</label>
+                  <label>{t("common.name")}</label>
                   <input type="text" required value={editName} onChange={(e) => setEditName(e.target.value)} />
                 </div>
                 <div className="field">
-                  <label>Description</label>
+                  <label>{t("common.description")}</label>
                   <textarea value={editDescription} onChange={(e) => setEditDescription(e.target.value)} />
                 </div>
                 <div className="gap-8">
                   <button className="btn btn-sm btn-primary" type="submit" disabled={updateItem.isPending}>
-                    Save
+                    {t("common.save")}
                   </button>
                   <button className="btn btn-sm" type="button" onClick={() => setEditingItemId(null)}>
-                    Cancel
+                    {t("common.cancel")}
                   </button>
                 </div>
               </form>
@@ -207,35 +214,31 @@ export function ModulesPage() {
               <div className="task-list-item">
                 <span>{item.name}</span>
                 <span className="gap-8">
-                  <span className="muted">{item.active ? "Active" : "Inactive"}</span>
+                  <span className="muted">{item.active ? t("common.active") : t("common.inactive")}</span>
                   <button
                     className="btn btn-sm"
                     onClick={() => setExpandedItemId(expandedItemId === item.id ? null : item.id)}
                   >
-                    {expandedItemId === item.id ? "Hide tasks" : "Manage tasks"}
+                    {expandedItemId === item.id ? t("modules.hideTasks") : t("modules.manageTasks")}
                   </button>
                   <button className="btn btn-sm" onClick={() => startEdit(item)}>
-                    Edit
+                    {t("common.edit")}
                   </button>
                   <button
                     className="btn btn-sm"
                     onClick={() => toggleActive.mutate({ id: item.id, active: !item.active })}
                   >
-                    {item.active ? "Deactivate" : "Reactivate"}
+                    {item.active ? t("common.deactivate") : t("common.reactivate")}
                   </button>
                   <button
                     className="btn btn-sm btn-danger"
                     onClick={() => {
-                      if (
-                        confirm(
-                          `Delete module "${item.name}"? This deletes it from the catalog and its to-do task templates. This cannot be undone.`
-                        )
-                      ) {
+                      if (confirm(t("modules.confirmDeleteModule", { name: item.name }))) {
                         deleteItem.mutate(item.id);
                       }
                     }}
                   >
-                    Delete
+                    {t("common.delete")}
                   </button>
                 </span>
               </div>
@@ -244,7 +247,7 @@ export function ModulesPage() {
             {expandedItemId === item.id && <TaskTemplatesPanel checklistItemId={item.id} />}
           </div>
         ))}
-        {modules.length === 0 && <p className="muted">No modules yet — add the first one below.</p>}
+        {modules.length === 0 && <p className="muted">{t("modules.noModulesYetAddFirst")}</p>}
         <CreateModuleForm />
       </div>
     </div>

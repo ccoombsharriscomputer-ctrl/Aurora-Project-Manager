@@ -1,18 +1,27 @@
 import { useState, type FormEvent } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
+import type { TFunction } from "i18next";
 import { api } from "../api/client";
 import type { SubProjectDetail, Task, TaskPriority, UserSummary } from "../api/types";
 import { extractErrorMessage } from "../context/AuthContext";
 import { formatDate } from "../utils/format";
 
-const COLUMNS: { status: Task["status"]; label: string }[] = [
-  { status: "TODO", label: "To Do" },
-  { status: "IN_PROGRESS", label: "In Progress" },
-  { status: "DONE", label: "Done" },
+const COLUMNS: { status: Task["status"]; labelKey: string }[] = [
+  { status: "TODO", labelKey: "common.statusTodo" },
+  { status: "IN_PROGRESS", labelKey: "common.statusInProgress" },
+  { status: "DONE", labelKey: "common.statusDone" },
 ];
 
+function priorityLabel(t: TFunction, priority: TaskPriority): string {
+  if (priority === "LOW") return t("common.priorityLow");
+  if (priority === "HIGH") return t("common.priorityHigh");
+  return t("common.priorityMedium");
+}
+
 function NewTaskForm({ subProjectId, members }: { subProjectId: string; members: UserSummary[] }) {
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -47,7 +56,7 @@ function NewTaskForm({ subProjectId, members }: { subProjectId: string; members:
   if (!open) {
     return (
       <button className="btn btn-primary" onClick={() => setOpen(true)}>
-        New task
+        {t("subProjectDetail.newTask")}
       </button>
     );
   }
@@ -62,26 +71,26 @@ function NewTaskForm({ subProjectId, members }: { subProjectId: string; members:
       }}
     >
       <div className="field">
-        <label>Title</label>
+        <label>{t("subProjectDetail.title")}</label>
         <input type="text" required value={title} onChange={(e) => setTitle(e.target.value)} />
       </div>
       <div className="field">
-        <label>Description</label>
+        <label>{t("common.description")}</label>
         <textarea value={description} onChange={(e) => setDescription(e.target.value)} />
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
         <div className="field">
-          <label>Priority</label>
+          <label>{t("subProjectDetail.priority")}</label>
           <select value={priority} onChange={(e) => setPriority(e.target.value as TaskPriority)}>
-            <option value="LOW">Low</option>
-            <option value="MEDIUM">Medium</option>
-            <option value="HIGH">High</option>
+            <option value="LOW">{t("common.priorityLow")}</option>
+            <option value="MEDIUM">{t("common.priorityMedium")}</option>
+            <option value="HIGH">{t("common.priorityHigh")}</option>
           </select>
         </div>
         <div className="field">
-          <label>Assignee</label>
+          <label>{t("subProjectDetail.assignee")}</label>
           <select value={assigneeId} onChange={(e) => setAssigneeId(e.target.value)}>
-            <option value="">Unassigned</option>
+            <option value="">{t("subProjectDetail.unassigned")}</option>
             {members.map((m) => (
               <option key={m.id} value={m.id}>
                 {m.name}
@@ -90,17 +99,17 @@ function NewTaskForm({ subProjectId, members }: { subProjectId: string; members:
           </select>
         </div>
         <div className="field">
-          <label>Due date</label>
+          <label>{t("subProjectDetail.dueDate")}</label>
           <input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
         </div>
       </div>
       {error && <div className="error-text">{error}</div>}
       <div className="gap-8">
         <button className="btn btn-primary" type="submit" disabled={createTask.isPending}>
-          Create task
+          {t("subProjectDetail.createTask")}
         </button>
         <button className="btn" type="button" onClick={() => setOpen(false)}>
-          Cancel
+          {t("common.cancel")}
         </button>
       </div>
     </form>
@@ -108,6 +117,7 @@ function NewTaskForm({ subProjectId, members }: { subProjectId: string; members:
 }
 
 export function SubProjectDetailPage() {
+  const { t } = useTranslation();
   const { projectId, subProjectId } = useParams<{ projectId: string; subProjectId: string }>();
   const queryClient = useQueryClient();
 
@@ -133,7 +143,7 @@ export function SubProjectDetailPage() {
   });
 
   if (subProjectLoading || !subProject) {
-    return <div className="muted">Loading sub-project…</div>;
+    return <div className="muted">{t("subProjectDetail.loadingSubProject")}</div>;
   }
 
   return (
@@ -149,32 +159,32 @@ export function SubProjectDetailPage() {
         <NewTaskForm subProjectId={subProject.id} members={subProject.project.members} />
       </div>
 
-      {tasksLoading && <p className="muted">Loading tasks…</p>}
+      {tasksLoading && <p className="muted">{t("subProjectDetail.loadingTasks")}</p>}
       <div className="board">
         {COLUMNS.map((col) => (
           <div className="board-column" key={col.status}>
-            <h3>{col.label}</h3>
+            <h3>{t(col.labelKey)}</h3>
             {tasks
               ?.filter((t) => t.status === col.status)
-              .map((t) => (
-                <div className="task-card" key={t.id}>
-                  <Link to={`/tasks/${t.id}`}>
-                    <div className="title">{t.title}</div>
+              .map((task) => (
+                <div className="task-card" key={task.id}>
+                  <Link to={`/tasks/${task.id}`}>
+                    <div className="title">{task.title}</div>
                   </Link>
                   <div className="task-meta">
-                    <span className={`badge priority-${t.priority}`}>{t.priority}</span>
-                    <span>{t.assignee?.name ?? "Unassigned"}</span>
+                    <span className={`badge priority-${task.priority}`}>{priorityLabel(t, task.priority)}</span>
+                    <span>{task.assignee?.name ?? t("subProjectDetail.unassigned")}</span>
                   </div>
                   <div className="task-meta" style={{ marginTop: 6 }}>
-                    <span>{formatDate(t.dueDate)}</span>
+                    <span>{formatDate(task.dueDate)}</span>
                     <select
-                      value={t.status}
-                      onChange={(e) => updateStatus.mutate({ taskId: t.id, status: e.target.value as Task["status"] })}
+                      value={task.status}
+                      onChange={(e) => updateStatus.mutate({ taskId: task.id, status: e.target.value as Task["status"] })}
                       style={{ width: "auto", padding: "2px 4px", fontSize: 12 }}
                     >
-                      <option value="TODO">To Do</option>
-                      <option value="IN_PROGRESS">In Progress</option>
-                      <option value="DONE">Done</option>
+                      <option value="TODO">{t("common.statusTodo")}</option>
+                      <option value="IN_PROGRESS">{t("common.statusInProgress")}</option>
+                      <option value="DONE">{t("common.statusDone")}</option>
                     </select>
                   </div>
                 </div>

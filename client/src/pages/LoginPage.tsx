@@ -1,8 +1,10 @@
 import { useState, type FormEvent } from "react";
 import { Link, Navigate, useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { useAuth, extractErrorMessage } from "../context/AuthContext";
 
 export function LoginPage() {
+  const { t } = useTranslation();
   const { user, login } = useAuth();
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
@@ -31,15 +33,15 @@ export function LoginPage() {
   return (
     <div className="auth-page">
       <div className="card auth-card">
-        <h1>Welcome back</h1>
-        <div className="subtitle">Log in to Aurora Project Manager</div>
+        <h1>{t("login.title")}</h1>
+        <div className="subtitle">{t("login.subtitle")}</div>
         <form onSubmit={handleSubmit}>
           <div className="field">
-            <label htmlFor="email">Email</label>
+            <label htmlFor="email">{t("common.email")}</label>
             <input id="email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
           </div>
           <div className="field">
-            <label htmlFor="password">Password</label>
+            <label htmlFor="password">{t("common.password")}</label>
             <input
               id="password"
               type="password"
@@ -50,11 +52,11 @@ export function LoginPage() {
           </div>
           {error && <div className="error-text">{error}</div>}
           <button className="btn btn-primary" type="submit" disabled={submitting} style={{ width: "100%" }}>
-            {submitting ? "Logging in…" : "Log in"}
+            {submitting ? t("login.loggingIn") : t("login.logIn")}
           </button>
         </form>
         <p style={{ marginTop: 16, fontSize: 13 }}>
-          Need access? <Link to="/request-access">Request an account</Link>
+          {t("login.needAccess")} <Link to="/request-access">{t("login.requestAnAccount")}</Link>
         </p>
       </div>
     </div>

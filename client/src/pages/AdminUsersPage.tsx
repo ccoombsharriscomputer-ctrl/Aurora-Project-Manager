@@ -1,5 +1,6 @@
 import { Fragment, useEffect, useState, type FormEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import { api } from "../api/client";
 import type { AccessRequest, AdminUser, UserRole } from "../api/types";
 import { extractErrorMessage, useAuth } from "../context/AuthContext";
@@ -18,6 +19,7 @@ function CreateUserForm({
   prefill: CreateUserPrefill | null;
   onDone: () => void;
 }) {
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
@@ -61,7 +63,7 @@ function CreateUserForm({
   if (!open) {
     return (
       <button className="btn btn-primary" onClick={() => setOpen(true)}>
-        Add user
+        {t("adminUsers.addUser")}
       </button>
     );
   }
@@ -77,15 +79,15 @@ function CreateUserForm({
     >
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
         <div className="field">
-          <label>Name</label>
+          <label>{t("common.name")}</label>
           <input type="text" required value={name} onChange={(e) => setName(e.target.value)} />
         </div>
         <div className="field">
-          <label>Email</label>
+          <label>{t("common.email")}</label>
           <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
         </div>
         <div className="field">
-          <label>Initial password</label>
+          <label>{t("adminUsers.initialPassword")}</label>
           <input
             type="password"
             required
@@ -95,18 +97,18 @@ function CreateUserForm({
           />
         </div>
         <div className="field">
-          <label>Role</label>
+          <label>{t("common.role")}</label>
           <select value={role} onChange={(e) => setRole(e.target.value as UserRole)}>
-            <option value="MEMBER">Member</option>
-            <option value="PROJECT_LEAD">Project Lead</option>
-            <option value="ADMIN">Admin</option>
+            <option value="MEMBER">{t("common.roleMember")}</option>
+            <option value="PROJECT_LEAD">{t("common.roleProjectLead")}</option>
+            <option value="ADMIN">{t("common.roleAdmin")}</option>
           </select>
         </div>
       </div>
       {error && <div className="error-text">{error}</div>}
       <div className="gap-8">
         <button className="btn btn-primary" type="submit" disabled={createUser.isPending}>
-          Create user
+          {t("adminUsers.createUser")}
         </button>
         <button
           className="btn"
@@ -116,7 +118,7 @@ function CreateUserForm({
             onDone();
           }}
         >
-          Cancel
+          {t("common.cancel")}
         </button>
       </div>
     </form>
@@ -128,6 +130,7 @@ function PendingAccessRequests({
 }: {
   onApprove: (prefill: CreateUserPrefill) => void;
 }) {
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const [denyErrors, setDenyErrors] = useState<Record<string, string>>({});
 
@@ -155,7 +158,7 @@ function PendingAccessRequests({
 
   return (
     <div className="card" style={{ marginBottom: 20 }}>
-      <div className="section-title">Pending access requests</div>
+      <div className="section-title">{t("adminUsers.pendingAccessRequests")}</div>
       {requests.map((r) => (
         <div key={r.id}>
           <div className="task-list-item">
@@ -169,10 +172,10 @@ function PendingAccessRequests({
                 className="btn btn-sm btn-primary"
                 onClick={() => onApprove({ accessRequestId: r.id, name: r.name, email: r.email })}
               >
-                Approve
+                {t("adminUsers.approve")}
               </button>
               <button className="btn btn-sm btn-danger" onClick={() => deny.mutate(r.id)}>
-                Deny
+                {t("adminUsers.deny")}
               </button>
             </span>
           </div>
@@ -184,6 +187,7 @@ function PendingAccessRequests({
 }
 
 export function AdminUsersPage() {
+  const { t } = useTranslation();
   const { user: me } = useAuth();
   const queryClient = useQueryClient();
   const [deleteErrors, setDeleteErrors] = useState<Record<string, string>>({});
@@ -214,13 +218,13 @@ export function AdminUsersPage() {
   });
 
   if (isLoading || !users) {
-    return <div className="muted">Loading users…</div>;
+    return <div className="muted">{t("adminUsers.loadingUsers")}</div>;
   }
 
   return (
     <div>
       <div className="page-header">
-        <h1>Users</h1>
+        <h1>{t("layout.users")}</h1>
         <CreateUserForm prefill={prefill} onDone={() => setPrefill(null)} />
       </div>
       <PendingAccessRequests onApprove={setPrefill} />
@@ -228,11 +232,11 @@ export function AdminUsersPage() {
         <table className="table">
           <thead>
             <tr>
-              <th>Name</th>
-              <th>Email</th>
-              <th>Role</th>
-              <th>Status</th>
-              <th>Joined</th>
+              <th>{t("common.name")}</th>
+              <th>{t("common.email")}</th>
+              <th>{t("common.role")}</th>
+              <th>{t("common.status")}</th>
+              <th>{t("adminUsers.joined")}</th>
               <th></th>
             </tr>
           </thead>
@@ -249,12 +253,12 @@ export function AdminUsersPage() {
                       onChange={(e) => updateUser.mutate({ id: u.id, data: { role: e.target.value as AdminUser["role"] } })}
                       style={{ width: "auto" }}
                     >
-                      <option value="MEMBER">Member</option>
-                      <option value="PROJECT_LEAD">Project Lead</option>
-                      <option value="ADMIN">Admin</option>
+                      <option value="MEMBER">{t("common.roleMember")}</option>
+                      <option value="PROJECT_LEAD">{t("common.roleProjectLead")}</option>
+                      <option value="ADMIN">{t("common.roleAdmin")}</option>
                     </select>
                   </td>
-                  <td>{u.active ? "Active" : "Deactivated"}</td>
+                  <td>{u.active ? t("common.active") : t("adminUsers.deactivated")}</td>
                   <td>{formatDate(u.createdAt)}</td>
                   <td className="gap-8">
                     <button
@@ -262,18 +266,18 @@ export function AdminUsersPage() {
                       disabled={u.id === me?.id}
                       onClick={() => updateUser.mutate({ id: u.id, data: { active: !u.active } })}
                     >
-                      {u.active ? "Deactivate" : "Reactivate"}
+                      {u.active ? t("common.deactivate") : t("common.reactivate")}
                     </button>
                     <button
                       className="btn btn-sm btn-danger"
                       disabled={u.id === me?.id}
                       onClick={() => {
-                        if (confirm(`Delete ${u.name}? This cannot be undone.`)) {
+                        if (confirm(t("adminUsers.confirmDeleteUser", { name: u.name }))) {
                           deleteUser.mutate(u.id);
                         }
                       }}
                     >
-                      Delete
+                      {t("common.delete")}
                     </button>
                   </td>
                 </tr>
