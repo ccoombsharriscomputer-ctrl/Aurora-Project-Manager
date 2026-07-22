@@ -4,7 +4,6 @@ import { ProtectedRoute, AdminRoute, ProjectLeadRoute } from "./components/Prote
 import { LoginPage } from "./pages/LoginPage";
 import { RequestAccessPage } from "./pages/RequestAccessPage";
 import { DashboardPage } from "./pages/DashboardPage";
-import { CalendarPage } from "./pages/CalendarPage";
 import { ProjectsPage } from "./pages/ProjectsPage";
 import { ProjectDetailPage } from "./pages/ProjectDetailPage";
 import { SubProjectDetailPage } from "./pages/SubProjectDetailPage";
@@ -31,7 +30,6 @@ function App() {
       <Route element={<ProtectedRoute />}>
         <Route element={<Layout />}>
           <Route path="/dashboard" element={<DashboardPage />} />
-          <Route path="/calendar" element={<CalendarPage />} />
           <Route path="/projects" element={<ProjectsPage />} />
           <Route path="/projects/:projectId" element={<ProjectDetailPage />} />
           <Route path="/projects/:projectId/sub-projects/:subProjectId" element={<SubProjectDetailPage />} />

@@ -36,7 +36,6 @@
   },
   "layout": {
     "dashboard": "Tableau de bord",
-    "calendar": "Calendrier",
     "projects": "Projets",
     "projectTypes": "Types de projet",
     "modules": "Modules",
@@ -195,9 +194,14 @@
     "noProjectsYet": "Aucun projet pour l'instant."
   },
   "calendar": {
+    "title": "Échéances à venir",
+    "month": "Mois",
+    "week": "Semaine",
+    "day": "Jour",
     "today": "Aujourd'hui",
     "loadingCalendar": "Chargement du calendrier…",
-    "moreCount": "+{{count}} de plus"
+    "moreCount": "+{{count}} de plus",
+    "noDeadlines": "Aucune échéance ce jour-là."
   },
   "settings": {
     "title": "Paramètres",

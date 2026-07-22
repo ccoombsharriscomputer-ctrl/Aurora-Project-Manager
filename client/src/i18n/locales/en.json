@@ -36,7 +36,6 @@
   },
   "layout": {
     "dashboard": "Dashboard",
-    "calendar": "Calendar",
     "projects": "Projects",
     "projectTypes": "Project Types",
     "modules": "Modules",
@@ -195,9 +194,14 @@
     "noProjectsYet": "No projects yet."
   },
   "calendar": {
+    "title": "Upcoming deadlines",
+    "month": "Month",
+    "week": "Week",
+    "day": "Day",
     "today": "Today",
     "loadingCalendar": "Loading calendar…",
-    "moreCount": "+{{count}} more"
+    "moreCount": "+{{count}} more",
+    "noDeadlines": "No deadlines on this day."
   },
   "settings": {
     "title": "Settings",

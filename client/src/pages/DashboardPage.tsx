@@ -4,8 +4,9 @@ import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { api } from "../api/client";
 import type { DashboardSummary } from "../api/types";
-import { formatDate, formatElapsed, formatRelativeTime } from "../utils/format";
+import { formatDueDate, formatElapsed, formatRelativeTime } from "../utils/format";
 import { useActiveTimer } from "../hooks/useActiveTimer";
+import { DeadlinesCalendar } from "../components/DeadlinesCalendar";
 
 function TimerBanner() {
   const { t } = useTranslation();
@@ -92,6 +93,10 @@ export function DashboardPage() {
         </div>
       </div>
 
+      <div style={{ marginBottom: 20 }}>
+        <DeadlinesCalendar />
+      </div>
+
       <div className="dashboard-grid">
         <div>
           <div className="card" style={{ marginBottom: 20 }}>
@@ -132,7 +137,7 @@ export function DashboardPage() {
           {data.myTasks.map((t) => (
             <div className="task-list-item" key={t.id}>
               <Link to={`/projects/${t.projectId}/tasks/${t.id}`}>{t.title}</Link>
-              <span className="muted">{formatDate(t.dueDate)}</span>
+              <span className="muted">{formatDueDate(t.dueDate)}</span>
             </div>
           ))}
         </div>

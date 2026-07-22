@@ -6,7 +6,7 @@ import type { TFunction } from "i18next";
 import { api } from "../api/client";
 import type { SubProjectDetail, Task, TaskPriority, UserSummary } from "../api/types";
 import { extractErrorMessage } from "../context/AuthContext";
-import { formatDate } from "../utils/format";
+import { formatDueDate } from "../utils/format";
 
 const COLUMNS: { status: Task["status"]; labelKey: string }[] = [
   { status: "TODO", labelKey: "common.statusTodo" },
@@ -176,7 +176,7 @@ export function SubProjectDetailPage() {
                     <span>{task.assignee?.name ?? t("subProjectDetail.unassigned")}</span>
                   </div>
                   <div className="task-meta" style={{ marginTop: 6 }}>
-                    <span>{formatDate(task.dueDate)}</span>
+                    <span>{formatDueDate(task.dueDate)}</span>
                     <select
                       value={task.status}
                       onChange={(e) => updateStatus.mutate({ taskId: task.id, status: e.target.value as Task["status"] })}

@@ -573,7 +573,22 @@ label {
   align-items: center;
 }
 
-.calendar-month-label {
+.calendar-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+
+.calendar-view-toggle {
+  display: inline-flex;
+  gap: 4px;
+  margin-right: 4px;
+}
+
+.calendar-label {
   min-width: 150px;
   text-align: center;
   font-weight: 600;
@@ -614,6 +629,10 @@ label {
 .calendar-day.outside {
   background: var(--bg);
   opacity: 0.55;
+}
+
+.calendar-day.week-cell {
+  min-height: 220px;
 }
 
 .calendar-day-number {
@@ -673,6 +692,24 @@ label {
 .calendar-more {
   font-size: 11px;
   padding: 0 6px;
+}
+
+.calendar-day-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.calendar-day-list-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 13px;
+}
+
+.calendar-day-list-item:last-child {
+  border-bottom: none;
 }
 
 .timer-banner {

@@ -16,9 +16,6 @@ export function Layout() {
         <NavLink to="/projects" className={({ isActive }) => `sidebar-link${isActive ? " active" : ""}`}>
           {t("layout.projects")}
         </NavLink>
-        <NavLink to="/calendar" className={({ isActive }) => `sidebar-link${isActive ? " active" : ""}`}>
-          {t("layout.calendar")}
-        </NavLink>
         {(user?.role === "ADMIN" || user?.role === "PROJECT_LEAD") && (
           <NavLink to="/project-types" className={({ isActive }) => `sidebar-link${isActive ? " active" : ""}`}>
             {t("layout.projectTypes")}
