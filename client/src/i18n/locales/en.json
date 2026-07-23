@@ -101,6 +101,7 @@
   },
   "projectDetail": {
     "newSubProject": "New sub-project",
+    "editProject": "Edit project",
     "archiveProject": "Archive project",
     "unarchiveProject": "Unarchive project",
     "product": "Product",
@@ -119,7 +120,9 @@
     "confirmDeleteProject": "Delete project \"{{name}}\"? This cannot be undone.",
     "deleteProject": "Delete project",
     "loadingSubProjects": "Loading sub-projects…",
-    "noSubProjectsYet": "No sub-projects yet — add one to start creating tasks."
+    "noSubProjectsYet": "No sub-projects yet — add one to start creating tasks.",
+    "removeSubProject": "Remove",
+    "confirmRemoveSubProject": "Remove sub-project \"{{name}}\"? This deletes its tasks too and cannot be undone."
   },
   "subProjectDetail": {
     "newTask": "New task",

@@ -101,6 +101,7 @@
   },
   "projectDetail": {
     "newSubProject": "Nuevo subproyecto",
+    "editProject": "Editar proyecto",
     "archiveProject": "Archivar proyecto",
     "unarchiveProject": "Desarchivar proyecto",
     "product": "Producto",
@@ -119,7 +120,9 @@
     "confirmDeleteProject": "¿Eliminar el proyecto \"{{name}}\"? Esta acción no se puede deshacer.",
     "deleteProject": "Eliminar proyecto",
     "loadingSubProjects": "Cargando subproyectos…",
-    "noSubProjectsYet": "Aún no hay subproyectos — añade uno para empezar a crear tareas."
+    "noSubProjectsYet": "Aún no hay subproyectos — añade uno para empezar a crear tareas.",
+    "removeSubProject": "Quitar",
+    "confirmRemoveSubProject": "¿Quitar el subproyecto \"{{name}}\"? Esto también elimina sus tareas y no se puede deshacer."
   },
   "subProjectDetail": {
     "newTask": "Nueva tarea",

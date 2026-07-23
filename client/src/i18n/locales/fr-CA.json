@@ -101,6 +101,7 @@
   },
   "projectDetail": {
     "newSubProject": "Nouveau sous-projet",
+    "editProject": "Modifier le projet",
     "archiveProject": "Archiver le projet",
     "unarchiveProject": "Désarchiver le projet",
     "product": "Produit",
@@ -119,7 +120,9 @@
     "confirmDeleteProject": "Supprimer le projet « {{name}} »? Cette action est irréversible.",
     "deleteProject": "Supprimer le projet",
     "loadingSubProjects": "Chargement des sous-projets…",
-    "noSubProjectsYet": "Aucun sous-projet pour l'instant — ajoutez-en un pour commencer à créer des tâches."
+    "noSubProjectsYet": "Aucun sous-projet pour l'instant — ajoutez-en un pour commencer à créer des tâches.",
+    "removeSubProject": "Retirer",
+    "confirmRemoveSubProject": "Retirer le sous-projet « {{name}} »? Cela supprime aussi ses tâches et cette action est irréversible."
   },
   "subProjectDetail": {
     "newTask": "Nouvelle tâche",

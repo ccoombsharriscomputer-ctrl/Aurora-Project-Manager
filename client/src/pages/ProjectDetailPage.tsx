@@ -253,6 +253,18 @@ export function ProjectDetailPage() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["project", projectId] }),
   });
 
+  const removeSubProject = useMutation({
+    mutationFn: (subProjectId: string) => api.delete(`/sub-projects/${subProjectId}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["project-sub-projects", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+    },
+  });
+
+  const [editing, setEditing] = useState(false);
+  const [editName, setEditName] = useState("");
+  const [editDescription, setEditDescription] = useState("");
+
   if (projectLoading || !project) {
     return <div className="muted">{t("projectDetail.loadingProject")}</div>;
   }
@@ -263,14 +275,47 @@ export function ProjectDetailPage() {
     <div>
       <div className="page-header">
         <div>
-          <div className="gap-8">
-            <h1 style={{ margin: 0 }}>{project.name}</h1>
-            {project.archivedAt && <span className="badge badge-archived">{t("projects.archived")}</span>}
-          </div>
-          <p className="muted" style={{ margin: "4px 0 0" }}>
-            {project.projectType.name}
-            {project.description ? ` · ${project.description}` : ""}
-          </p>
+          {editing ? (
+            <form
+              className="card"
+              style={{ marginBottom: 12 }}
+              onSubmit={(e: FormEvent) => {
+                e.preventDefault();
+                updateProject.mutate(
+                  { name: editName, description: editDescription || null },
+                  { onSuccess: () => setEditing(false) }
+                );
+              }}
+            >
+              <div className="field">
+                <label>{t("common.name")}</label>
+                <input type="text" required value={editName} onChange={(e) => setEditName(e.target.value)} />
+              </div>
+              <div className="field">
+                <label>{t("common.description")}</label>
+                <textarea value={editDescription} onChange={(e) => setEditDescription(e.target.value)} />
+              </div>
+              <div className="gap-8">
+                <button className="btn btn-primary" type="submit" disabled={updateProject.isPending}>
+                  {t("common.save")}
+                </button>
+                <button className="btn" type="button" onClick={() => setEditing(false)}>
+                  {t("common.cancel")}
+                </button>
+              </div>
+            </form>
+          ) : (
+            <>
+              <div className="gap-8">
+                <h1 style={{ margin: 0 }}>{project.name}</h1>
+                {project.archivedAt && <span className="badge badge-archived">{t("projects.archived")}</span>}
+              </div>
+              <p className="muted" style={{ margin: "4px 0 0" }}>
+                {project.projectType.name}
+                {project.description ? ` · ${project.description}` : ""}
+              </p>
+            </>
+          )}
           <div className="gap-8" style={{ marginTop: 8 }}>
             <label style={{ margin: 0 }}>{t("projectDetail.teamSupportTicket")}</label>
             {canManage ? (
@@ -292,6 +337,18 @@ export function ProjectDetailPage() {
         </div>
         <div className="gap-8">
           <NewSubProjectForm projectId={project.id} />
+          {canManage && !editing && (
+            <button
+              className="btn"
+              onClick={() => {
+                setEditName(project.name);
+                setEditDescription(project.description ?? "");
+                setEditing(true);
+              }}
+            >
+              {t("projectDetail.editProject")}
+            </button>
+          )}
           {canManage && (
             <button
               className="btn"
@@ -326,17 +383,32 @@ export function ProjectDetailPage() {
             {subProjects?.map((sp) => {
               const percent = sp.totalTasks === 0 ? 0 : Math.round((sp.doneTasks / sp.totalTasks) * 100);
               return (
-                <Link key={sp.id} to={`/projects/${project.id}/sub-projects/${sp.id}`} className="card project-card">
-                  <h3>{sp.name || sp.checklistItem.name}</h3>
-                  <p>{sp.name ? sp.checklistItem.name : " "}</p>
-                  <div className="progress-row-top">
-                    <span className="muted">{t("dashboard.tasksCount", { done: sp.doneTasks, total: sp.totalTasks })}</span>
-                    <span className="muted">{percent}%</span>
-                  </div>
-                  <div className="progress-bar-track">
-                    <div className="progress-bar-fill" style={{ width: `${percent}%` }} />
-                  </div>
-                </Link>
+                <div key={sp.id} className="card project-card">
+                  <Link to={`/projects/${project.id}/sub-projects/${sp.id}`} style={{ display: "block" }}>
+                    <h3>{sp.name || sp.checklistItem.name}</h3>
+                    <p>{sp.name ? sp.checklistItem.name : " "}</p>
+                    <div className="progress-row-top">
+                      <span className="muted">{t("dashboard.tasksCount", { done: sp.doneTasks, total: sp.totalTasks })}</span>
+                      <span className="muted">{percent}%</span>
+                    </div>
+                    <div className="progress-bar-track">
+                      <div className="progress-bar-fill" style={{ width: `${percent}%` }} />
+                    </div>
+                  </Link>
+                  {canManage && (
+                    <button
+                      className="btn btn-sm btn-danger"
+                      style={{ marginTop: 12 }}
+                      onClick={() => {
+                        if (confirm(t("projectDetail.confirmRemoveSubProject", { name: sp.name || sp.checklistItem.name }))) {
+                          removeSubProject.mutate(sp.id);
+                        }
+                      }}
+                    >
+                      {t("projectDetail.removeSubProject")}
+                    </button>
+                  )}
+                </div>
               );
             })}
           </div>
