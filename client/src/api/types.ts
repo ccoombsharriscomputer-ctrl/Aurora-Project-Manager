@@ -135,6 +135,7 @@ export interface Task {
   assignee: UserSummary | null;
   createdBy: UserSummary;
   dueDate: string | null;
+  completedAt: string | null;
   createdAt: string;
   updatedAt: string;
   project?: { id: string; name: string };
@@ -201,35 +202,47 @@ export interface DashboardSummary {
   recentActivity: Activity[];
 }
 
-export interface UserReportRow {
+interface ReportStats {
+  totalTasks: number;
+  doneTasks: number;
+  openTasks: number;
+  overdueOpen: number;
+  completedLate: number;
+  onTimeRate: number | null;
+  avgCompletionDays: number | null;
+  hoursLogged: number;
+}
+
+export interface UserReportRow extends ReportStats {
   id: string;
   name: string;
   email: string;
   role: UserRole;
   projects: { id: string; name: string }[];
-  openTasks: number;
-  doneTasks: number;
-  hoursLogged: number;
 }
 
-export interface ProjectReportRow {
+export interface ProjectReportRow extends ReportStats {
   id: string;
   name: string;
   projectType: { id: string; name: string };
   members: UserSummary[];
   totalSubProjects: number;
-  totalTasks: number;
-  doneTasks: number;
-  openTasks: number;
-  hoursLogged: number;
 }
 
-export interface ProjectTypeReportRow {
+export interface ProjectTypeReportRow extends ReportStats {
   id: string;
   name: string;
   totalProjects: number;
-  totalTasks: number;
-  doneTasks: number;
-  openTasks: number;
-  hoursLogged: number;
+}
+
+export interface OverdueTaskRow {
+  id: string;
+  title: string;
+  status: TaskStatus;
+  project: { id: string; name: string };
+  subProject: { id: string; name: string };
+  assignee: UserSummary | null;
+  dueDate: string;
+  completedAt: string | null;
+  daysLate: number;
 }

@@ -219,6 +219,7 @@ model Task {
   assigneeId  String?
   assignee    User?        @relation("TaskAssignee", fields: [assigneeId], references: [id])
   dueDate     DateTime?
+  completedAt DateTime?
   createdById String
   createdBy   User         @relation("TaskCreatedBy", fields: [createdById], references: [id])
   createdAt   DateTime     @default(now())

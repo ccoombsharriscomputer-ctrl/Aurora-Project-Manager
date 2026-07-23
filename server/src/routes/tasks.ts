@@ -69,6 +69,9 @@ router.patch("/:id", blockReadOnly, async (req, res) => {
   if (parsed.data.dueDate !== undefined) {
     data.dueDate = parsed.data.dueDate ? new Date(parsed.data.dueDate) : null;
   }
+  if (parsed.data.status && parsed.data.status !== existing.status) {
+    data.completedAt = parsed.data.status === "DONE" ? new Date() : null;
+  }
 
   const task = await prisma.task.update({
     where: { id: req.params.id },
