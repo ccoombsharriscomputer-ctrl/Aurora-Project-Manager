@@ -11,6 +11,7 @@ export function ProjectsPage() {
   const { user, canWrite } = useAuth();
   const queryClient = useQueryClient();
   const [showArchived, setShowArchived] = useState(false);
+  const [filterProjectTypeId, setFilterProjectTypeId] = useState("");
   const { data: projects, isLoading } = useQuery({
     queryKey: ["projects", showArchived],
     queryFn: () => api.get<Project[]>(`/projects${showArchived ? "?includeArchived=true" : ""}`),
@@ -43,6 +44,9 @@ export function ProjectsPage() {
   const activeTypes = (projectTypes ?? []).filter((t) => t.active);
   const activeProducts = (products ?? []).filter((p) => p.active);
   const otherUsers = (users ?? []).filter((u) => u.id !== user?.id);
+  const filteredProjects = (projects ?? []).filter(
+    (p) => !filterProjectTypeId || p.projectType.id === filterProjectTypeId
+  );
 
   function toggleProduct(id: string) {
     setChecklistItemIds((prev) => (prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]));
@@ -94,6 +98,14 @@ export function ProjectsPage() {
       <div className="page-header">
         <h1>{t("layout.projects")}</h1>
         <div className="gap-8">
+          <select value={filterProjectTypeId} onChange={(e) => setFilterProjectTypeId(e.target.value)}>
+            <option value="">{t("projects.allProjectTypes")}</option>
+            {(projectTypes ?? []).map((pt) => (
+              <option key={pt.id} value={pt.id}>
+                {pt.name}
+              </option>
+            ))}
+          </select>
           <label className="gap-8" style={{ cursor: "pointer" }}>
             <input type="checkbox" checked={showArchived} onChange={(e) => setShowArchived(e.target.checked)} />
             <span>{t("projects.showArchived")}</span>
@@ -196,9 +208,12 @@ export function ProjectsPage() {
 
       {isLoading && <p className="muted">{t("projects.loadingProjects")}</p>}
       {!isLoading && projects?.length === 0 && <p className="muted">{t("projects.noProjectsYet")}</p>}
+      {!isLoading && (projects?.length ?? 0) > 0 && filteredProjects.length === 0 && (
+        <p className="muted">{t("projects.noProjectsMatchFilter")}</p>
+      )}
 
       <div className="project-grid">
-        {projects?.map((p) => {
+        {filteredProjects.map((p) => {
           const percent = p.totalTasks === 0 ? 0 : Math.round((p.doneTasks / p.totalTasks) * 100);
           return (
             <Link key={p.id} to={`/projects/${p.id}`} className="card project-card">

@@ -105,6 +105,8 @@
     "memberCount_one": "{{count}} member",
     "memberCount_other": "{{count}} members",
     "showArchived": "Show archived projects",
+    "allProjectTypes": "All project types",
+    "noProjectsMatchFilter": "No projects match this project type.",
     "archived": "Archived"
   },
   "projectDetail": {
