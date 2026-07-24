@@ -84,7 +84,15 @@
     "showMore": "Afficher plus",
     "showLess": "Afficher moins",
     "myTasks": "Mes tâches",
-    "nothingAssigned": "Rien ne vous est assigné pour le moment."
+    "nothingAssigned": "Rien ne vous est assigné pour le moment.",
+    "task": "Tâche",
+    "user": "Utilisateur",
+    "date": "Date",
+    "hours": "Heures",
+    "note": "Note",
+    "noOpenTasks": "Aucune tâche ouverte.",
+    "noCompletedThisWeek": "Aucune tâche terminée cette semaine.",
+    "noHoursLoggedThisWeek": "Aucune heure enregistrée cette semaine."
   },
   "projects": {
     "newProject": "Nouveau projet",

@@ -84,7 +84,15 @@
     "showMore": "Show more",
     "showLess": "Show less",
     "myTasks": "My tasks",
-    "nothingAssigned": "Nothing assigned to you right now."
+    "nothingAssigned": "Nothing assigned to you right now.",
+    "task": "Task",
+    "user": "User",
+    "date": "Date",
+    "hours": "Hours",
+    "note": "Note",
+    "noOpenTasks": "No open tasks.",
+    "noCompletedThisWeek": "No tasks completed this week.",
+    "noHoursLoggedThisWeek": "No time logged this week."
   },
   "projects": {
     "newProject": "New project",

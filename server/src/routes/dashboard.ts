@@ -16,7 +16,6 @@ router.get("/summary", async (req, res) => {
     totalOpenTasks,
     tasksCompletedThisWeek,
     timeEntriesThisWeek,
-    statusCounts,
     projects,
     myTasks,
     recentActivity,
@@ -28,7 +27,6 @@ router.get("/summary", async (req, res) => {
       where: { startedAt: { gte: weekAgo }, durationMinutes: { not: null }, task: inLine },
       select: { durationMinutes: true },
     }),
-    prisma.task.groupBy({ by: ["status"], _count: { status: true }, where: inLine }),
     prisma.project.findMany({ where: { softwareLineId: lineId, archivedAt: null }, select: { id: true, name: true } }),
     prisma.task.findMany({
       where: { assigneeId: req.user!.id, status: { notIn: ["DONE", "NA"] }, ...inLine },
@@ -51,11 +49,6 @@ router.get("/summary", async (req, res) => {
   const hoursLoggedThisWeek =
     timeEntriesThisWeek.reduce((sum, e) => sum + (e.durationMinutes ?? 0), 0) / 60;
 
-  const statusBreakdown = { TODO: 0, IN_PROGRESS: 0, DONE: 0, NA: 0 } as Record<string, number>;
-  for (const row of statusCounts) {
-    statusBreakdown[row.status] = row._count.status;
-  }
-
   const projectProgress = await Promise.all(
     projects.map(async (p) => {
       const [total, done] = await Promise.all([
@@ -77,11 +70,62 @@ router.get("/summary", async (req, res) => {
     totalOpenTasks,
     tasksCompletedThisWeek,
     hoursLoggedThisWeek: Math.round(hoursLoggedThisWeek * 10) / 10,
-    statusBreakdown,
     projectProgress,
     myTasks,
     recentActivity,
   });
+});
+
+// Drill-down lists behind the dashboard's clickable stat tiles — each mirrors the exact
+// filter used to compute that tile's number in /summary, so the list always matches the count.
+router.get("/open-tasks", async (req, res) => {
+  const lineId = effectiveSoftwareLineId(req.user!);
+  const inLine = { project: { softwareLineId: lineId, archivedAt: null } };
+
+  const tasks = await prisma.task.findMany({
+    where: { status: { notIn: ["DONE", "NA"] }, ...inLine },
+    orderBy: [{ dueDate: "asc" }, { createdAt: "asc" }],
+    include: {
+      project: { select: { id: true, name: true } },
+      assignee: { select: { id: true, name: true } },
+    },
+  });
+  res.json(tasks);
+});
+
+router.get("/completed-this-week", async (req, res) => {
+  const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+  const lineId = effectiveSoftwareLineId(req.user!);
+  const inLine = { project: { softwareLineId: lineId, archivedAt: null } };
+
+  const tasks = await prisma.task.findMany({
+    where: { status: "DONE", updatedAt: { gte: weekAgo }, ...inLine },
+    orderBy: { updatedAt: "desc" },
+    include: {
+      project: { select: { id: true, name: true } },
+      assignee: { select: { id: true, name: true } },
+    },
+  });
+  res.json(tasks);
+});
+
+router.get("/time-entries-this-week", async (req, res) => {
+  const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+  const lineId = effectiveSoftwareLineId(req.user!);
+
+  const entries = await prisma.timeEntry.findMany({
+    where: {
+      startedAt: { gte: weekAgo },
+      durationMinutes: { not: null },
+      task: { project: { softwareLineId: lineId, archivedAt: null } },
+    },
+    orderBy: { startedAt: "desc" },
+    include: {
+      user: { select: { id: true, name: true } },
+      task: { select: { id: true, title: true, project: { select: { id: true, name: true } } } },
+    },
+  });
+  res.json(entries);
 });
 
 export default router;

@@ -25,7 +25,7 @@ function TimerBanner() {
     <div className="timer-banner">
       <span>
         {t("dashboard.timerRunningOn")}{" "}
-        <Link to={`/projects/${activeTimer.task.project.id}/tasks/${activeTimer.taskId}`} style={{ color: "white", textDecoration: "underline" }}>
+        <Link to={`/tasks/${activeTimer.taskId}`} style={{ color: "white", textDecoration: "underline" }}>
           {activeTimer.task.title}
         </Link>{" "}
         · {formatElapsed(activeTimer.startedAt)}
@@ -37,12 +37,12 @@ function TimerBanner() {
   );
 }
 
-const RECENT_ACTIVITY_COLLAPSED_COUNT = 2;
+const COLLAPSED_COUNT = 2;
 
 function RecentActivity({ activities }: { activities: Activity[] }) {
   const { t } = useTranslation();
   const [expanded, setExpanded] = useState(false);
-  const visible = expanded ? activities : activities.slice(0, RECENT_ACTIVITY_COLLAPSED_COUNT);
+  const visible = expanded ? activities : activities.slice(0, COLLAPSED_COUNT);
 
   return (
     <div className="card">
@@ -50,7 +50,7 @@ function RecentActivity({ activities }: { activities: Activity[] }) {
         <div className="section-title" style={{ marginBottom: 0 }}>
           {t("dashboard.recentActivity")}
         </div>
-        {activities.length > RECENT_ACTIVITY_COLLAPSED_COUNT && (
+        {activities.length > COLLAPSED_COUNT && (
           <button className="btn btn-sm" onClick={() => setExpanded((v) => !v)}>
             {expanded ? t("dashboard.showLess") : t("dashboard.showMore")}
           </button>
@@ -69,6 +69,41 @@ function RecentActivity({ activities }: { activities: Activity[] }) {
   );
 }
 
+function ProjectProgress({ projects }: { projects: DashboardSummary["projectProgress"] }) {
+  const { t } = useTranslation();
+  const [expanded, setExpanded] = useState(false);
+  const visible = expanded ? projects : projects.slice(0, COLLAPSED_COUNT);
+
+  return (
+    <div className="card" style={{ marginBottom: 20 }}>
+      <div className="flex-between">
+        <div className="section-title" style={{ marginBottom: 0 }}>
+          {t("dashboard.projectProgress")}
+        </div>
+        {projects.length > COLLAPSED_COUNT && (
+          <button className="btn btn-sm" onClick={() => setExpanded((v) => !v)}>
+            {expanded ? t("dashboard.showLess") : t("dashboard.showMore")}
+          </button>
+        )}
+      </div>
+      {projects.length === 0 && <p className="muted">{t("dashboard.noProjectsYet")}</p>}
+      {visible.map((p) => (
+        <div className="progress-row" key={p.id}>
+          <div className="progress-row-top">
+            <Link to={`/projects/${p.id}`}>{p.name}</Link>
+            <span className="muted">
+              {t("dashboard.tasksCount", { done: p.doneTasks, total: p.totalTasks })} · {p.percent}%
+            </span>
+          </div>
+          <div className="progress-bar-track">
+            <div className="progress-bar-fill" style={{ width: `${p.percent}%` }} />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export function DashboardPage() {
   const { t } = useTranslation();
   const { data, isLoading } = useQuery({
@@ -81,8 +116,6 @@ export function DashboardPage() {
     return <div className="muted">{t("dashboard.loadingDashboard")}</div>;
   }
 
-  const { statusBreakdown } = data;
-
   return (
     <div>
       <div className="page-header">
@@ -92,63 +125,27 @@ export function DashboardPage() {
       <TimerBanner />
 
       <div className="stat-grid">
-        <div className="stat-tile">
+        <Link to="/projects" className="stat-tile">
           <div className="value">{data.totalProjects}</div>
           <div className="label">{t("dashboard.totalProjects")}</div>
-        </div>
-        <div className="stat-tile">
+        </Link>
+        <Link to="/dashboard/open-tasks" className="stat-tile">
           <div className="value">{data.totalOpenTasks}</div>
           <div className="label">{t("dashboard.openTasks")}</div>
-        </div>
-        <div className="stat-tile">
+        </Link>
+        <Link to="/dashboard/completed-this-week" className="stat-tile">
           <div className="value">{data.tasksCompletedThisWeek}</div>
           <div className="label">{t("dashboard.completedThisWeek")}</div>
-        </div>
-        <div className="stat-tile">
+        </Link>
+        <Link to="/dashboard/time-entries-this-week" className="stat-tile">
           <div className="value">{data.hoursLoggedThisWeek}h</div>
           <div className="label">{t("dashboard.loggedThisWeek")}</div>
-        </div>
-      </div>
-
-      <div className="status-breakdown">
-        <div className="status-pill todo">
-          <div className="count">{statusBreakdown.TODO}</div>
-          <div className="label">{t("common.statusTodo")}</div>
-        </div>
-        <div className="status-pill in-progress">
-          <div className="count">{statusBreakdown.IN_PROGRESS}</div>
-          <div className="label">{t("common.statusInProgress")}</div>
-        </div>
-        <div className="status-pill done">
-          <div className="count">{statusBreakdown.DONE}</div>
-          <div className="label">{t("common.statusDone")}</div>
-        </div>
-        <div className="status-pill na">
-          <div className="count">{statusBreakdown.NA}</div>
-          <div className="label">{t("common.statusNA")}</div>
-        </div>
+        </Link>
       </div>
 
       <div className="dashboard-grid">
         <div>
-          <div className="card" style={{ marginBottom: 20 }}>
-            <div className="section-title">{t("dashboard.projectProgress")}</div>
-            {data.projectProgress.length === 0 && <p className="muted">{t("dashboard.noProjectsYet")}</p>}
-            {data.projectProgress.map((p) => (
-              <div className="progress-row" key={p.id}>
-                <div className="progress-row-top">
-                  <Link to={`/projects/${p.id}`}>{p.name}</Link>
-                  <span className="muted">
-                    {t("dashboard.tasksCount", { done: p.doneTasks, total: p.totalTasks })} · {p.percent}%
-                  </span>
-                </div>
-                <div className="progress-bar-track">
-                  <div className="progress-bar-fill" style={{ width: `${p.percent}%` }} />
-                </div>
-              </div>
-            ))}
-          </div>
-
+          <ProjectProgress projects={data.projectProgress} />
           <RecentActivity activities={data.recentActivity} />
         </div>
 
@@ -157,7 +154,7 @@ export function DashboardPage() {
           {data.myTasks.length === 0 && <p className="muted">{t("dashboard.nothingAssigned")}</p>}
           {data.myTasks.map((t) => (
             <div className="task-list-item" key={t.id}>
-              <Link to={`/projects/${t.projectId}/tasks/${t.id}`}>{t.title}</Link>
+              <Link to={`/tasks/${t.id}`}>{t.title}</Link>
               <span className="muted">{formatDueDate(t.dueDate)}</span>
             </div>
           ))}

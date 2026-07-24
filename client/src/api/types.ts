@@ -197,7 +197,6 @@ export interface DashboardSummary {
   totalOpenTasks: number;
   tasksCompletedThisWeek: number;
   hoursLoggedThisWeek: number;
-  statusBreakdown: Record<TaskStatus, number>;
   projectProgress: { id: string; name: string; totalTasks: number; doneTasks: number; percent: number }[];
   myTasks: Task[];
   recentActivity: Activity[];
