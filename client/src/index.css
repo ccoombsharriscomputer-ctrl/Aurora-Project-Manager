@@ -195,6 +195,9 @@ select {
   overflow-y: auto;
   overflow-x: auto;
   padding: 28px 36px;
+}
+
+.main-content-inner {
   max-width: 1200px;
 }
 

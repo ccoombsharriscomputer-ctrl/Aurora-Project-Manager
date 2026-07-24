@@ -58,7 +58,9 @@ export function Layout() {
         </div>
       </aside>
       <main className="main-content">
-        <Outlet />
+        <div className="main-content-inner">
+          <Outlet />
+        </div>
       </main>
     </div>
   );
