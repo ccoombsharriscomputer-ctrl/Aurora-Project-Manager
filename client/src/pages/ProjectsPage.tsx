@@ -52,6 +52,12 @@ export function ProjectsPage() {
     setMemberIds((prev) => (prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]));
   }
 
+  const allMembersSelected = otherUsers.length > 0 && otherUsers.every((u) => memberIds.includes(u.id));
+
+  function toggleAllMembers() {
+    setMemberIds(allMembersSelected ? [] : otherUsers.map((u) => u.id));
+  }
+
   const createProject = useMutation({
     mutationFn: () =>
       api.post<Project>("/projects", {
@@ -147,7 +153,14 @@ export function ProjectsPage() {
               ))}
             </div>
             <div className="field" style={{ flex: 1 }}>
-              <label>{t("projects.membersToAdd")}</label>
+              <div className="flex-between">
+                <label>{t("projects.membersToAdd")}</label>
+                {otherUsers.length > 0 && (
+                  <button type="button" className="btn btn-sm" onClick={toggleAllMembers}>
+                    {allMembersSelected ? t("projects.clearAll") : t("projects.selectAll")}
+                  </button>
+                )}
+              </div>
               {otherUsers.length === 0 && (
                 <p className="muted" style={{ fontSize: 12, marginTop: 6 }}>
                   {t("projects.noOtherUsersYet")}

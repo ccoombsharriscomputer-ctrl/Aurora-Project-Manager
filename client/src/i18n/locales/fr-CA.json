@@ -95,6 +95,8 @@
     "noProductsYet": "Aucun produit pour l'instant — un administrateur ou un chef de projet peut en ajouter sur la page Produits.",
     "membersToAdd": "Utilisateurs à ajouter",
     "noOtherUsersYet": "Aucun autre utilisateur dans cette ligne de logiciels pour l'instant.",
+    "selectAll": "Tout sélectionner",
+    "clearAll": "Tout effacer",
     "teamSupportTicketNumber": "N° de billet TeamSupport (facultatif)",
     "createProject": "Créer le projet",
     "loadingProjects": "Chargement des projets…",

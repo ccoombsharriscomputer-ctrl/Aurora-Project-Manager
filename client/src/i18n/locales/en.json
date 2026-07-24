@@ -95,6 +95,8 @@
     "noProductsYet": "No products yet — an admin or project lead can add some on the Products page.",
     "membersToAdd": "Users to add",
     "noOtherUsersYet": "No other users in this software line yet.",
+    "selectAll": "Select all",
+    "clearAll": "Clear all",
     "teamSupportTicketNumber": "TeamSupport ticket # (optional)",
     "createProject": "Create project",
     "loadingProjects": "Loading projects…",
