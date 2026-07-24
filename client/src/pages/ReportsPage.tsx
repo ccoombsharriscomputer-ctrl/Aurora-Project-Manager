@@ -115,6 +115,7 @@ function ByUserTab({ filters }: { filters: Filters }) {
               { header: t("common.role"), value: (r) => roleLabel(t, r.role) },
               { header: t("reports.projects"), value: (r) => r.projects.map((p) => p.name).join("; ") },
               { header: t("reports.openTasks"), value: (r) => r.openTasks },
+              { header: t("reports.naTasks"), value: (r) => r.naTasks },
               { header: t("reports.overdue"), value: (r) => r.overdueOpen },
               { header: t("reports.completedTasks"), value: (r) => r.doneTasks },
               { header: t("reports.completedLate"), value: (r) => r.completedLate },
@@ -135,6 +136,7 @@ function ByUserTab({ filters }: { filters: Filters }) {
               <th>{t("common.role")}</th>
               <th>{t("reports.projects")}</th>
               <th>{t("reports.openTasks")}</th>
+              <th>{t("reports.naTasks")}</th>
               <th>{t("reports.overdue")}</th>
               <th>{t("reports.completedTasks")}</th>
               <th>{t("reports.completedLate")}</th>
@@ -155,6 +157,7 @@ function ByUserTab({ filters }: { filters: Filters }) {
                 <td>{roleLabel(t, r.role)}</td>
                 <td>{r.projects.length === 0 ? "—" : r.projects.map((p) => p.name).join(", ")}</td>
                 <td>{r.openTasks}</td>
+                <td>{r.naTasks}</td>
                 <td>
                   <CountBadge count={r.overdueOpen} />
                 </td>
@@ -169,7 +172,7 @@ function ByUserTab({ filters }: { filters: Filters }) {
             ))}
             {rows.length === 0 && (
               <tr>
-                <td colSpan={10} className="muted">
+                <td colSpan={11} className="muted">
                   {t("reports.noActiveUsers")}
                 </td>
               </tr>
@@ -208,6 +211,7 @@ function ByProjectTab({ filters }: { filters: Filters }) {
               { header: t("reports.type"), value: (r) => r.name },
               { header: t("reports.projects"), value: (r) => r.totalProjects },
               { header: t("reports.openTasks"), value: (r) => r.openTasks },
+              { header: t("reports.naTasks"), value: (r) => r.naTasks },
               { header: t("reports.overdue"), value: (r) => r.overdueOpen },
               { header: t("reports.completedTasks"), value: (r) => r.doneTasks },
               { header: t("reports.completedLate"), value: (r) => r.completedLate },
@@ -230,6 +234,7 @@ function ByProjectTab({ filters }: { filters: Filters }) {
                   <th>{t("reports.type")}</th>
                   <th>{t("reports.projects")}</th>
                   <th>{t("reports.openTasks")}</th>
+                  <th>{t("reports.naTasks")}</th>
                   <th>{t("reports.overdue")}</th>
                   <th>{t("reports.completedTasks")}</th>
                   <th>{t("reports.completedLate")}</th>
@@ -244,6 +249,7 @@ function ByProjectTab({ filters }: { filters: Filters }) {
                     <td>{row.name}</td>
                     <td>{row.totalProjects}</td>
                     <td>{row.openTasks}</td>
+                    <td>{row.naTasks}</td>
                     <td>
                       <CountBadge count={row.overdueOpen} />
                     </td>
@@ -258,7 +264,7 @@ function ByProjectTab({ filters }: { filters: Filters }) {
                 ))}
                 {typeRows.length === 0 && (
                   <tr>
-                    <td colSpan={9} className="muted">
+                    <td colSpan={10} className="muted">
                       {t("reports.noProjectTypesYet")}
                     </td>
                   </tr>
@@ -283,6 +289,7 @@ function ByProjectTab({ filters }: { filters: Filters }) {
               { header: t("reports.type"), value: (r) => r.projectType.name },
               { header: t("reports.subProjects"), value: (r) => r.totalSubProjects },
               { header: t("reports.openTasks"), value: (r) => r.openTasks },
+              { header: t("reports.naTasks"), value: (r) => r.naTasks },
               { header: t("reports.overdue"), value: (r) => r.overdueOpen },
               { header: t("reports.completedTasks"), value: (r) => r.doneTasks },
               { header: t("reports.completedLate"), value: (r) => r.completedLate },
@@ -307,6 +314,7 @@ function ByProjectTab({ filters }: { filters: Filters }) {
                   <th>{t("reports.type")}</th>
                   <th>{t("reports.subProjects")}</th>
                   <th>{t("reports.openTasks")}</th>
+                  <th>{t("reports.naTasks")}</th>
                   <th>{t("reports.overdue")}</th>
                   <th>{t("reports.completedTasks")}</th>
                   <th>{t("reports.completedLate")}</th>
@@ -323,6 +331,7 @@ function ByProjectTab({ filters }: { filters: Filters }) {
                     <td>{p.projectType.name}</td>
                     <td>{p.totalSubProjects}</td>
                     <td>{p.openTasks}</td>
+                    <td>{p.naTasks}</td>
                     <td>
                       <CountBadge count={p.overdueOpen} />
                     </td>
@@ -338,7 +347,7 @@ function ByProjectTab({ filters }: { filters: Filters }) {
                 ))}
                 {projectRows.length === 0 && (
                   <tr>
-                    <td colSpan={11} className="muted">
+                    <td colSpan={12} className="muted">
                       {t("reports.noProjectsYet")}
                     </td>
                   </tr>

@@ -23,10 +23,13 @@ function inRange(date: Date, range: DateRange): boolean {
 
 // "Done" tasks are scoped to the date range (via completedAt); "open" tasks reflect
 // live current state and are never filtered by date, since they have no completion event yet.
+// N/A tasks are their own bucket — excluded from open/overdue (the work was deemed
+// inapplicable, not neglected) and from done/on-time (it was never completed).
 export function computeTaskStats(tasks: TaskLite[], range: DateRange) {
   const now = new Date();
   const hasRange = Boolean(range.from || range.to);
-  const open = tasks.filter((t) => t.status !== "DONE");
+  const open = tasks.filter((t) => t.status !== "DONE" && t.status !== "NA");
+  const na = tasks.filter((t) => t.status === "NA");
   const done = tasks.filter((t) => t.status === "DONE" && t.completedAt);
   const doneInRange = hasRange ? done.filter((t) => inRange(t.completedAt!, range)) : done;
 
@@ -42,6 +45,7 @@ export function computeTaskStats(tasks: TaskLite[], range: DateRange) {
   return {
     totalTasks: tasks.length,
     openTasks: open.length,
+    naTasks: na.length,
     doneTasks: doneInRange.length,
     overdueOpen,
     completedLate,

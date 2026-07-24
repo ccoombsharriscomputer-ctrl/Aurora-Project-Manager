@@ -28,6 +28,7 @@
     "statusTodo": "À faire",
     "statusInProgress": "En cours",
     "statusDone": "Terminé",
+    "statusNA": "N/D",
     "cannotBeUndone": "Cette action est irréversible.",
     "somethingWentWrong": "Une erreur s'est produite",
     "justNow": "à l'instant",
@@ -136,7 +137,8 @@
     "dueDate": "Date d'échéance",
     "createTask": "Créer la tâche",
     "loadingSubProject": "Chargement du sous-projet…",
-    "loadingTasks": "Chargement des tâches…"
+    "loadingTasks": "Chargement des tâches…",
+    "naReasonPrompt": "Pourquoi cette tâche est-elle N/D?"
   },
   "taskDetail": {
     "loadingTask": "Chargement de la tâche…",
@@ -157,7 +159,9 @@
     "noTimeLoggedYet": "Aucun temps enregistré pour l'instant.",
     "running": "en cours…",
     "details": "Détails",
-    "createdBy": "Créé par {{name}}"
+    "createdBy": "Créé par {{name}}",
+    "naReasonPrompt": "Pourquoi cette tâche est-elle N/D?",
+    "naReasonLabel": "Motif du N/D"
   },
   "adminUsers": {
     "addUser": "Ajouter un utilisateur",
@@ -221,6 +225,7 @@
     "overdueTasks": "Tâches en retard",
     "noOverdueTasks": "Aucune tâche en retard — bon travail.",
     "daysLate": "Jours de retard",
+    "naTasks": "N/D",
     "completedDate": "Date d'achèvement",
     "subProject": "Sous-projet"
   },

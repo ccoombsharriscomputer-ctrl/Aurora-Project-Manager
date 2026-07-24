@@ -22,7 +22,7 @@ router.get("/summary", async (req, res) => {
     recentActivity,
   ] = await Promise.all([
     prisma.project.count({ where: { softwareLineId: lineId, archivedAt: null } }),
-    prisma.task.count({ where: { status: { not: "DONE" }, ...inLine } }),
+    prisma.task.count({ where: { status: { notIn: ["DONE", "NA"] }, ...inLine } }),
     prisma.task.count({ where: { status: "DONE", updatedAt: { gte: weekAgo }, ...inLine } }),
     prisma.timeEntry.findMany({
       where: { startedAt: { gte: weekAgo }, durationMinutes: { not: null }, task: inLine },
@@ -31,7 +31,7 @@ router.get("/summary", async (req, res) => {
     prisma.task.groupBy({ by: ["status"], _count: { status: true }, where: inLine }),
     prisma.project.findMany({ where: { softwareLineId: lineId, archivedAt: null }, select: { id: true, name: true } }),
     prisma.task.findMany({
-      where: { assigneeId: req.user!.id, status: { not: "DONE" }, ...inLine },
+      where: { assigneeId: req.user!.id, status: { notIn: ["DONE", "NA"] }, ...inLine },
       orderBy: [{ dueDate: "asc" }, { createdAt: "asc" }],
       include: { project: { select: { id: true, name: true } } },
       take: 20,
@@ -51,7 +51,7 @@ router.get("/summary", async (req, res) => {
   const hoursLoggedThisWeek =
     timeEntriesThisWeek.reduce((sum, e) => sum + (e.durationMinutes ?? 0), 0) / 60;
 
-  const statusBreakdown = { TODO: 0, IN_PROGRESS: 0, DONE: 0 } as Record<string, number>;
+  const statusBreakdown = { TODO: 0, IN_PROGRESS: 0, DONE: 0, NA: 0 } as Record<string, number>;
   for (const row of statusCounts) {
     statusBreakdown[row.status] = row._count.status;
   }

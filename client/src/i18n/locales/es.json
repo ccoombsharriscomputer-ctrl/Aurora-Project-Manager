@@ -28,6 +28,7 @@
     "statusTodo": "Por hacer",
     "statusInProgress": "En progreso",
     "statusDone": "Hecho",
+    "statusNA": "N/D",
     "cannotBeUndone": "Esta acción no se puede deshacer.",
     "somethingWentWrong": "Algo salió mal",
     "justNow": "justo ahora",
@@ -136,7 +137,8 @@
     "dueDate": "Fecha límite",
     "createTask": "Crear tarea",
     "loadingSubProject": "Cargando subproyecto…",
-    "loadingTasks": "Cargando tareas…"
+    "loadingTasks": "Cargando tareas…",
+    "naReasonPrompt": "¿Por qué esta tarea es N/D?"
   },
   "taskDetail": {
     "loadingTask": "Cargando tarea…",
@@ -157,7 +159,9 @@
     "noTimeLoggedYet": "Aún no hay tiempo registrado.",
     "running": "en curso…",
     "details": "Detalles",
-    "createdBy": "Creado por {{name}}"
+    "createdBy": "Creado por {{name}}",
+    "naReasonPrompt": "¿Por qué esta tarea es N/D?",
+    "naReasonLabel": "Motivo de N/D"
   },
   "adminUsers": {
     "addUser": "Añadir usuario",
@@ -221,6 +225,7 @@
     "overdueTasks": "Tareas atrasadas",
     "noOverdueTasks": "No hay tareas atrasadas — buen trabajo.",
     "daysLate": "Días de retraso",
+    "naTasks": "N/D",
     "completedDate": "Fecha de finalización",
     "subProject": "Subproyecto"
   },

@@ -123,6 +123,10 @@ export function DashboardPage() {
           <div className="count">{statusBreakdown.DONE}</div>
           <div className="label">{t("common.statusDone")}</div>
         </div>
+        <div className="status-pill na">
+          <div className="count">{statusBreakdown.NA}</div>
+          <div className="label">{t("common.statusNA")}</div>
+        </div>
       </div>
 
       <div className="dashboard-grid">

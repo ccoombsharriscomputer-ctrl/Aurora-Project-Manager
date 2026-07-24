@@ -10,6 +10,7 @@
   --todo-bg: #eef1f6;
   --progress-bg: #fff4e0;
   --done-bg: #e6f6ec;
+  --na-bg: #eceef1;
   --radius: 8px;
   --shadow: 0 1px 2px rgba(20, 24, 40, 0.06), 0 1px 3px rgba(20, 24, 40, 0.08);
   --accent-color: #3457d5;
@@ -32,6 +33,7 @@
     --todo-bg: #232a38;
     --progress-bg: #332a17;
     --done-bg: #16311f;
+    --na-bg: #262c38;
     --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 1px 3px rgba(0, 0, 0, 0.4);
     --primary: color-mix(in srgb, var(--accent-color) 75%, white);
     --primary-hover: color-mix(in srgb, var(--primary) 85%, white);
@@ -405,6 +407,10 @@ label {
 
 .status-pill.done {
   background: var(--done-bg);
+}
+
+.status-pill.na {
+  background: var(--na-bg);
 }
 
 .activity-list {

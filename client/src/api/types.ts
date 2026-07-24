@@ -1,6 +1,6 @@
 export type UserRole = "ADMIN" | "PROJECT_LEAD" | "MEMBER" | "READ_ONLY";
 export type ProjectMemberRole = "OWNER" | "MEMBER";
-export type TaskStatus = "TODO" | "IN_PROGRESS" | "DONE";
+export type TaskStatus = "TODO" | "IN_PROGRESS" | "DONE" | "NA";
 export type TaskPriority = "LOW" | "MEDIUM" | "HIGH";
 export type ThemeMode = "LIGHT" | "DARK" | "SYSTEM";
 export type AccentColor = "BLUE" | "GREEN" | "PURPLE" | "ORANGE" | "RED" | "TEAL";
@@ -136,6 +136,7 @@ export interface Task {
   createdBy: UserSummary;
   dueDate: string | null;
   completedAt: string | null;
+  naReason: string | null;
   createdAt: string;
   updatedAt: string;
   project?: { id: string; name: string };
@@ -206,6 +207,7 @@ interface ReportStats {
   totalTasks: number;
   doneTasks: number;
   openTasks: number;
+  naTasks: number;
   overdueOpen: number;
   completedLate: number;
   onTimeRate: number | null;

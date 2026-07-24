@@ -20,7 +20,7 @@ router.get("/", async (req, res) => {
 
   const tasks = await prisma.task.findMany({
     where: {
-      status: { not: "DONE" },
+      status: { notIn: ["DONE", "NA"] },
       dueDate: { gte: new Date(start), lte: new Date(end) },
       project: { softwareLineId: effectiveSoftwareLineId(req.user!), archivedAt: null },
     },

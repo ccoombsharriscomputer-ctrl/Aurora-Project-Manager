@@ -11,6 +11,7 @@ import { useActiveTimer } from "../hooks/useActiveTimer";
 function statusLabel(t: (key: string) => string, status: TaskStatus): string {
   if (status === "IN_PROGRESS") return t("common.statusInProgress");
   if (status === "DONE") return t("common.statusDone");
+  if (status === "NA") return t("common.statusNA");
   return t("common.statusTodo");
 }
 
@@ -57,6 +58,16 @@ export function TaskDetailPage() {
     mutationFn: (data: Record<string, unknown>) => api.patch(`/tasks/${taskId}`, data),
     onSuccess: invalidateTask,
   });
+
+  function handleStatusChange(status: TaskStatus) {
+    if (status === "NA") {
+      const reason = window.prompt(t("taskDetail.naReasonPrompt"));
+      if (!reason || !reason.trim()) return;
+      updateTask.mutate({ status, naReason: reason.trim() });
+      return;
+    }
+    updateTask.mutate({ status });
+  }
 
   const deleteTask = useMutation({
     mutationFn: () => api.delete(`/tasks/${taskId}`),
@@ -315,18 +326,22 @@ export function TaskDetailPage() {
           <div className="field">
             <label>{t("common.status")}</label>
             {canWrite ? (
-              <select
-                value={task.status}
-                onChange={(e) => updateTask.mutate({ status: e.target.value as TaskStatus })}
-              >
+              <select value={task.status} onChange={(e) => handleStatusChange(e.target.value as TaskStatus)}>
                 <option value="TODO">{t("common.statusTodo")}</option>
                 <option value="IN_PROGRESS">{t("common.statusInProgress")}</option>
                 <option value="DONE">{t("common.statusDone")}</option>
+                <option value="NA">{t("common.statusNA")}</option>
               </select>
             ) : (
               <span>{statusLabel(t, task.status)}</span>
             )}
           </div>
+          {task.status === "NA" && task.naReason && (
+            <div className="field">
+              <label>{t("taskDetail.naReasonLabel")}</label>
+              <span>{task.naReason}</span>
+            </div>
+          )}
           <div className="field">
             <label>{t("subProjectDetail.priority")}</label>
             {canWrite ? (

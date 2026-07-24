@@ -23,6 +23,7 @@ enum TaskStatus {
   TODO
   IN_PROGRESS
   DONE
+  NA
 }
 
 enum TaskPriority {
@@ -220,6 +221,7 @@ model Task {
   assignee    User?        @relation("TaskAssignee", fields: [assigneeId], references: [id])
   dueDate     DateTime?
   completedAt DateTime?
+  naReason    String?
   createdById String
   createdBy   User         @relation("TaskCreatedBy", fields: [createdById], references: [id])
   createdAt   DateTime     @default(now())

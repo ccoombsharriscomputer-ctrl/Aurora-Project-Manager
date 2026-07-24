@@ -12,6 +12,7 @@ const COLUMNS: { status: Task["status"]; labelKey: string }[] = [
   { status: "TODO", labelKey: "common.statusTodo" },
   { status: "IN_PROGRESS", labelKey: "common.statusInProgress" },
   { status: "DONE", labelKey: "common.statusDone" },
+  { status: "NA", labelKey: "common.statusNA" },
 ];
 
 function priorityLabel(t: TFunction, priority: TaskPriority): string {
@@ -140,13 +141,23 @@ export function SubProjectDetailPage() {
   });
 
   const updateStatus = useMutation({
-    mutationFn: ({ taskId, status }: { taskId: string; status: Task["status"] }) =>
-      api.patch(`/tasks/${taskId}`, { status }),
+    mutationFn: ({ taskId, status, naReason }: { taskId: string; status: Task["status"]; naReason?: string }) =>
+      api.patch(`/tasks/${taskId}`, { status, ...(naReason ? { naReason } : {}) }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["sub-project-tasks", subProjectId] });
       queryClient.invalidateQueries({ queryKey: ["dashboard"] });
     },
   });
+
+  function handleStatusChange(taskId: string, status: Task["status"]) {
+    if (status === "NA") {
+      const reason = window.prompt(t("subProjectDetail.naReasonPrompt"));
+      if (!reason || !reason.trim()) return;
+      updateStatus.mutate({ taskId, status, naReason: reason.trim() });
+      return;
+    }
+    updateStatus.mutate({ taskId, status });
+  }
 
   if (subProjectLoading || !subProject) {
     return <div className="muted">{t("subProjectDetail.loadingSubProject")}</div>;
@@ -186,15 +197,21 @@ export function SubProjectDetailPage() {
                     {canWrite ? (
                       <select
                         value={task.status}
-                        onChange={(e) => updateStatus.mutate({ taskId: task.id, status: e.target.value as Task["status"] })}
+                        onChange={(e) => handleStatusChange(task.id, e.target.value as Task["status"])}
                         style={{ width: "auto", padding: "2px 4px", fontSize: 12 }}
                       >
                         <option value="TODO">{t("common.statusTodo")}</option>
                         <option value="IN_PROGRESS">{t("common.statusInProgress")}</option>
                         <option value="DONE">{t("common.statusDone")}</option>
+                        <option value="NA">{t("common.statusNA")}</option>
                       </select>
                     ) : null}
                   </div>
+                  {task.status === "NA" && task.naReason && (
+                    <div className="muted" style={{ marginTop: 6, fontSize: 12, fontStyle: "italic" }}>
+                      {task.naReason}
+                    </div>
+                  )}
                 </div>
               ))}
           </div>

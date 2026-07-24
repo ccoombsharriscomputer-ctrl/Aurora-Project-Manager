@@ -167,7 +167,7 @@ router.get("/overdue", async (req, res) => {
       project: { softwareLineId: lineId },
       ...(userId ? { assigneeId: userId } : {}),
       dueDate: { not: null },
-      OR: [{ status: { not: "DONE" } }, { status: "DONE", completedAt: { not: null } }],
+      OR: [{ status: { notIn: ["DONE", "NA"] } }, { status: "DONE", completedAt: { not: null } }],
     },
     include: {
       project: { select: { id: true, name: true } },

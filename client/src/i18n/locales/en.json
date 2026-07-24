@@ -28,6 +28,7 @@
     "statusTodo": "To Do",
     "statusInProgress": "In Progress",
     "statusDone": "Done",
+    "statusNA": "N/A",
     "cannotBeUndone": "This cannot be undone.",
     "somethingWentWrong": "Something went wrong",
     "justNow": "just now",
@@ -136,7 +137,8 @@
     "dueDate": "Due date",
     "createTask": "Create task",
     "loadingSubProject": "Loading sub-project…",
-    "loadingTasks": "Loading tasks…"
+    "loadingTasks": "Loading tasks…",
+    "naReasonPrompt": "Why is this task N/A?"
   },
   "taskDetail": {
     "loadingTask": "Loading task…",
@@ -157,7 +159,9 @@
     "noTimeLoggedYet": "No time logged yet.",
     "running": "running…",
     "details": "Details",
-    "createdBy": "Created by {{name}}"
+    "createdBy": "Created by {{name}}",
+    "naReasonPrompt": "Why is this task N/A?",
+    "naReasonLabel": "N/A reason"
   },
   "adminUsers": {
     "addUser": "Add user",
@@ -221,6 +225,7 @@
     "overdueTasks": "Overdue tasks",
     "noOverdueTasks": "No overdue tasks — nice work.",
     "daysLate": "Days late",
+    "naTasks": "N/A",
     "completedDate": "Completed date",
     "subProject": "Sub-project"
   },

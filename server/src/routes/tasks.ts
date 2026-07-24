@@ -42,7 +42,8 @@ router.get("/:id", async (req, res) => {
 const updateSchema = z.object({
   title: z.string().min(1).max(300).optional(),
   description: z.string().max(5000).nullable().optional(),
-  status: z.enum(["TODO", "IN_PROGRESS", "DONE"]).optional(),
+  status: z.enum(["TODO", "IN_PROGRESS", "DONE", "NA"]).optional(),
+  naReason: z.string().max(2000).optional(),
   priority: z.enum(["LOW", "MEDIUM", "HIGH"]).optional(),
   assigneeId: z.string().nullable().optional(),
   dueDate: z.string().datetime().nullable().optional(),
@@ -57,6 +58,9 @@ router.patch("/:id", blockReadOnly, async (req, res) => {
   if (!parsed.success) {
     return res.status(400).json({ error: parsed.error.issues[0].message });
   }
+  if (parsed.data.status === "NA" && !parsed.data.naReason?.trim()) {
+    return res.status(400).json({ error: "A reason is required when marking a task N/A" });
+  }
 
   if (parsed.data.assigneeId) {
     const assignee = await prisma.user.findUnique({ where: { id: parsed.data.assigneeId } });
@@ -65,12 +69,14 @@ router.patch("/:id", blockReadOnly, async (req, res) => {
     }
   }
 
-  const data: Record<string, unknown> = { ...parsed.data };
+  const { naReason, ...rest } = parsed.data;
+  const data: Record<string, unknown> = { ...rest };
   if (parsed.data.dueDate !== undefined) {
     data.dueDate = parsed.data.dueDate ? new Date(parsed.data.dueDate) : null;
   }
   if (parsed.data.status && parsed.data.status !== existing.status) {
     data.completedAt = parsed.data.status === "DONE" ? new Date() : null;
+    data.naReason = parsed.data.status === "NA" ? naReason!.trim() : null;
   }
 
   const task = await prisma.task.update({
@@ -80,9 +86,13 @@ router.patch("/:id", blockReadOnly, async (req, res) => {
   });
 
   if (parsed.data.status && parsed.data.status !== existing.status) {
+    const message =
+      parsed.data.status === "NA"
+        ? `${req.user!.name} marked "${task.title}" as N/A: ${task.naReason}`
+        : `${req.user!.name} moved "${task.title}" to ${parsed.data.status.replace("_", " ")}`;
     await logActivity({
       type: "TASK_STATUS_CHANGED",
-      message: `${req.user!.name} moved "${task.title}" to ${parsed.data.status.replace("_", " ")}`,
+      message,
       userId: req.user!.id,
       projectId: task.projectId,
       taskId: task.id,
