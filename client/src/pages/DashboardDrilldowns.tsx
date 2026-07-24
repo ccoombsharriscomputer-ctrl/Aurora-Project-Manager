@@ -1,3 +1,4 @@
+import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
@@ -22,23 +23,96 @@ function BackToDashboard() {
   );
 }
 
+type SortKey = "task" | "project" | "status" | "assignee" | "date";
+type SortState = { key: SortKey; direction: "asc" | "desc" };
+
+function SortableHeader({
+  label,
+  sortKey,
+  sort,
+  onSort,
+}: {
+  label: string;
+  sortKey: SortKey;
+  sort: SortState | null;
+  onSort: (key: SortKey) => void;
+}) {
+  const active = sort?.key === sortKey;
+  return (
+    <th
+      onClick={() => onSort(sortKey)}
+      style={{ cursor: "pointer", userSelect: "none", whiteSpace: "nowrap" }}
+    >
+      {label}
+      {active && <span style={{ marginLeft: 4 }}>{sort!.direction === "asc" ? "▲" : "▼"}</span>}
+    </th>
+  );
+}
+
 function TaskDrilldownTable({ tasks, showDueDate }: { tasks: Task[]; showDueDate: boolean }) {
   const { t } = useTranslation();
+  const [sort, setSort] = useState<SortState | null>(null);
+
+  function handleSort(key: SortKey) {
+    setSort((prev) => {
+      if (prev?.key !== key) return { key, direction: "asc" };
+      return { key, direction: prev.direction === "asc" ? "desc" : "asc" };
+    });
+  }
+
+  const sortedTasks = useMemo(() => {
+    if (!sort) return tasks;
+    const dir = sort.direction === "asc" ? 1 : -1;
+
+    function value(task: Task): string | number {
+      switch (sort!.key) {
+        case "task":
+          return task.title.toLowerCase();
+        case "project":
+          return (task.project?.name ?? "").toLowerCase();
+        case "status":
+          return statusLabel(t, task.status).toLowerCase();
+        case "assignee":
+          return (task.assignee?.name ?? "").toLowerCase();
+        case "date": {
+          const iso = showDueDate ? task.dueDate : task.completedAt;
+          return iso ? new Date(iso).getTime() : Number.POSITIVE_INFINITY;
+        }
+      }
+    }
+
+    return [...tasks].sort((a, b) => {
+      const av = value(a);
+      const bv = value(b);
+      if (av === bv) return 0;
+      return av < bv ? -1 * dir : 1 * dir;
+    });
+  }, [tasks, sort, showDueDate, t]);
 
   return (
     <div className="card">
       <table className="table">
         <thead>
           <tr>
-            <th>{t("dashboard.task")}</th>
-            <th>{t("reports.project")}</th>
-            <th>{t("common.status")}</th>
-            <th>{t("subProjectDetail.assignee")}</th>
-            <th>{showDueDate ? t("subProjectDetail.dueDate") : t("reports.completedDate")}</th>
+            <SortableHeader label={t("dashboard.task")} sortKey="task" sort={sort} onSort={handleSort} />
+            <SortableHeader label={t("reports.project")} sortKey="project" sort={sort} onSort={handleSort} />
+            <SortableHeader label={t("common.status")} sortKey="status" sort={sort} onSort={handleSort} />
+            <SortableHeader
+              label={t("subProjectDetail.assignee")}
+              sortKey="assignee"
+              sort={sort}
+              onSort={handleSort}
+            />
+            <SortableHeader
+              label={showDueDate ? t("subProjectDetail.dueDate") : t("reports.completedDate")}
+              sortKey="date"
+              sort={sort}
+              onSort={handleSort}
+            />
           </tr>
         </thead>
         <tbody>
-          {tasks.map((task) => (
+          {sortedTasks.map((task) => (
             <tr key={task.id}>
               <td>
                 <Link to={`/tasks/${task.id}`}>{task.title}</Link>
