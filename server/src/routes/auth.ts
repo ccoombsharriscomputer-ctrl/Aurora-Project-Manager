@@ -35,18 +35,26 @@ router.post("/login", async (req, res) => {
     return res.status(401).json({ error: "Invalid email or password" });
   }
 
-  const token = signToken(user.id);
+  // Each fresh login starts an admin back on their home line, even if a
+  // previous session left them switched into another one. Mid-session
+  // switches (via PATCH /active-line) still stick until the next login.
+  const loggedInUser =
+    user.role === "ADMIN" && user.activeSoftwareLineId
+      ? await prisma.user.update({ where: { id: user.id }, data: { activeSoftwareLineId: null } })
+      : user;
+
+  const token = signToken(loggedInUser.id);
   res.cookie(COOKIE_NAME, token, COOKIE_OPTIONS);
   res.json({
-    id: user.id,
-    name: user.name,
-    email: user.email,
-    role: user.role,
-    theme: user.theme,
-    accentColor: user.accentColor,
-    locale: user.locale,
-    softwareLineId: user.softwareLineId,
-    activeSoftwareLineId: user.activeSoftwareLineId,
+    id: loggedInUser.id,
+    name: loggedInUser.name,
+    email: loggedInUser.email,
+    role: loggedInUser.role,
+    theme: loggedInUser.theme,
+    accentColor: loggedInUser.accentColor,
+    locale: loggedInUser.locale,
+    softwareLineId: loggedInUser.softwareLineId,
+    activeSoftwareLineId: loggedInUser.activeSoftwareLineId,
   });
 });
 
