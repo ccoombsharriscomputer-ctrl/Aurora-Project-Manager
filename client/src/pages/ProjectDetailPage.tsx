@@ -219,7 +219,7 @@ function AttachmentsPanel({ projectId }: { projectId: string }) {
 export function ProjectDetailPage() {
   const { t } = useTranslation();
   const { projectId } = useParams<{ projectId: string }>();
-  const { user } = useAuth();
+  const { user, canWrite } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
@@ -251,6 +251,18 @@ export function ProjectDetailPage() {
   const updateProject = useMutation({
     mutationFn: (data: Record<string, unknown>) => api.patch(`/projects/${projectId}`, data),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["project", projectId] }),
+  });
+
+  const [duplicateError, setDuplicateError] = useState<string | null>(null);
+  const duplicateProject = useMutation({
+    mutationFn: (name: string) => api.post<Project>(`/projects/${projectId}/duplicate`, { name }),
+    onSuccess: (created) => {
+      queryClient.invalidateQueries({ queryKey: ["projects"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+      setDuplicateError(null);
+      navigate(`/projects/${created.id}`);
+    },
+    onError: (err) => setDuplicateError(extractErrorMessage(err)),
   });
 
   const removeSubProject = useMutation({
@@ -337,6 +349,19 @@ export function ProjectDetailPage() {
         </div>
         <div className="gap-8">
           <NewSubProjectForm projectId={project.id} />
+          {canWrite && (
+            <button
+              className="btn"
+              disabled={duplicateProject.isPending}
+              onClick={() => {
+                const name = window.prompt(t("projectDetail.duplicatePrompt"), t("projectDetail.duplicateDefaultName", { name: project.name }));
+                if (!name || !name.trim()) return;
+                duplicateProject.mutate(name.trim());
+              }}
+            >
+              {t("projectDetail.duplicateProject")}
+            </button>
+          )}
           {canManage && !editing && (
             <button
               className="btn"
@@ -372,6 +397,7 @@ export function ProjectDetailPage() {
           )}
         </div>
       </div>
+      {duplicateError && <div className="error-text">{duplicateError}</div>}
 
       <div className="dashboard-grid">
         <div>

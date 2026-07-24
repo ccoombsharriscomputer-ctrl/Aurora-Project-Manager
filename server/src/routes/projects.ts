@@ -236,6 +236,92 @@ router.delete("/:id", blockReadOnly, async (req, res) => {
   res.status(204).send();
 });
 
+const duplicateSchema = z.object({
+  name: z.string().min(1).max(200),
+});
+
+// Full-snapshot copy: same project type, description, TeamSupport ticket #, members,
+// sub-projects, and every task exactly as it stands right now (status, assignee, priority,
+// due date). Comments, attachments, and time entries are deliberately left behind — those
+// belong to the original engagement's history, not a fresh copy of it.
+router.post("/:id/duplicate", blockReadOnly, async (req, res) => {
+  const lineId = effectiveSoftwareLineId(req.user!);
+  const parsed = duplicateSchema.safeParse(req.body);
+  if (!parsed.success) {
+    return res.status(400).json({ error: parsed.error.issues[0].message });
+  }
+
+  const source = await prisma.project.findUnique({
+    where: { id: req.params.id },
+    include: { members: true, subProjects: true, tasks: true },
+  });
+  if (!source || source.softwareLineId !== lineId) {
+    return res.status(404).json({ error: "Project not found" });
+  }
+
+  // Carry over every member's role from the source, but the person doing the copy always
+  // becomes (or stays) OWNER of the new project, since they're the one who just created it.
+  const memberRoles = new Map<string, "OWNER" | "MEMBER">();
+  for (const m of source.members) memberRoles.set(m.userId, m.role);
+  memberRoles.set(req.user!.id, "OWNER");
+
+  const project = await prisma.project.create({
+    data: {
+      name: parsed.data.name,
+      description: source.description,
+      teamSupportTicketNumber: source.teamSupportTicketNumber,
+      projectTypeId: source.projectTypeId,
+      softwareLineId: source.softwareLineId,
+      createdById: req.user!.id,
+      members: {
+        create: [...memberRoles.entries()].map(([userId, role]) => ({ userId, role })),
+      },
+    },
+    include: {
+      projectType: { select: { id: true, name: true } },
+      members: { include: { user: { select: { id: true, name: true, email: true } } } },
+    },
+  });
+
+  const subProjectIdMap = new Map<string, string>();
+  for (const sp of source.subProjects) {
+    const newSubProject = await prisma.subProject.create({
+      data: { projectId: project.id, checklistItemId: sp.checklistItemId, name: sp.name, createdById: req.user!.id },
+    });
+    subProjectIdMap.set(sp.id, newSubProject.id);
+  }
+
+  if (source.tasks.length > 0) {
+    await prisma.task.createMany({
+      data: source.tasks.map((task) => ({
+        projectId: project.id,
+        subProjectId: subProjectIdMap.get(task.subProjectId)!,
+        projectTypeId: project.projectTypeId,
+        title: task.title,
+        description: task.description,
+        status: task.status,
+        priority: task.priority,
+        assigneeId: task.assigneeId,
+        dueDate: task.dueDate,
+        completedAt: task.completedAt,
+        naReason: task.naReason,
+        createdById: req.user!.id,
+      })),
+    });
+  }
+
+  await logActivity({
+    type: "PROJECT_CREATED",
+    message: `${req.user!.name} copied project "${source.name}" to create "${project.name}"`,
+    userId: req.user!.id,
+    projectId: project.id,
+  });
+  emitUpdate({ scope: "dashboard" });
+  emitUpdate({ scope: "projects" });
+
+  res.status(201).json(project);
+});
+
 const addMemberSchema = z.object({
   userId: z.string().min(1),
   role: z.enum(["OWNER", "MEMBER"]).optional(),

@@ -110,6 +110,9 @@
   "projectDetail": {
     "newSubProject": "Nouveau sous-projet",
     "editProject": "Modifier le projet",
+    "duplicateProject": "Copier le projet",
+    "duplicatePrompt": "Nom de la copie :",
+    "duplicateDefaultName": "{{name}} (Copie)",
     "archiveProject": "Archiver le projet",
     "unarchiveProject": "Désarchiver le projet",
     "product": "Produit",
