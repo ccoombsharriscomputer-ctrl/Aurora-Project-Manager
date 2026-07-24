@@ -93,6 +93,8 @@
     "noProjectTypesYet": "No project types yet — an admin or project lead needs to create one first.",
     "productsToInclude": "Products to include",
     "noProductsYet": "No products yet — an admin or project lead can add some on the Products page.",
+    "membersToAdd": "Users to add",
+    "noOtherUsersYet": "No other users in this software line yet.",
     "teamSupportTicketNumber": "TeamSupport ticket # (optional)",
     "createProject": "Create project",
     "loadingProjects": "Loading projects…",

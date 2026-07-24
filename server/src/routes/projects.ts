@@ -57,6 +57,7 @@ const createSchema = z.object({
   teamSupportTicketNumber: z.string().max(50).optional(),
   projectTypeId: z.string().min(1),
   checklistItemIds: z.array(z.string().min(1)).optional(),
+  memberIds: z.array(z.string().min(1)).optional(),
 });
 
 router.post("/", blockReadOnly, async (req, res) => {
@@ -80,6 +81,23 @@ router.post("/", blockReadOnly, async (req, res) => {
     return res.status(404).json({ error: "One or more selected products were not found" });
   }
 
+  const requestedMemberIds = [...new Set(parsed.data.memberIds ?? [])].filter((id) => id !== req.user!.id);
+  const memberUsers =
+    requestedMemberIds.length > 0
+      ? await prisma.user.findMany({ where: { id: { in: requestedMemberIds } } })
+      : [];
+  if (memberUsers.length !== requestedMemberIds.length) {
+    return res.status(404).json({ error: "One or more selected users were not found" });
+  }
+  // Same rule as adding a member after creation: a non-admin permanently locked to another
+  // line would be orphaned by membership on a project they can never switch into.
+  const wrongLineUser = memberUsers.find((u) => u.role !== "ADMIN" && u.softwareLineId !== lineId);
+  if (wrongLineUser) {
+    return res
+      .status(400)
+      .json({ error: `${wrongLineUser.name} belongs to a different software line and can't be added to this project` });
+  }
+
   const project = await prisma.project.create({
     data: {
       name: parsed.data.name,
@@ -89,7 +107,10 @@ router.post("/", blockReadOnly, async (req, res) => {
       softwareLineId: lineId,
       createdById: req.user!.id,
       members: {
-        create: { userId: req.user!.id, role: "OWNER" },
+        create: [
+          { userId: req.user!.id, role: "OWNER" },
+          ...memberUsers.map((u) => ({ userId: u.id, role: "MEMBER" as const })),
+        ],
       },
     },
     include: {

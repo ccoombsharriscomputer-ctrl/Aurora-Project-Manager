@@ -93,6 +93,8 @@
     "noProjectTypesYet": "Aún no hay tipos de proyecto — un administrador o líder de proyecto debe crear uno primero.",
     "productsToInclude": "Productos a incluir",
     "noProductsYet": "Aún no hay productos — un administrador o líder de proyecto puede añadir algunos en la página de Productos.",
+    "membersToAdd": "Usuarios para añadir",
+    "noOtherUsersYet": "Aún no hay otros usuarios en esta línea de software.",
     "teamSupportTicketNumber": "N.º de ticket de TeamSupport (opcional)",
     "createProject": "Crear proyecto",
     "loadingProjects": "Cargando proyectos…",

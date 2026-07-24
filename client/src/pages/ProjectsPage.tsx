@@ -3,12 +3,12 @@ import { Link } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { api } from "../api/client";
-import type { ChecklistItem, Project, ProjectType } from "../api/types";
+import type { ChecklistItem, Project, ProjectType, UserSummary } from "../api/types";
 import { extractErrorMessage, useAuth } from "../context/AuthContext";
 
 export function ProjectsPage() {
   const { t } = useTranslation();
-  const { canWrite } = useAuth();
+  const { user, canWrite } = useAuth();
   const queryClient = useQueryClient();
   const [showArchived, setShowArchived] = useState(false);
   const { data: projects, isLoading } = useQuery({
@@ -26,19 +26,30 @@ export function ProjectsPage() {
     queryFn: () => api.get<ChecklistItem[]>("/checklist-items"),
   });
 
+  const { data: users } = useQuery({
+    queryKey: ["users"],
+    queryFn: () => api.get<UserSummary[]>("/users"),
+  });
+
   const [showForm, setShowForm] = useState(false);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [teamSupportTicketNumber, setTeamSupportTicketNumber] = useState("");
   const [projectTypeId, setProjectTypeId] = useState("");
   const [checklistItemIds, setChecklistItemIds] = useState<string[]>([]);
+  const [memberIds, setMemberIds] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
 
   const activeTypes = (projectTypes ?? []).filter((t) => t.active);
   const activeProducts = (products ?? []).filter((p) => p.active);
+  const otherUsers = (users ?? []).filter((u) => u.id !== user?.id);
 
   function toggleProduct(id: string) {
     setChecklistItemIds((prev) => (prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]));
+  }
+
+  function toggleMember(id: string) {
+    setMemberIds((prev) => (prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]));
   }
 
   const createProject = useMutation({
@@ -49,6 +60,7 @@ export function ProjectsPage() {
         teamSupportTicketNumber: teamSupportTicketNumber || undefined,
         projectTypeId,
         checklistItemIds,
+        memberIds,
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["projects"] });
@@ -58,6 +70,7 @@ export function ProjectsPage() {
       setTeamSupportTicketNumber("");
       setProjectTypeId("");
       setChecklistItemIds([]);
+      setMemberIds([]);
       setShowForm(false);
       setError(null);
     },
@@ -114,23 +127,39 @@ export function ProjectsPage() {
               </p>
             )}
           </div>
-          <div className="field">
-            <label>{t("projects.productsToInclude")}</label>
-            {activeProducts.length === 0 && (
-              <p className="muted" style={{ fontSize: 12, marginTop: 6 }}>
-                {t("projects.noProductsYet")}
-              </p>
-            )}
-            {activeProducts.map((p) => (
-              <label key={p.id} className="gap-8" style={{ display: "flex", margin: "4px 0", cursor: "pointer" }}>
-                <input
-                  type="checkbox"
-                  checked={checklistItemIds.includes(p.id)}
-                  onChange={() => toggleProduct(p.id)}
-                />
-                <span>{p.name}</span>
-              </label>
-            ))}
+          <div className="gap-8" style={{ display: "flex", alignItems: "flex-start" }}>
+            <div className="field" style={{ flex: 1 }}>
+              <label>{t("projects.productsToInclude")}</label>
+              {activeProducts.length === 0 && (
+                <p className="muted" style={{ fontSize: 12, marginTop: 6 }}>
+                  {t("projects.noProductsYet")}
+                </p>
+              )}
+              {activeProducts.map((p) => (
+                <label key={p.id} className="gap-8" style={{ display: "flex", margin: "4px 0", cursor: "pointer" }}>
+                  <input
+                    type="checkbox"
+                    checked={checklistItemIds.includes(p.id)}
+                    onChange={() => toggleProduct(p.id)}
+                  />
+                  <span>{p.name}</span>
+                </label>
+              ))}
+            </div>
+            <div className="field" style={{ flex: 1 }}>
+              <label>{t("projects.membersToAdd")}</label>
+              {otherUsers.length === 0 && (
+                <p className="muted" style={{ fontSize: 12, marginTop: 6 }}>
+                  {t("projects.noOtherUsersYet")}
+                </p>
+              )}
+              {otherUsers.map((u) => (
+                <label key={u.id} className="gap-8" style={{ display: "flex", margin: "4px 0", cursor: "pointer" }}>
+                  <input type="checkbox" checked={memberIds.includes(u.id)} onChange={() => toggleMember(u.id)} />
+                  <span>{u.name}</span>
+                </label>
+              ))}
+            </div>
           </div>
           <div className="field">
             <label htmlFor="description">{t("common.description")}</label>
