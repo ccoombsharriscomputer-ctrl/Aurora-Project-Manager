@@ -32,7 +32,7 @@ router.get("/", requireAuth, async (req, res) => {
 
 const createSchema = z.object({
   name: z.string().min(1).max(100),
-  email: z.string().email(),
+  email: z.string().email().transform((v) => v.trim().toLowerCase()),
   password: z.string().min(8).max(200),
   role: z.enum(["ADMIN", "PROJECT_LEAD", "MEMBER", "READ_ONLY"]).optional(),
   softwareLineId: z.string().min(1),
@@ -86,7 +86,7 @@ router.post("/", attachUserIfPresent, async (req, res) => {
         }
       }
 
-      const existing = await tx.user.findUnique({ where: { email } });
+      const existing = await tx.user.findFirst({ where: { email: { equals: email, mode: "insensitive" } } });
       if (existing) {
         throw new HttpError(409, "An account with that email already exists");
       }
@@ -117,7 +117,7 @@ router.post("/", attachUserIfPresent, async (req, res) => {
 
 const updateSchema = z.object({
   name: z.string().min(1).max(100).optional(),
-  email: z.string().email().optional(),
+  email: z.string().email().transform((v) => v.trim().toLowerCase()).optional(),
   password: z.string().min(8).max(200).optional(),
   role: z.enum(["ADMIN", "PROJECT_LEAD", "MEMBER", "READ_ONLY"]).optional(),
   active: z.boolean().optional(),
@@ -141,7 +141,9 @@ router.patch("/:id", requireAuth, requireAdmin, async (req, res) => {
   }
 
   if (parsed.data.email) {
-    const existing = await prisma.user.findUnique({ where: { email: parsed.data.email } });
+    const existing = await prisma.user.findFirst({
+      where: { email: { equals: parsed.data.email, mode: "insensitive" } },
+    });
     if (existing && existing.id !== req.params.id) {
       return res.status(409).json({ error: "An account with that email already exists" });
     }

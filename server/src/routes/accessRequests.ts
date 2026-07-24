@@ -9,7 +9,7 @@ const router = Router();
 
 const createSchema = z.object({
   name: z.string().min(1).max(100),
-  email: z.string().email(),
+  email: z.string().email().transform((v) => v.trim().toLowerCase()),
   message: z.string().max(2000).optional(),
   softwareLineId: z.string().min(1),
 });
