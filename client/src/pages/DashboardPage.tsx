@@ -143,7 +143,9 @@ export function DashboardPage() {
         </Link>
       </div>
 
-      <div className="dashboard-grid">
+      <DeadlinesCalendar />
+
+      <div className="dashboard-grid" style={{ marginTop: 20 }}>
         <div>
           <ProjectProgress projects={data.projectProgress} />
           <RecentActivity activities={data.recentActivity} />
@@ -159,10 +161,6 @@ export function DashboardPage() {
             </div>
           ))}
         </div>
-      </div>
-
-      <div style={{ marginTop: 20 }}>
-        <DeadlinesCalendar />
       </div>
     </div>
   );
