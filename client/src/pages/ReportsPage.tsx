@@ -4,6 +4,9 @@ import { useTranslation } from "react-i18next";
 import type { TFunction } from "i18next";
 import { api } from "../api/client";
 import type {
+  Activity,
+  ActivityReport,
+  ActivityType,
   OverdueTaskRow,
   ProjectReportRow,
   ProjectTypeReportRow,
@@ -12,12 +15,13 @@ import type {
   UserSummary,
 } from "../api/types";
 import { downloadCsv } from "../utils/csv";
-import { formatDate, formatDueDate } from "../utils/format";
+import { formatDate, formatDateTime, formatDueDate } from "../utils/format";
 
 interface Filters {
   userId: string;
   from: string;
   to: string;
+  activityType: string;
 }
 
 function buildQuery(filters: Filters): string {
@@ -25,8 +29,29 @@ function buildQuery(filters: Filters): string {
   if (filters.userId) params.set("userId", filters.userId);
   if (filters.from) params.set("from", filters.from);
   if (filters.to) params.set("to", filters.to);
+  if (filters.activityType) params.set("type", filters.activityType);
   const qs = params.toString();
   return qs ? `?${qs}` : "";
+}
+
+const ACTIVITY_TYPES: ActivityType[] = [
+  "PROJECT_CREATED",
+  "TASK_CREATED",
+  "TASK_STATUS_CHANGED",
+  "TASK_ASSIGNED",
+  "COMMENT_ADDED",
+  "ATTACHMENT_ADDED",
+  "TIME_LOGGED",
+];
+
+function activityTypeLabel(t: TFunction, type: ActivityType): string {
+  if (type === "PROJECT_CREATED") return t("reports.activityTypeProjectCreated");
+  if (type === "TASK_CREATED") return t("reports.activityTypeTaskCreated");
+  if (type === "TASK_STATUS_CHANGED") return t("reports.activityTypeStatusChanged");
+  if (type === "TASK_ASSIGNED") return t("reports.activityTypeTaskAssigned");
+  if (type === "COMMENT_ADDED") return t("reports.activityTypeCommentAdded");
+  if (type === "ATTACHMENT_ADDED") return t("reports.activityTypeAttachmentAdded");
+  return t("reports.activityTypeTimeLogged");
 }
 
 function roleLabel(t: TFunction, role: UserRole): string {
@@ -49,9 +74,19 @@ function CountBadge({ count }: { count: number }) {
   return <span className="badge badge-danger">{count}</span>;
 }
 
-function FilterBar({ filters, setFilters, users }: { filters: Filters; setFilters: (f: Filters) => void; users: UserSummary[] }) {
+function FilterBar({
+  filters,
+  setFilters,
+  users,
+  showActivityTypeFilter,
+}: {
+  filters: Filters;
+  setFilters: (f: Filters) => void;
+  users: UserSummary[];
+  showActivityTypeFilter?: boolean;
+}) {
   const { t } = useTranslation();
-  const hasFilters = filters.userId || filters.from || filters.to;
+  const hasFilters = filters.userId || filters.from || filters.to || filters.activityType;
 
   return (
     <div className="card" style={{ marginBottom: 16 }}>
@@ -75,14 +110,30 @@ function FilterBar({ filters, setFilters, users }: { filters: Filters; setFilter
           <label>{t("reports.toDate")}</label>
           <input type="date" value={filters.to} onChange={(e) => setFilters({ ...filters, to: e.target.value })} />
         </div>
+        {showActivityTypeFilter && (
+          <div className="field" style={{ minWidth: 200 }}>
+            <label>{t("reports.activityType")}</label>
+            <select
+              value={filters.activityType}
+              onChange={(e) => setFilters({ ...filters, activityType: e.target.value })}
+            >
+              <option value="">{t("reports.activityAllTypes")}</option>
+              {ACTIVITY_TYPES.map((type) => (
+                <option key={type} value={type}>
+                  {activityTypeLabel(t, type)}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
         {hasFilters && (
-          <button className="btn btn-sm" onClick={() => setFilters({ userId: "", from: "", to: "" })}>
+          <button className="btn btn-sm" onClick={() => setFilters({ userId: "", from: "", to: "", activityType: "" })}>
             {t("reports.clearFilters")}
           </button>
         )}
       </div>
       <p className="muted" style={{ fontSize: 12, marginTop: 10, marginBottom: 0 }}>
-        {t("reports.dateRangeHint")}
+        {showActivityTypeFilter ? t("reports.activityDateRangeHint") : t("reports.dateRangeHint")}
       </p>
     </div>
   );
@@ -449,10 +500,88 @@ function OverdueTab({ filters }: { filters: Filters }) {
   );
 }
 
+function AuditTrailTab({ filters }: { filters: Filters }) {
+  const { t } = useTranslation();
+  const { data, isLoading } = useQuery({
+    queryKey: ["reports", "activity", filters],
+    queryFn: () => api.get<ActivityReport>(`/reports/activity${buildQuery(filters)}`),
+  });
+
+  if (isLoading || !data) {
+    return <p className="muted">{t("common.loading")}</p>;
+  }
+
+  const { activities, truncated } = data;
+
+  return (
+    <div className="card">
+      <div className="flex-between" style={{ marginBottom: 12 }}>
+        <div className="section-title" style={{ marginBottom: 0 }}>
+          {t("reports.activity")}
+        </div>
+        <button
+          className="btn btn-sm"
+          disabled={activities.length === 0}
+          onClick={() =>
+            downloadCsv("report-activity.csv", activities, [
+              { header: t("dashboard.date"), value: (r: Activity) => r.createdAt },
+              { header: t("common.name"), value: (r: Activity) => r.user.name },
+              { header: t("reports.activityType"), value: (r: Activity) => activityTypeLabel(t, r.type) },
+              { header: t("reports.activityDetails"), value: (r: Activity) => r.message },
+              { header: t("reports.project"), value: (r: Activity) => r.project?.name ?? "" },
+              { header: t("subProjectDetail.title"), value: (r: Activity) => r.task?.title ?? "" },
+            ])
+          }
+        >
+          {t("reports.exportCsv")}
+        </button>
+      </div>
+      {truncated && (
+        <p className="muted" style={{ fontSize: 12, marginBottom: 10 }}>
+          {t("reports.activityTruncatedNotice", { count: activities.length })}
+        </p>
+      )}
+      <div style={{ overflowX: "auto" }}>
+        <table className="table">
+          <thead>
+            <tr>
+              <th>{t("dashboard.date")}</th>
+              <th>{t("common.name")}</th>
+              <th>{t("reports.activityType")}</th>
+              <th>{t("reports.activityDetails")}</th>
+              <th>{t("reports.project")}</th>
+              <th>{t("subProjectDetail.title")}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {activities.map((a) => (
+              <tr key={a.id}>
+                <td style={{ whiteSpace: "nowrap" }}>{formatDateTime(a.createdAt)}</td>
+                <td>{a.user.name}</td>
+                <td>{activityTypeLabel(t, a.type)}</td>
+                <td>{a.message}</td>
+                <td>{a.project?.name ?? "—"}</td>
+                <td>{a.task?.title ?? "—"}</td>
+              </tr>
+            ))}
+            {activities.length === 0 && (
+              <tr>
+                <td colSpan={6} className="muted">
+                  {t("reports.noActivityRows")}
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
 export function ReportsPage() {
   const { t } = useTranslation();
-  const [tab, setTab] = useState<"user" | "project" | "overdue">("user");
-  const [filters, setFilters] = useState<Filters>({ userId: "", from: "", to: "" });
+  const [tab, setTab] = useState<"user" | "project" | "overdue" | "activity">("user");
+  const [filters, setFilters] = useState<Filters>({ userId: "", from: "", to: "", activityType: "" });
 
   const { data: users } = useQuery({
     queryKey: ["users"],
@@ -479,12 +608,19 @@ export function ReportsPage() {
           >
             {t("reports.overdueTasks")}
           </button>
+          <button
+            className={`btn btn-sm${tab === "activity" ? " btn-primary" : ""}`}
+            onClick={() => setTab("activity")}
+          >
+            {t("reports.activity")}
+          </button>
         </div>
       </div>
-      <FilterBar filters={filters} setFilters={setFilters} users={users ?? []} />
+      <FilterBar filters={filters} setFilters={setFilters} users={users ?? []} showActivityTypeFilter={tab === "activity"} />
       {tab === "user" && <ByUserTab filters={filters} />}
       {tab === "project" && <ByProjectTab filters={filters} />}
       {tab === "overdue" && <OverdueTab filters={filters} />}
+      {tab === "activity" && <AuditTrailTab filters={filters} />}
     </div>
   );
 }

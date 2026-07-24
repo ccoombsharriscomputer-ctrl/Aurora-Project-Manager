@@ -244,7 +244,21 @@
     "daysLate": "Días de retraso",
     "naTasks": "N/D",
     "completedDate": "Fecha de finalización",
-    "subProject": "Subproyecto"
+    "subProject": "Subproyecto",
+    "activity": "Actividad",
+    "activityType": "Tipo",
+    "activityAllTypes": "Todos los tipos",
+    "activityDetails": "Detalles",
+    "noActivityRows": "Aún no hay actividad.",
+    "activityDateRangeHint": "El rango de fechas filtra la actividad según cuándo ocurrió.",
+    "activityTruncatedNotice": "Mostrando las {{count}} entradas más recientes. Reduce los filtros para ver todo.",
+    "activityTypeProjectCreated": "Proyecto creado",
+    "activityTypeTaskCreated": "Tarea creada",
+    "activityTypeStatusChanged": "Estado cambiado",
+    "activityTypeTaskAssigned": "Asignación cambiada",
+    "activityTypeCommentAdded": "Comentario añadido",
+    "activityTypeAttachmentAdded": "Archivo adjuntado",
+    "activityTypeTimeLogged": "Horas registradas"
   },
   "calendar": {
     "title": "Próximos vencimientos",

@@ -18,6 +18,10 @@ export function formatDate(iso: string | null): string {
   return new Date(iso).toLocaleDateString(i18n.language);
 }
 
+export function formatDateTime(iso: string): string {
+  return new Date(iso).toLocaleString(i18n.language, { dateStyle: "medium", timeStyle: "short" });
+}
+
 // Due dates are entered as a plain calendar date (no time-of-day) and stored as UTC
 // midnight, so they must be read back with timeZone: "UTC" — otherwise a negative-offset
 // browser timezone (e.g. US/Canada) renders them one day early.

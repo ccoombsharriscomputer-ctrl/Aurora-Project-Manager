@@ -247,3 +247,8 @@ export interface OverdueTaskRow {
   completedAt: string | null;
   daysLate: number;
 }
+
+export interface ActivityReport {
+  activities: Activity[];
+  truncated: boolean;
+}

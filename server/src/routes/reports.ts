@@ -206,4 +206,57 @@ router.get("/overdue", async (req, res) => {
   res.json(rows);
 });
 
+const ACTIVITY_TYPES = [
+  "PROJECT_CREATED",
+  "TASK_CREATED",
+  "TASK_STATUS_CHANGED",
+  "TASK_ASSIGNED",
+  "COMMENT_ADDED",
+  "ATTACHMENT_ADDED",
+  "TIME_LOGGED",
+] as const;
+
+// Audit trail: every logged activity in the line, newest first. Capped well above any
+// realistic page size — if a filter combination still hits the cap, `truncated` tells the
+// caller to narrow further rather than silently dropping rows.
+const ACTIVITY_LIMIT = 1000;
+
+router.get("/activity", async (req, res) => {
+  const lineId = effectiveSoftwareLineId(req.user!);
+  const userId = parseUserId(req);
+  const range = parseDateRange(req);
+  const typeParam = typeof req.query.type === "string" ? req.query.type : undefined;
+  const type = (ACTIVITY_TYPES as readonly string[]).includes(typeParam ?? "")
+    ? (typeParam as (typeof ACTIVITY_TYPES)[number])
+    : undefined;
+
+  const activities = await prisma.activity.findMany({
+    where: {
+      project: { softwareLineId: lineId },
+      ...(userId ? { userId } : {}),
+      ...(type ? { type } : {}),
+      ...(range.from || range.to
+        ? {
+            createdAt: {
+              ...(range.from ? { gte: range.from } : {}),
+              ...(range.to ? { lte: range.to } : {}),
+            },
+          }
+        : {}),
+    },
+    orderBy: { createdAt: "desc" },
+    take: ACTIVITY_LIMIT + 1,
+    include: {
+      user: { select: { id: true, name: true } },
+      project: { select: { id: true, name: true } },
+      task: { select: { id: true, title: true } },
+    },
+  });
+
+  res.json({
+    activities: activities.slice(0, ACTIVITY_LIMIT),
+    truncated: activities.length > ACTIVITY_LIMIT,
+  });
+});
+
 export default router;

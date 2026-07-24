@@ -244,7 +244,21 @@
     "daysLate": "Days late",
     "naTasks": "N/A",
     "completedDate": "Completed date",
-    "subProject": "Sub-project"
+    "subProject": "Sub-project",
+    "activity": "Activity",
+    "activityType": "Type",
+    "activityAllTypes": "All types",
+    "activityDetails": "Details",
+    "noActivityRows": "No activity yet.",
+    "activityDateRangeHint": "The date range filters activity by when it happened.",
+    "activityTruncatedNotice": "Showing the most recent {{count}} entries. Narrow the filters to see everything.",
+    "activityTypeProjectCreated": "Project created",
+    "activityTypeTaskCreated": "Task created",
+    "activityTypeStatusChanged": "Status changed",
+    "activityTypeTaskAssigned": "Assignee changed",
+    "activityTypeCommentAdded": "Comment added",
+    "activityTypeAttachmentAdded": "Attachment added",
+    "activityTypeTimeLogged": "Time logged"
   },
   "calendar": {
     "title": "Upcoming deadlines",

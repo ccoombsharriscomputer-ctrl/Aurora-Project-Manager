@@ -244,7 +244,21 @@
     "daysLate": "Jours de retard",
     "naTasks": "N/D",
     "completedDate": "Date d'achèvement",
-    "subProject": "Sous-projet"
+    "subProject": "Sous-projet",
+    "activity": "Activité",
+    "activityType": "Type",
+    "activityAllTypes": "Tous les types",
+    "activityDetails": "Détails",
+    "noActivityRows": "Aucune activité pour l'instant.",
+    "activityDateRangeHint": "La plage de dates filtre l'activité selon le moment où elle s'est produite.",
+    "activityTruncatedNotice": "Affichage des {{count}} entrées les plus récentes. Réduisez les filtres pour tout voir.",
+    "activityTypeProjectCreated": "Projet créé",
+    "activityTypeTaskCreated": "Tâche créée",
+    "activityTypeStatusChanged": "Statut modifié",
+    "activityTypeTaskAssigned": "Assignation modifiée",
+    "activityTypeCommentAdded": "Commentaire ajouté",
+    "activityTypeAttachmentAdded": "Pièce jointe ajoutée",
+    "activityTypeTimeLogged": "Heures enregistrées"
   },
   "calendar": {
     "title": "Échéances à venir",
