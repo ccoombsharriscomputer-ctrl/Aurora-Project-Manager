@@ -3,6 +3,8 @@ import { useTranslation } from "react-i18next";
 import { useAuth } from "../context/AuthContext";
 import { SoftwareLineSwitcher } from "./SoftwareLineSwitcher";
 
+const HELP_URL = "https://claude.ai/code/artifact/f4c3dcf1-c3ec-4ef8-9bc5-bc492554e189";
+
 export function Layout() {
   const { t } = useTranslation();
   const { user, logout } = useAuth();
@@ -44,6 +46,9 @@ export function Layout() {
         <NavLink to="/settings" className={({ isActive }) => `sidebar-link${isActive ? " active" : ""}`}>
           {t("layout.settings")}
         </NavLink>
+        <a href={HELP_URL} target="_blank" rel="noopener noreferrer" className="sidebar-link">
+          {t("layout.help")}
+        </a>
         <div className="sidebar-footer">
           <div>{user?.name}</div>
           <div>{user?.email}</div>
