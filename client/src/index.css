@@ -112,12 +112,15 @@ select {
 
 .app-shell {
   display: flex;
-  min-height: 100vh;
+  height: 100vh;
+  overflow: hidden;
 }
 
 .sidebar {
   width: 220px;
   flex-shrink: 0;
+  height: 100vh;
+  overflow-y: auto;
   background: var(--surface);
   border-right: 1px solid var(--border);
   padding: 20px 16px;
@@ -188,9 +191,11 @@ select {
 
 .main-content {
   flex: 1;
+  height: 100vh;
+  overflow-y: auto;
+  overflow-x: auto;
   padding: 28px 36px;
   max-width: 1200px;
-  overflow-x: auto;
 }
 
 .page-header {

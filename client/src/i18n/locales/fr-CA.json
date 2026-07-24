@@ -80,6 +80,8 @@
     "tasksCount": "{{done}}/{{total}} tâches",
     "recentActivity": "Activité récente",
     "noActivityYet": "Aucune activité pour l'instant.",
+    "showMore": "Afficher plus",
+    "showLess": "Afficher moins",
     "myTasks": "Mes tâches",
     "nothingAssigned": "Rien ne vous est assigné pour le moment."
   },

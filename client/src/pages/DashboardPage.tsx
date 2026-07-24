@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { api } from "../api/client";
-import type { DashboardSummary } from "../api/types";
+import type { Activity, DashboardSummary } from "../api/types";
 import { formatDueDate, formatElapsed, formatRelativeTime } from "../utils/format";
 import { useActiveTimer } from "../hooks/useActiveTimer";
 import { DeadlinesCalendar } from "../components/DeadlinesCalendar";
@@ -33,6 +33,38 @@ function TimerBanner() {
       <button className="btn btn-sm" onClick={() => stop.mutate(activeTimer.id)} disabled={stop.isPending}>
         {t("dashboard.stop")}
       </button>
+    </div>
+  );
+}
+
+const RECENT_ACTIVITY_COLLAPSED_COUNT = 2;
+
+function RecentActivity({ activities }: { activities: Activity[] }) {
+  const { t } = useTranslation();
+  const [expanded, setExpanded] = useState(false);
+  const visible = expanded ? activities : activities.slice(0, RECENT_ACTIVITY_COLLAPSED_COUNT);
+
+  return (
+    <div className="card">
+      <div className="flex-between">
+        <div className="section-title" style={{ marginBottom: 0 }}>
+          {t("dashboard.recentActivity")}
+        </div>
+        {activities.length > RECENT_ACTIVITY_COLLAPSED_COUNT && (
+          <button className="btn btn-sm" onClick={() => setExpanded((v) => !v)}>
+            {expanded ? t("dashboard.showLess") : t("dashboard.showMore")}
+          </button>
+        )}
+      </div>
+      {activities.length === 0 && <p className="muted">{t("dashboard.noActivityYet")}</p>}
+      <ul className="activity-list">
+        {visible.map((a) => (
+          <li className="activity-item" key={a.id}>
+            <div>{a.message}</div>
+            <div className="meta">{formatRelativeTime(a.createdAt)}</div>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }
@@ -113,18 +145,7 @@ export function DashboardPage() {
             ))}
           </div>
 
-          <div className="card">
-            <div className="section-title">{t("dashboard.recentActivity")}</div>
-            {data.recentActivity.length === 0 && <p className="muted">{t("dashboard.noActivityYet")}</p>}
-            <ul className="activity-list">
-              {data.recentActivity.map((a) => (
-                <li className="activity-item" key={a.id}>
-                  <div>{a.message}</div>
-                  <div className="meta">{formatRelativeTime(a.createdAt)}</div>
-                </li>
-              ))}
-            </ul>
-          </div>
+          <RecentActivity activities={data.recentActivity} />
         </div>
 
         <div className="card">
