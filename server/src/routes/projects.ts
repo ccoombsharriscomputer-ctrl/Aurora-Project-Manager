@@ -330,6 +330,23 @@ router.post("/:id/sub-projects", blockReadOnly, async (req, res) => {
     include: { checklistItem: true, createdBy: { select: { id: true, name: true } } },
   });
 
+  const templates = await prisma.taskTemplate.findMany({
+    where: { checklistItemId: checklistItem.id, active: true },
+  });
+  if (templates.length > 0) {
+    await prisma.task.createMany({
+      data: templates.map((template) => ({
+        projectId: project.id,
+        subProjectId: subProject.id,
+        projectTypeId: project.projectTypeId,
+        title: template.title,
+        description: template.description,
+        priority: template.priority,
+        createdById: req.user!.id,
+      })),
+    });
+  }
+
   emitUpdate({ scope: "project", projectId: project.id });
   res.status(201).json(subProject);
 });
