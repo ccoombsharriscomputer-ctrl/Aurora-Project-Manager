@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 import { useAuth } from "../context/AuthContext";
 import { SoftwareLineSwitcher } from "./SoftwareLineSwitcher";
 
-const HELP_URL = "https://claude.ai/code/artifact/f4c3dcf1-c3ec-4ef8-9bc5-bc492554e189";
+const HELP_URL = "/help.html";
 
 export function Layout() {
   const { t } = useTranslation();
