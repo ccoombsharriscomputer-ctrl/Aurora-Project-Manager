@@ -36,7 +36,9 @@
     "hoursAgo": "hace {{count}} h",
     "daysAgo": "hace {{count}} d",
     "softwareLine": "Línea de software",
-    "download": "Descargar"
+    "download": "Descargar",
+    "showMore": "Mostrar más",
+    "showLess": "Mostrar menos"
   },
   "layout": {
     "dashboard": "Panel",

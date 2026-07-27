@@ -36,7 +36,9 @@
     "hoursAgo": "{{count}}h ago",
     "daysAgo": "{{count}}d ago",
     "softwareLine": "Software line",
-    "download": "Download"
+    "download": "Download",
+    "showMore": "Show more",
+    "showLess": "Show less"
   },
   "layout": {
     "dashboard": "Dashboard",

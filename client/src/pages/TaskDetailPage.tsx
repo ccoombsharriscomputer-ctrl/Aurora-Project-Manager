@@ -8,6 +8,8 @@ import { extractErrorMessage, useAuth } from "../context/AuthContext";
 import { formatDate, formatMinutes, formatRelativeTime } from "../utils/format";
 import { useActiveTimer } from "../hooks/useActiveTimer";
 
+const COLLAPSED_COUNT = 3;
+
 function statusLabel(t: (key: string) => string, status: TaskStatus): string {
   if (status === "IN_PROGRESS") return t("common.statusInProgress");
   if (status === "DONE") return t("common.statusDone");
@@ -45,9 +47,10 @@ export function TaskDetailPage() {
 
   const [commentBody, setCommentBody] = useState("");
   const [commentError, setCommentError] = useState<string | null>(null);
-  const [showTimeFields, setShowTimeFields] = useState(false);
   const [commentDate, setCommentDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [commentHours, setCommentHours] = useState("");
+  const [expandedComments, setExpandedComments] = useState(false);
+  const [expandedTimeEntries, setExpandedTimeEntries] = useState(false);
 
   function invalidateTask() {
     queryClient.invalidateQueries({ queryKey: ["task", taskId] });
@@ -89,13 +92,12 @@ export function TaskDetailPage() {
     mutationFn: () =>
       api.post(`/tasks/${taskId}/comments`, {
         body: commentBody,
-        hours: showTimeFields && commentHours ? Number(commentHours) : undefined,
-        date: showTimeFields && commentHours ? commentDate : undefined,
+        hours: commentHours ? Number(commentHours) : undefined,
+        date: commentHours ? commentDate : undefined,
       }),
     onSuccess: () => {
       setCommentBody("");
       setCommentError(null);
-      setShowTimeFields(false);
       setCommentHours("");
       invalidateTask();
     },
@@ -130,6 +132,11 @@ export function TaskDetailPage() {
 
   const isTimerRunningHere = activeTimer?.taskId === task.id;
   const isTimerRunningElsewhere = !!activeTimer && activeTimer.taskId !== task.id;
+
+  // Comments render oldest-first, so "most recent" is the tail of the array; time entries
+  // already come back newest-first, so it's the head.
+  const visibleComments = expandedComments ? task.comments : task.comments.slice(-COLLAPSED_COUNT);
+  const visibleTimeEntries = expandedTimeEntries ? task.timeEntries : task.timeEntries.slice(0, COLLAPSED_COUNT);
 
   function handleCommentSubmit(e: FormEvent) {
     e.preventDefault();
@@ -178,8 +185,17 @@ export function TaskDetailPage() {
           </div>
 
           <div className="card" style={{ marginBottom: 16 }}>
-            <div className="section-title">{t("taskDetail.comments")}</div>
-            {task.comments.map((c) => (
+            <div className="flex-between">
+              <div className="section-title" style={{ marginBottom: 0 }}>
+                {t("taskDetail.comments")}
+              </div>
+              {task.comments.length > COLLAPSED_COUNT && (
+                <button className="btn btn-sm" onClick={() => setExpandedComments((v) => !v)}>
+                  {expandedComments ? t("common.showLess") : t("common.showMore")}
+                </button>
+              )}
+            </div>
+            {visibleComments.map((c) => (
               <div className="comment" key={c.id}>
                 <div className="meta">
                   {c.author.name} · {formatRelativeTime(c.createdAt)}
@@ -195,34 +211,24 @@ export function TaskDetailPage() {
                   value={commentBody}
                   onChange={(e) => setCommentBody(e.target.value)}
                 />
-                <button
-                  type="button"
-                  className="attachment-download-link"
-                  style={{ marginTop: 6 }}
-                  onClick={() => setShowTimeFields((v) => !v)}
-                >
-                  {showTimeFields ? t("common.cancel") : t("taskDetail.logTimeToggle")}
-                </button>
-                {showTimeFields && (
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginTop: 8 }}>
-                    <div className="field">
-                      <label>{t("taskDetail.date")}</label>
-                      <input type="date" value={commentDate} onChange={(e) => setCommentDate(e.target.value)} />
-                    </div>
-                    <div className="field">
-                      <label>{t("taskDetail.hours")}</label>
-                      <input
-                        type="number"
-                        min="0.25"
-                        max="24"
-                        step="0.25"
-                        placeholder="e.g. 2.5"
-                        value={commentHours}
-                        onChange={(e) => setCommentHours(e.target.value)}
-                      />
-                    </div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginTop: 8 }}>
+                  <div className="field">
+                    <label>{t("taskDetail.date")}</label>
+                    <input type="date" value={commentDate} onChange={(e) => setCommentDate(e.target.value)} />
                   </div>
-                )}
+                  <div className="field">
+                    <label>{t("taskDetail.hours")}</label>
+                    <input
+                      type="number"
+                      min="0.25"
+                      max="24"
+                      step="0.25"
+                      placeholder="e.g. 2.5"
+                      value={commentHours}
+                      onChange={(e) => setCommentHours(e.target.value)}
+                    />
+                  </div>
+                </div>
                 {commentError && <div className="error-text">{commentError}</div>}
                 <button className="btn btn-primary btn-sm" type="submit" disabled={addComment.isPending} style={{ marginTop: 8 }}>
                   {t("taskDetail.postUpdate")}
@@ -287,9 +293,14 @@ export function TaskDetailPage() {
               <div className="section-title" style={{ marginBottom: 0 }}>
                 {t("taskDetail.timeEntries")}
               </div>
-              {canWrite && (
-                <div className="gap-8">
-                  {isTimerRunningHere ? (
+              <div className="gap-8">
+                {task.timeEntries.length > COLLAPSED_COUNT && (
+                  <button className="btn btn-sm" onClick={() => setExpandedTimeEntries((v) => !v)}>
+                    {expandedTimeEntries ? t("common.showLess") : t("common.showMore")}
+                  </button>
+                )}
+                {canWrite &&
+                  (isTimerRunningHere ? (
                     <button className="btn btn-sm" onClick={() => stop.mutate(activeTimer!.id)}>
                       {t("taskDetail.stopTimer")}
                     </button>
@@ -302,13 +313,12 @@ export function TaskDetailPage() {
                     >
                       {t("taskDetail.startTimer")}
                     </button>
-                  )}
-                </div>
-              )}
+                  ))}
+              </div>
             </div>
             <p className="muted" style={{ marginTop: 8, fontSize: 13 }}>{t("taskDetail.logTimeHint")}</p>
             {task.timeEntries.length === 0 && <p className="muted" style={{ marginTop: 12 }}>{t("taskDetail.noTimeLoggedYet")}</p>}
-            {task.timeEntries.map((entry) => (
+            {visibleTimeEntries.map((entry) => (
               <div className="task-list-item" key={entry.id}>
                 <span>
                   {entry.user.name} {entry.endedAt ? "" : `(${t("taskDetail.running")})`}
