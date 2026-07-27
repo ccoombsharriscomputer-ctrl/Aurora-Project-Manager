@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useState, type FormEvent } from "react";
+import { Fragment, useEffect, useRef, useState, type FormEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { api } from "../api/client";
@@ -214,6 +214,109 @@ function PendingAccessRequests({
   );
 }
 
+function TeamSupportUserPicker({
+  value,
+  users,
+  onChange,
+  notLinkedLabel,
+}: {
+  value: string | null;
+  users: TeamSupportUser[];
+  onChange: (id: string | null) => void;
+  notLinkedLabel: string;
+}) {
+  const selected = users.find((u) => u.id === value) ?? null;
+  const [query, setQuery] = useState(selected?.name ?? "");
+  const [open, setOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    setQuery(selected?.name ?? "");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [value]);
+
+  useEffect(() => {
+    if (!open) return;
+    function onClickOutside(e: MouseEvent) {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setOpen(false);
+        setQuery(selected?.name ?? "");
+      }
+    }
+    document.addEventListener("mousedown", onClickOutside);
+    return () => document.removeEventListener("mousedown", onClickOutside);
+  }, [open, selected]);
+
+  const trimmed = query.trim().toLowerCase();
+  const matches = (trimmed ? users.filter((u) => u.name.toLowerCase().includes(trimmed)) : users).slice(0, 8);
+
+  function select(id: string | null, name: string) {
+    onChange(id);
+    setQuery(name);
+    setOpen(false);
+  }
+
+  return (
+    <div ref={containerRef} style={{ position: "relative", width: 180 }}>
+      <input
+        type="text"
+        value={query}
+        placeholder={notLinkedLabel}
+        onFocus={() => setOpen(true)}
+        onChange={(e) => {
+          setQuery(e.target.value);
+          setOpen(true);
+        }}
+        onKeyDown={(e) => {
+          if (e.key === "Escape") {
+            setOpen(false);
+            setQuery(selected?.name ?? "");
+          }
+        }}
+      />
+      {open && (
+        <div
+          className="card"
+          style={{
+            position: "absolute",
+            zIndex: 20,
+            top: "100%",
+            left: 0,
+            right: 0,
+            marginTop: 4,
+            padding: 4,
+            maxHeight: 220,
+            overflowY: "auto",
+          }}
+        >
+          <div
+            className="muted"
+            onMouseDown={(e) => {
+              e.preventDefault();
+              select(null, "");
+            }}
+            style={{ padding: "4px 8px", borderRadius: 4, cursor: "pointer" }}
+          >
+            {notLinkedLabel}
+          </div>
+          {matches.map((u) => (
+            <div
+              key={u.id}
+              onMouseDown={(e) => {
+                e.preventDefault();
+                select(u.id, u.name);
+              }}
+              style={{ padding: "4px 8px", borderRadius: 4, cursor: "pointer" }}
+            >
+              {u.name}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 interface UserEditData {
   role?: AdminUser["role"];
   active?: boolean;
@@ -398,20 +501,12 @@ export function AdminUsersPage() {
                       </select>
                     </td>
                     <td>
-                      <select
-                        value={u.teamSupportUserId ?? ""}
-                        onChange={(e) =>
-                          updateUser.mutate({ id: u.id, data: { teamSupportUserId: e.target.value || null } })
-                        }
-                        style={{ width: "auto" }}
-                      >
-                        <option value="">{t("adminUsers.notLinked")}</option>
-                        {(teamSupportUsers ?? []).map((tsUser) => (
-                          <option key={tsUser.id} value={tsUser.id}>
-                            {tsUser.name}
-                          </option>
-                        ))}
-                      </select>
+                      <TeamSupportUserPicker
+                        value={u.teamSupportUserId}
+                        users={teamSupportUsers ?? []}
+                        notLinkedLabel={t("adminUsers.notLinked")}
+                        onChange={(teamSupportUserId) => updateUser.mutate({ id: u.id, data: { teamSupportUserId } })}
+                      />
                     </td>
                     <td>{u.active ? t("common.active") : t("adminUsers.deactivated")}</td>
                     <td>{formatDate(u.createdAt)}</td>
