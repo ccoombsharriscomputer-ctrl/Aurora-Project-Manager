@@ -7,6 +7,16 @@ import { loadAttachmentInScope } from "../lib/scope";
 const router = Router();
 router.use(requireAuth);
 
+router.get("/:id", async (req, res) => {
+  const attachment = await loadAttachmentInScope(req.params.id, effectiveSoftwareLineId(req.user!));
+  if (!attachment) {
+    return res.status(404).json({ error: "Attachment not found" });
+  }
+  res.setHeader("Content-Type", attachment.mimeType);
+  res.setHeader("Content-Disposition", `inline; filename="${attachment.originalName.replace(/"/g, "")}"`);
+  res.sendFile(path.join(UPLOAD_DIR, attachment.storedFilename));
+});
+
 router.get("/:id/download", async (req, res) => {
   const attachment = await loadAttachmentInScope(req.params.id, effectiveSoftwareLineId(req.user!));
   if (!attachment) {

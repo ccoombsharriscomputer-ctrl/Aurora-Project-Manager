@@ -206,7 +206,14 @@ function AttachmentsPanel({ projectId }: { projectId: string }) {
       {attachments?.length === 0 && <p className="muted" style={{ marginTop: 12 }}>{t("projectDetail.noAttachmentsYet")}</p>}
       {attachments?.map((a) => (
         <div className="task-list-item" key={a.id}>
-          <a href={`/api/attachments/${a.id}/download`}>{a.originalName}</a>
+          <span className="gap-8">
+            <a href={`/api/attachments/${a.id}`} target="_blank" rel="noopener noreferrer">
+              {a.originalName}
+            </a>
+            <a href={`/api/attachments/${a.id}/download`} className="muted attachment-download-link">
+              {t("common.download")}
+            </a>
+          </span>
           <span className="muted">
             {(a.size / 1024).toFixed(0)} KB · {a.uploader.name}
           </span>

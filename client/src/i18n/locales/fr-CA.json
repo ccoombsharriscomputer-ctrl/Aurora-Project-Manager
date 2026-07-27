@@ -35,7 +35,8 @@
     "minutesAgo": "il y a {{count}} min",
     "hoursAgo": "il y a {{count}} h",
     "daysAgo": "il y a {{count}} j",
-    "softwareLine": "Ligne de logiciel"
+    "softwareLine": "Ligne de logiciel",
+    "download": "Télécharger"
   },
   "layout": {
     "dashboard": "Tableau de bord",

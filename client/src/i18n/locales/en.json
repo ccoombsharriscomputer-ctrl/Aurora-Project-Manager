@@ -35,7 +35,8 @@
     "minutesAgo": "{{count}}m ago",
     "hoursAgo": "{{count}}h ago",
     "daysAgo": "{{count}}d ago",
-    "softwareLine": "Software line"
+    "softwareLine": "Software line",
+    "download": "Download"
   },
   "layout": {
     "dashboard": "Dashboard",

@@ -35,7 +35,8 @@
     "minutesAgo": "hace {{count}} min",
     "hoursAgo": "hace {{count}} h",
     "daysAgo": "hace {{count}} d",
-    "softwareLine": "Línea de software"
+    "softwareLine": "Línea de software",
+    "download": "Descargar"
   },
   "layout": {
     "dashboard": "Panel",

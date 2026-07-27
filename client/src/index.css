@@ -600,6 +600,11 @@ label {
   align-items: center;
 }
 
+.attachment-download-link {
+  font-size: 11px;
+  text-decoration: underline;
+}
+
 .calendar-toolbar {
   display: flex;
   align-items: center;
