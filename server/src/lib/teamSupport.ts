@@ -126,15 +126,15 @@ export async function fetchTicketByNumber(ticketNumber: string): Promise<TeamSup
 
 // Posts a new ticket action (TeamSupport's term for a note/comment on a ticket) via
 // POST Tickets/{TicketNumber}/Actions — confirmed against TeamSupport's own published API
-// endpoint reference. Hours populate the native HoursSpent field on the action (confirmed
-// against TeamSupport's own API client's TicketAction model) as well as being embedded in
-// the description text, so the time shows up whether or not the account's UI surfaces
-// HoursSpent prominently. TEAMSUPPORT_TIME_FIELD_NAME can override the field name for an
-// account that uses a differently-named custom field instead.
+// endpoint reference. Time is tracked as separate integer Hours/Minutes fields, not a single
+// decimal — confirmed directly against TeamSupport's own "edit action" UI, since HoursSpent
+// (what the API read-side exposes) turned out to be a read-only rollup computed from these,
+// not something settable directly.
 export async function postTicketAction(ticketNumber: string, description: string, hours?: number): Promise<void> {
   const action: Record<string, unknown> = { Description: description };
   if (hours) {
-    action[process.env.TEAMSUPPORT_TIME_FIELD_NAME || "HoursSpent"] = hours;
+    action.Hours = Math.floor(hours);
+    action.Minutes = Math.round((hours - Math.floor(hours)) * 60);
   }
 
   await teamSupportRequest(`/api/json/tickets/${encodeURIComponent(ticketNumber)}/actions`, {
