@@ -96,6 +96,10 @@
   },
   "projects": {
     "newProject": "New project",
+    "fillFromContract": "Create from a contract (PDF)",
+    "fillFromContractHint": "Upload a signed contract and Aurora will suggest values below using Claude (Anthropic) — review everything before creating. The contract's text is sent to Claude to extract these suggestions; it isn't saved or attached to the project.",
+    "uploadContract": "Upload PDF",
+    "extractingContract": "Reading contract…",
     "projectType": "Project type",
     "selectProjectType": "Select a project type…",
     "noProjectTypesYet": "No project types yet — an admin or project lead needs to create one first.",

@@ -255,3 +255,12 @@ export interface ActivityReport {
   activities: Activity[];
   truncated: boolean;
 }
+
+export interface ExtractedProjectDetails {
+  name: string | null;
+  description: string | null;
+  teamSupportTicketNumber: string | null;
+  projectTypeId: string | null;
+  checklistItemIds: string[];
+  notes: string | null;
+}

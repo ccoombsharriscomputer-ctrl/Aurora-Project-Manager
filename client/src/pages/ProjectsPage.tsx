@@ -1,9 +1,9 @@
-import { useState, type FormEvent } from "react";
+import { useRef, useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { api } from "../api/client";
-import type { ChecklistItem, Project, ProjectType, UserSummary } from "../api/types";
+import type { ChecklistItem, ExtractedProjectDetails, Project, ProjectType, UserSummary } from "../api/types";
 import { extractErrorMessage, useAuth } from "../context/AuthContext";
 
 export function ProjectsPage() {
@@ -40,6 +40,9 @@ export function ProjectsPage() {
   const [checklistItemIds, setChecklistItemIds] = useState<string[]>([]);
   const [memberIds, setMemberIds] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [contractError, setContractError] = useState<string | null>(null);
+  const [contractNotes, setContractNotes] = useState<string | null>(null);
+  const contractInputRef = useRef<HTMLInputElement>(null);
 
   const activeTypes = (projectTypes ?? []).filter((t) => t.active);
   const activeProducts = (products ?? []).filter((p) => p.active);
@@ -83,8 +86,24 @@ export function ProjectsPage() {
       setMemberIds([]);
       setShowForm(false);
       setError(null);
+      setContractNotes(null);
+      setContractError(null);
     },
     onError: (err) => setError(extractErrorMessage(err)),
+  });
+
+  const parseContract = useMutation({
+    mutationFn: (form: FormData) => api.postForm<ExtractedProjectDetails>("/projects/parse-contract", form),
+    onSuccess: (result) => {
+      if (result.name) setName(result.name);
+      if (result.description) setDescription(result.description);
+      if (result.teamSupportTicketNumber) setTeamSupportTicketNumber(result.teamSupportTicketNumber);
+      if (result.projectTypeId) setProjectTypeId(result.projectTypeId);
+      if (result.checklistItemIds.length > 0) setChecklistItemIds(result.checklistItemIds);
+      setContractNotes(result.notes);
+      setContractError(null);
+    },
+    onError: (err) => setContractError(extractErrorMessage(err)),
   });
 
   function handleSubmit(e: FormEvent) {
@@ -120,6 +139,45 @@ export function ProjectsPage() {
 
       {showForm && canWrite && (
         <form className="card" style={{ marginBottom: 20 }} onSubmit={handleSubmit}>
+          <div className="field" style={{ paddingBottom: 16, marginBottom: 20, borderBottom: "1px solid var(--border)" }}>
+            <label>{t("projects.fillFromContract")}</label>
+            <p className="muted" style={{ fontSize: 12, margin: "2px 0 8px" }}>
+              {t("projects.fillFromContractHint")}
+            </p>
+            <input
+              ref={contractInputRef}
+              type="file"
+              accept="application/pdf"
+              style={{ display: "none" }}
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) {
+                  const form = new FormData();
+                  form.append("file", file);
+                  parseContract.mutate(form);
+                }
+                e.target.value = "";
+              }}
+            />
+            <button
+              type="button"
+              className="btn btn-sm"
+              onClick={() => contractInputRef.current?.click()}
+              disabled={parseContract.isPending}
+            >
+              {parseContract.isPending ? t("projects.extractingContract") : t("projects.uploadContract")}
+            </button>
+            {contractError && (
+              <div className="error-text" style={{ marginTop: 8 }}>
+                {contractError}
+              </div>
+            )}
+            {contractNotes && (
+              <p className="muted" style={{ fontSize: 12, marginTop: 8, fontStyle: "italic" }}>
+                {contractNotes}
+              </p>
+            )}
+          </div>
           <div className="field">
             <label htmlFor="name">{t("common.name")}</label>
             <input id="name" type="text" required value={name} onChange={(e) => setName(e.target.value)} />

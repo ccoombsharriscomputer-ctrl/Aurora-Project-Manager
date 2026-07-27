@@ -23,3 +23,8 @@ services:
         value: production
       - key: NODE_VERSION
         value: "22"
+      # Only needed for "Create project from a contract (PDF)" — set this in the Render
+      # dashboard to a key from console.anthropic.com. Without it, that one feature
+      # returns a friendly error; everything else works fine.
+      - key: ANTHROPIC_API_KEY
+        sync: false

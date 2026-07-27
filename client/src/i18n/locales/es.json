@@ -96,6 +96,10 @@
   },
   "projects": {
     "newProject": "Nuevo proyecto",
+    "fillFromContract": "Crear a partir de un contrato (PDF)",
+    "fillFromContractHint": "Sube un contrato firmado y Aurora sugerirá valores a continuación usando Claude (Anthropic) — revisa todo antes de crear. El texto del contrato se envía a Claude para extraer estas sugerencias; no se guarda ni se adjunta al proyecto.",
+    "uploadContract": "Subir PDF",
+    "extractingContract": "Leyendo contrato…",
     "projectType": "Tipo de proyecto",
     "selectProjectType": "Selecciona un tipo de proyecto…",
     "noProjectTypesYet": "Aún no hay tipos de proyecto — un administrador o líder de proyecto debe crear uno primero.",

@@ -1,4 +1,5 @@
 import { Router } from "express";
+import multer from "multer";
 import { z } from "zod";
 import { prisma } from "../lib/prisma";
 import { blockReadOnly, effectiveSoftwareLineId, requireAuth } from "../middleware/auth";
@@ -6,6 +7,7 @@ import { logActivity } from "../lib/activity";
 import { emitUpdate } from "../lib/realtime";
 import { upload } from "../lib/upload";
 import { loadProjectInScope } from "../lib/scope";
+import { extractProjectDetailsFromContract, extractTextFromPdf } from "../lib/contractExtraction";
 
 const router = Router();
 
@@ -163,6 +165,53 @@ router.post("/", blockReadOnly, async (req, res) => {
   emitUpdate({ scope: "projects" });
 
   res.status(201).json(project);
+});
+
+// PDFs are parsed in memory only — never written to disk and never attached to any
+// project. This just prefills the new-project form; nothing is created until the user
+// reviews the suggestions and submits normally.
+const parseContractUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 15 * 1024 * 1024 },
+});
+
+router.post("/parse-contract", blockReadOnly, parseContractUpload.single("file"), async (req, res) => {
+  if (!req.file) {
+    return res.status(400).json({ error: "No file uploaded" });
+  }
+  if (req.file.mimetype !== "application/pdf") {
+    return res.status(400).json({ error: "Please upload a PDF file" });
+  }
+
+  let contractText: string;
+  try {
+    contractText = await extractTextFromPdf(req.file.buffer);
+  } catch {
+    return res.status(400).json({ error: "Could not read this PDF — it may be corrupted." });
+  }
+  if (contractText.length < 50) {
+    return res
+      .status(400)
+      .json({ error: "This PDF doesn't seem to contain readable text — it may be a scanned image without text." });
+  }
+
+  const lineId = effectiveSoftwareLineId(req.user!);
+  const [projectTypes, products] = await Promise.all([
+    prisma.projectType.findMany({ where: { softwareLineId: lineId, active: true } }),
+    prisma.checklistItem.findMany({ where: { softwareLineId: lineId, active: true } }),
+  ]);
+
+  try {
+    const extracted = await extractProjectDetailsFromContract(contractText, projectTypes, products);
+    res.json(extracted);
+  } catch (err) {
+    if (err instanceof Error && err.message === "ANTHROPIC_API_KEY is not configured") {
+      return res
+        .status(503)
+        .json({ error: "Contract extraction isn't set up yet — ask an admin to configure ANTHROPIC_API_KEY." });
+    }
+    res.status(502).json({ error: "Couldn't extract details from this contract. Try again, or fill in the form manually." });
+  }
 });
 
 router.get("/:id", async (req, res) => {
