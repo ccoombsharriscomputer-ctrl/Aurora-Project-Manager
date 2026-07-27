@@ -143,6 +143,8 @@
     "noAttachmentsYet": "No attachments yet.",
     "loadingProject": "Loading project…",
     "teamSupportTicket": "TeamSupport Ticket #",
+    "teamSupportLoading": "Loading ticket status…",
+    "viewInTeamSupport": "View in TeamSupport",
     "confirmDeleteProject": "Delete project \"{{name}}\"? This cannot be undone.",
     "deleteProject": "Delete project",
     "loadingSubProjects": "Loading sub-projects…",

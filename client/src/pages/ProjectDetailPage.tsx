@@ -3,7 +3,7 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { api } from "../api/client";
-import type { Attachment, ChecklistItem, Project, SubProject, UserSummary } from "../api/types";
+import type { Attachment, ChecklistItem, Project, SubProject, TeamSupportTicketResponse, UserSummary } from "../api/types";
 import { extractErrorMessage, useAuth } from "../context/AuthContext";
 
 function NewSubProjectForm({ projectId }: { projectId: string }) {
@@ -259,6 +259,13 @@ export function ProjectDetailPage() {
     enabled: !!projectId,
   });
 
+  const { data: teamSupportTicket, error: teamSupportError } = useQuery({
+    queryKey: ["project-teamsupport-ticket", projectId],
+    queryFn: () => api.get<TeamSupportTicketResponse>(`/projects/${projectId}/teamsupport-ticket`),
+    enabled: !!project?.teamSupportTicketNumber,
+    retry: false,
+  });
+
   const { data: allUsers } = useQuery({
     queryKey: ["users"],
     queryFn: () => api.get<UserSummary[]>("/users"),
@@ -370,6 +377,25 @@ export function ProjectDetailPage() {
               <span>{project.teamSupportTicketNumber || "—"}</span>
             )}
           </div>
+          {project.teamSupportTicketNumber && (
+            <div className="gap-8" style={{ marginTop: 4 }}>
+              {teamSupportError ? (
+                <span className="muted">{extractErrorMessage(teamSupportError)}</span>
+              ) : !teamSupportTicket ? (
+                <span className="muted">{t("projectDetail.teamSupportLoading")}</span>
+              ) : teamSupportTicket.linked ? (
+                <>
+                  <span className={`badge${teamSupportTicket.ticket.status.toLowerCase().includes("closed") ? " badge-archived" : ""}`}>
+                    {teamSupportTicket.ticket.status}
+                  </span>
+                  <span className="muted">{teamSupportTicket.ticket.name}</span>
+                  <a href={teamSupportTicket.ticket.url} target="_blank" rel="noopener noreferrer" className="attachment-download-link">
+                    {t("projectDetail.viewInTeamSupport")}
+                  </a>
+                </>
+              ) : null}
+            </div>
+          )}
         </div>
         <div className="gap-8">
           <NewSubProjectForm projectId={project.id} />

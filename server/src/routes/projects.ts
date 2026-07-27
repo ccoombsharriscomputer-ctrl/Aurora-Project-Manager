@@ -8,6 +8,7 @@ import { emitUpdate } from "../lib/realtime";
 import { upload } from "../lib/upload";
 import { loadProjectInScope } from "../lib/scope";
 import { extractProjectDetailsFromContract, extractTextFromPdf } from "../lib/contractExtraction";
+import { fetchTicketByNumber, TeamSupportNotConfiguredError, TeamSupportTicketNotFoundError } from "../lib/teamSupport";
 
 const router = Router();
 
@@ -231,6 +232,31 @@ router.get("/:id", async (req, res) => {
     ...project,
     members: project.members.map((m) => ({ ...m.user, role: m.role })),
   });
+});
+
+router.get("/:id/teamsupport-ticket", async (req, res) => {
+  const project = await loadProjectInScope(req.params.id, effectiveSoftwareLineId(req.user!));
+  if (!project) {
+    return res.status(404).json({ error: "Project not found" });
+  }
+  if (!project.teamSupportTicketNumber) {
+    return res.json({ linked: false });
+  }
+
+  try {
+    const ticket = await fetchTicketByNumber(project.teamSupportTicketNumber);
+    res.json({ linked: true, ticket });
+  } catch (err) {
+    if (err instanceof TeamSupportNotConfiguredError) {
+      return res
+        .status(503)
+        .json({ error: "TeamSupport isn't set up yet — ask an admin to configure TEAMSUPPORT_ORG_ID and TEAMSUPPORT_API_TOKEN." });
+    }
+    if (err instanceof TeamSupportTicketNotFoundError) {
+      return res.status(404).json({ error: `Ticket ${project.teamSupportTicketNumber} wasn't found in TeamSupport.` });
+    }
+    res.status(502).json({ error: "Couldn't reach TeamSupport. Try again shortly." });
+  }
 });
 
 function canManageProject(projectCreatedById: string, req: import("express").Request) {

@@ -265,3 +265,15 @@ export interface ExtractedProjectDetails {
   checklistItemIds: string[];
   notes: string | null;
 }
+
+export interface TeamSupportTicket {
+  ticketNumber: string;
+  name: string;
+  status: string;
+  severity: string | null;
+  groupName: string | null;
+  assigneeName: string | null;
+  url: string;
+}
+
+export type TeamSupportTicketResponse = { linked: false } | { linked: true; ticket: TeamSupportTicket };

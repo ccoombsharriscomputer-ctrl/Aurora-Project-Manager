@@ -143,6 +143,8 @@
     "noAttachmentsYet": "Aún no hay archivos adjuntos.",
     "loadingProject": "Cargando proyecto…",
     "teamSupportTicket": "N.º de ticket de TeamSupport",
+    "teamSupportLoading": "Cargando estado del ticket…",
+    "viewInTeamSupport": "Ver en TeamSupport",
     "confirmDeleteProject": "¿Eliminar el proyecto \"{{name}}\"? Esta acción no se puede deshacer.",
     "deleteProject": "Eliminar proyecto",
     "loadingSubProjects": "Cargando subproyectos…",
