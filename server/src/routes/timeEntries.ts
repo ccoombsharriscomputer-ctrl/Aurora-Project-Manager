@@ -57,7 +57,14 @@ router.post("/:id/stop", blockReadOnly, async (req, res) => {
   if (entry.task.project.teamSupportTicketNumber) {
     const hours = durationMinutes / 60;
     const body = updated.note || `${formatHours(hours)}h logged (timer)`;
-    syncTaskUpdateToTeamSupport(entry.task.project.teamSupportTicketNumber, req.user!.name, entry.task.title, body, hours);
+    syncTaskUpdateToTeamSupport(
+      entry.task.project.teamSupportTicketNumber,
+      req.user!.name,
+      entry.task.title,
+      body,
+      hours,
+      req.user!.teamSupportUserId
+    );
   }
 
   emitUpdate({ scope: "task", taskId: entry.task.id });

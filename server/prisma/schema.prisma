@@ -101,6 +101,7 @@ model User {
   softwareLine        SoftwareLine  @relation("UserSoftwareLine", fields: [softwareLineId], references: [id])
   activeSoftwareLineId String?
   activeSoftwareLine   SoftwareLine? @relation("UserActiveSoftwareLine", fields: [activeSoftwareLineId], references: [id])
+  teamSupportUserId   String?
   createdAt           DateTime    @default(now())
 
   createdProjects   Project[]       @relation("ProjectCreatedBy")

@@ -46,6 +46,12 @@ export interface AdminUser extends UserSummary {
   active: boolean;
   createdAt: string;
   softwareLine: SoftwareLine;
+  teamSupportUserId: string | null;
+}
+
+export interface TeamSupportUser {
+  id: string;
+  name: string;
 }
 
 export interface AccessRequest {

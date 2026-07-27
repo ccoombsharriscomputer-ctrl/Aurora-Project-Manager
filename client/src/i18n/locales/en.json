@@ -205,7 +205,9 @@
     "loadingUsers": "Loading users…",
     "joined": "Joined",
     "deactivated": "Deactivated",
-    "confirmDeleteUser": "Delete {{name}}? This cannot be undone."
+    "confirmDeleteUser": "Delete {{name}}? This cannot be undone.",
+    "teamSupportUser": "TeamSupport user",
+    "notLinked": "Not linked"
   },
   "projectTypes": {
     "newProjectType": "New project type",

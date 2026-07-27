@@ -205,7 +205,9 @@
     "loadingUsers": "Cargando usuarios…",
     "joined": "Se unió",
     "deactivated": "Desactivado",
-    "confirmDeleteUser": "¿Eliminar a {{name}}? Esta acción no se puede deshacer."
+    "confirmDeleteUser": "¿Eliminar a {{name}}? Esta acción no se puede deshacer.",
+    "teamSupportUser": "Usuario de TeamSupport",
+    "notLinked": "Sin vincular"
   },
   "projectTypes": {
     "newProjectType": "Nuevo tipo de proyecto",

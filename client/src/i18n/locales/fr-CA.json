@@ -205,7 +205,9 @@
     "loadingUsers": "Chargement des utilisateurs…",
     "joined": "Inscrit le",
     "deactivated": "Désactivé",
-    "confirmDeleteUser": "Supprimer {{name}}? Cette action est irréversible."
+    "confirmDeleteUser": "Supprimer {{name}}? Cette action est irréversible.",
+    "teamSupportUser": "Utilisateur TeamSupport",
+    "notLinked": "Non lié"
   },
   "projectTypes": {
     "newProjectType": "Nouveau type de projet",

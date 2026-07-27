@@ -2,7 +2,7 @@ import { Fragment, useEffect, useState, type FormEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { api } from "../api/client";
-import type { AccessRequest, AdminUser, SoftwareLine, UserRole } from "../api/types";
+import type { AccessRequest, AdminUser, SoftwareLine, TeamSupportUser, UserRole } from "../api/types";
 import { extractErrorMessage, useAuth } from "../context/AuthContext";
 import { formatDate } from "../utils/format";
 
@@ -218,6 +218,7 @@ interface UserEditData {
   role?: AdminUser["role"];
   active?: boolean;
   softwareLineId?: string;
+  teamSupportUserId?: string | null;
   name?: string;
   email?: string;
   password?: string;
@@ -243,6 +244,14 @@ export function AdminUsersPage() {
   const { data: softwareLines } = useQuery({
     queryKey: ["software-lines"],
     queryFn: () => api.get<SoftwareLine[]>("/software-lines"),
+  });
+
+  // Not every deployment has TeamSupport configured — fails quietly (no retry storm) and
+  // the picker below just falls back to "not linked" for everyone when it's unavailable.
+  const { data: teamSupportUsers } = useQuery({
+    queryKey: ["teamsupport-users"],
+    queryFn: () => api.get<TeamSupportUser[]>("/teamsupport-users"),
+    retry: false,
   });
 
   const updateUser = useMutation({
@@ -300,6 +309,7 @@ export function AdminUsersPage() {
               <th>{t("common.email")}</th>
               <th>{t("common.role")}</th>
               <th>{t("common.softwareLine")}</th>
+              <th>{t("adminUsers.teamSupportUser")}</th>
               <th>{t("common.status")}</th>
               <th>{t("adminUsers.joined")}</th>
               <th></th>
@@ -309,7 +319,7 @@ export function AdminUsersPage() {
             {users.map((u) =>
               editingUserId === u.id ? (
                 <tr key={u.id}>
-                  <td colSpan={7}>
+                  <td colSpan={8}>
                     <form
                       className="card"
                       style={{ margin: "8px 0" }}
@@ -387,6 +397,22 @@ export function AdminUsersPage() {
                         ))}
                       </select>
                     </td>
+                    <td>
+                      <select
+                        value={u.teamSupportUserId ?? ""}
+                        onChange={(e) =>
+                          updateUser.mutate({ id: u.id, data: { teamSupportUserId: e.target.value || null } })
+                        }
+                        style={{ width: "auto" }}
+                      >
+                        <option value="">{t("adminUsers.notLinked")}</option>
+                        {(teamSupportUsers ?? []).map((tsUser) => (
+                          <option key={tsUser.id} value={tsUser.id}>
+                            {tsUser.name}
+                          </option>
+                        ))}
+                      </select>
+                    </td>
                     <td>{u.active ? t("common.active") : t("adminUsers.deactivated")}</td>
                     <td>{formatDate(u.createdAt)}</td>
                     <td className="gap-8">
@@ -415,7 +441,7 @@ export function AdminUsersPage() {
                   </tr>
                   {deleteErrors[u.id] && (
                     <tr>
-                      <td colSpan={7}>
+                      <td colSpan={8}>
                         <div className="error-text">{deleteErrors[u.id]}</div>
                       </td>
                     </tr>

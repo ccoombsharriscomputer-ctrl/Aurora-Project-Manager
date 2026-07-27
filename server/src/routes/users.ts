@@ -14,6 +14,7 @@ const userSelect = {
   role: true,
   active: true,
   createdAt: true,
+  teamSupportUserId: true,
   softwareLine: { select: { id: true, name: true } },
 } as const;
 
@@ -122,6 +123,7 @@ const updateSchema = z.object({
   role: z.enum(["ADMIN", "PROJECT_LEAD", "MEMBER", "READ_ONLY"]).optional(),
   active: z.boolean().optional(),
   softwareLineId: z.string().min(1).optional(),
+  teamSupportUserId: z.string().min(1).nullable().optional(),
 });
 
 router.patch("/:id", requireAuth, requireAdmin, async (req, res) => {

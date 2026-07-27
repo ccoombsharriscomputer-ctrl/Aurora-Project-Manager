@@ -217,7 +217,14 @@ router.post("/:id/comments", blockReadOnly, async (req, res) => {
   }
 
   if (task.project.teamSupportTicketNumber) {
-    syncTaskUpdateToTeamSupport(task.project.teamSupportTicketNumber, req.user!.name, task.title, parsed.data.body, parsed.data.hours);
+    syncTaskUpdateToTeamSupport(
+      task.project.teamSupportTicketNumber,
+      req.user!.name,
+      task.title,
+      parsed.data.body,
+      parsed.data.hours,
+      req.user!.teamSupportUserId
+    );
   }
 
   emitUpdate({ scope: "task", taskId: task.id });
@@ -356,7 +363,7 @@ router.post("/:id/time-entries", blockReadOnly, async (req, res) => {
   if (task.project.teamSupportTicketNumber) {
     const hours = parsed.data.hours;
     const body = parsed.data.note || `${formatHours(hours)}h logged`;
-    syncTaskUpdateToTeamSupport(task.project.teamSupportTicketNumber, req.user!.name, task.title, body, hours);
+    syncTaskUpdateToTeamSupport(task.project.teamSupportTicketNumber, req.user!.name, task.title, body, hours, req.user!.teamSupportUserId);
   }
 
   emitUpdate({ scope: "task", taskId: task.id });

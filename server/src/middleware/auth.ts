@@ -12,6 +12,7 @@ export interface AuthedUser {
   locale: "EN" | "ES" | "FR_CA";
   softwareLineId: string;
   activeSoftwareLineId: string | null;
+  teamSupportUserId: string | null;
 }
 
 // The software line whose data this request should operate on. Only admins can ever
@@ -51,6 +52,7 @@ async function getUserFromRequest(req: Request): Promise<AuthedUser | null> {
       locale: user.locale,
       softwareLineId: user.softwareLineId,
       activeSoftwareLineId: user.activeSoftwareLineId,
+      teamSupportUserId: user.teamSupportUserId,
     };
   } catch {
     return null;

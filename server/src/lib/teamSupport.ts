@@ -130,11 +130,22 @@ export async function fetchTicketByNumber(ticketNumber: string): Promise<TeamSup
 // POST Tickets/{TicketNumber}/Actions — confirmed against TeamSupport's own published API
 // endpoint reference. Time is a single TimeSpent field in total minutes (not HoursSpent, and
 // not separate Hours/Minutes fields) — confirmed by intercepting the actual request
-// TeamSupport's own web UI sends when saving time on an action.
-export async function postTicketAction(ticketNumber: string, description: string, hours?: number): Promise<void> {
+// TeamSupport's own web UI sends when saving time on an action. creatorId (a TeamSupport
+// UserID) is attempted on a best-effort basis — TeamSupport may or may not honor a caller-
+// specified author on top of the API-token identity; if it's silently ignored, the note
+// still shows the real Aurora user's name in its text either way.
+export async function postTicketAction(
+  ticketNumber: string,
+  description: string,
+  hours?: number,
+  creatorId?: string | null
+): Promise<void> {
   const action: Record<string, unknown> = { Description: description };
   if (hours) {
     action.TimeSpent = Math.round(hours * 60);
+  }
+  if (creatorId) {
+    action.CreatorID = Number(creatorId);
   }
 
   await teamSupportRequest(`/api/json/tickets/${encodeURIComponent(ticketNumber)}/actions`, {
@@ -151,10 +162,39 @@ export function syncTaskUpdateToTeamSupport(
   userName: string,
   taskTitle: string,
   body: string,
-  hours: number | undefined
+  hours: number | undefined,
+  creatorId: string | null | undefined
 ) {
   const prefix = hours ? `${userName} logged ${formatHours(hours)}h on "${taskTitle}" via Aurora:` : `${userName} commented on "${taskTitle}" via Aurora:`;
-  postTicketAction(ticketNumber, `${prefix}\n\n${body}`, hours).catch((err) => {
+  postTicketAction(ticketNumber, `${prefix}\n\n${body}`, hours, creatorId).catch((err) => {
     console.error(`[teamSupport] failed to sync update to ticket ${ticketNumber}: ${err instanceof Error ? err.message : err}`);
   });
+}
+
+export interface TeamSupportUser {
+  id: string;
+  name: string;
+}
+
+function extractUsersPayload(raw: unknown): Record<string, unknown>[] {
+  if (Array.isArray(raw)) return raw as Record<string, unknown>[];
+  if (raw && typeof raw === "object") {
+    const obj = raw as Record<string, unknown>;
+    if (Array.isArray(obj.Users)) return obj.Users as Record<string, unknown>[];
+  }
+  return [];
+}
+
+// For the admin picker that maps an Aurora user to their TeamSupport counterpart, so admins
+// don't have to hunt down a raw numeric UserID themselves.
+export async function fetchTeamSupportUsers(): Promise<TeamSupportUser[]> {
+  const raw = await teamSupportRequest("/api/json/users");
+  return extractUsersPayload(raw)
+    .map((row) => {
+      const id = row.UserID ?? row.ID;
+      const name = String(row.Name ?? [row.FirstName, row.LastName].filter(Boolean).join(" ")).trim();
+      return id != null && name ? { id: String(id), name } : null;
+    })
+    .filter((u): u is TeamSupportUser => u !== null)
+    .sort((a, b) => a.name.localeCompare(b.name));
 }
