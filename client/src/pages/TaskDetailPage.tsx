@@ -45,6 +45,9 @@ export function TaskDetailPage() {
 
   const [commentBody, setCommentBody] = useState("");
   const [commentError, setCommentError] = useState<string | null>(null);
+  const [showTimeFields, setShowTimeFields] = useState(false);
+  const [commentDate, setCommentDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [commentHours, setCommentHours] = useState("");
 
   function invalidateTask() {
     queryClient.invalidateQueries({ queryKey: ["task", taskId] });
@@ -83,10 +86,17 @@ export function TaskDetailPage() {
   });
 
   const addComment = useMutation({
-    mutationFn: () => api.post(`/tasks/${taskId}/comments`, { body: commentBody }),
+    mutationFn: () =>
+      api.post(`/tasks/${taskId}/comments`, {
+        body: commentBody,
+        hours: showTimeFields && commentHours ? Number(commentHours) : undefined,
+        date: showTimeFields && commentHours ? commentDate : undefined,
+      }),
     onSuccess: () => {
       setCommentBody("");
       setCommentError(null);
+      setShowTimeFields(false);
+      setCommentHours("");
       invalidateTask();
     },
     onError: (err) => setCommentError(extractErrorMessage(err)),
@@ -112,29 +122,6 @@ export function TaskDetailPage() {
       queryClient.invalidateQueries({ queryKey: ["active-timer"] });
       invalidateTask();
     },
-  });
-
-  const [showLogTime, setShowLogTime] = useState(false);
-  const [logDate, setLogDate] = useState(() => new Date().toISOString().slice(0, 10));
-  const [logHours, setLogHours] = useState("");
-  const [logNote, setLogNote] = useState("");
-  const [logError, setLogError] = useState<string | null>(null);
-
-  const logTime = useMutation({
-    mutationFn: () =>
-      api.post(`/tasks/${taskId}/time-entries`, {
-        date: logDate,
-        hours: Number(logHours),
-        note: logNote || undefined,
-      }),
-    onSuccess: () => {
-      setShowLogTime(false);
-      setLogHours("");
-      setLogNote("");
-      setLogError(null);
-      invalidateTask();
-    },
-    onError: (err) => setLogError(extractErrorMessage(err)),
   });
 
   if (isLoading || !task) {
@@ -208,9 +195,37 @@ export function TaskDetailPage() {
                   value={commentBody}
                   onChange={(e) => setCommentBody(e.target.value)}
                 />
+                <button
+                  type="button"
+                  className="attachment-download-link"
+                  style={{ marginTop: 6 }}
+                  onClick={() => setShowTimeFields((v) => !v)}
+                >
+                  {showTimeFields ? t("common.cancel") : t("taskDetail.logTimeToggle")}
+                </button>
+                {showTimeFields && (
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginTop: 8 }}>
+                    <div className="field">
+                      <label>{t("taskDetail.date")}</label>
+                      <input type="date" value={commentDate} onChange={(e) => setCommentDate(e.target.value)} />
+                    </div>
+                    <div className="field">
+                      <label>{t("taskDetail.hours")}</label>
+                      <input
+                        type="number"
+                        min="0.25"
+                        max="24"
+                        step="0.25"
+                        placeholder="e.g. 2.5"
+                        value={commentHours}
+                        onChange={(e) => setCommentHours(e.target.value)}
+                      />
+                    </div>
+                  </div>
+                )}
                 {commentError && <div className="error-text">{commentError}</div>}
                 <button className="btn btn-primary btn-sm" type="submit" disabled={addComment.isPending} style={{ marginTop: 8 }}>
-                  {t("taskDetail.comment")}
+                  {t("taskDetail.postUpdate")}
                 </button>
               </form>
             )}
@@ -274,9 +289,6 @@ export function TaskDetailPage() {
               </div>
               {canWrite && (
                 <div className="gap-8">
-                  <button className="btn btn-sm" onClick={() => setShowLogTime((v) => !v)}>
-                    {showLogTime ? t("common.cancel") : t("taskDetail.logTime")}
-                  </button>
                   {isTimerRunningHere ? (
                     <button className="btn btn-sm" onClick={() => stop.mutate(activeTimer!.id)}>
                       {t("taskDetail.stopTimer")}
@@ -294,44 +306,7 @@ export function TaskDetailPage() {
                 </div>
               )}
             </div>
-            {showLogTime && canWrite && (
-              <form
-                style={{ marginTop: 12, marginBottom: 4 }}
-                onSubmit={(e: FormEvent) => {
-                  e.preventDefault();
-                  if (!logHours || Number(logHours) <= 0) return;
-                  logTime.mutate();
-                }}
-              >
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-                  <div className="field">
-                    <label>{t("taskDetail.date")}</label>
-                    <input type="date" required value={logDate} onChange={(e) => setLogDate(e.target.value)} />
-                  </div>
-                  <div className="field">
-                    <label>{t("taskDetail.hours")}</label>
-                    <input
-                      type="number"
-                      required
-                      min="0.25"
-                      max="24"
-                      step="0.25"
-                      placeholder="e.g. 2.5"
-                      value={logHours}
-                      onChange={(e) => setLogHours(e.target.value)}
-                    />
-                  </div>
-                </div>
-                <div className="field">
-                  <label>{t("taskDetail.noteOptional")}</label>
-                  <input type="text" value={logNote} onChange={(e) => setLogNote(e.target.value)} />
-                </div>
-                {logError && <div className="error-text">{logError}</div>}
-                <button className="btn btn-primary btn-sm" type="submit" disabled={logTime.isPending}>
-                  {t("common.save")}
-                </button>
-              </form>
-            )}
+            <p className="muted" style={{ marginTop: 8, fontSize: 13 }}>{t("taskDetail.logTimeHint")}</p>
             {task.timeEntries.length === 0 && <p className="muted" style={{ marginTop: 12 }}>{t("taskDetail.noTimeLoggedYet")}</p>}
             {task.timeEntries.map((entry) => (
               <div className="task-list-item" key={entry.id}>

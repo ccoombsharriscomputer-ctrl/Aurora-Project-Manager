@@ -6,6 +6,7 @@ import { logActivity } from "../lib/activity";
 import { emitUpdate } from "../lib/realtime";
 import { upload } from "../lib/upload";
 import { loadTaskInScope } from "../lib/scope";
+import { syncTaskUpdateToTeamSupport } from "../lib/teamSupport";
 
 const router = Router();
 router.use(requireAuth);
@@ -159,7 +160,14 @@ router.get("/:id/comments", async (req, res) => {
   res.json(comments);
 });
 
-const commentSchema = z.object({ body: z.string().min(1).max(5000) });
+const commentSchema = z.object({
+  body: z.string().min(1).max(5000),
+  hours: z.number().positive().max(24).optional(),
+  date: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be in YYYY-MM-DD format")
+    .optional(),
+});
 
 router.post("/:id/comments", blockReadOnly, async (req, res) => {
   const task = await loadTaskInScope(req.params.id, effectiveSoftwareLineId(req.user!));
@@ -184,10 +192,37 @@ router.post("/:id/comments", blockReadOnly, async (req, res) => {
     projectId: task.projectId,
     taskId: task.id,
   });
+
+  let timeEntry = null;
+  if (parsed.data.hours) {
+    const durationMinutes = Math.round(parsed.data.hours * 60);
+    const dateStr = parsed.data.date ?? new Date().toISOString().slice(0, 10);
+    const startedAt = new Date(`${dateStr}T12:00:00.000Z`);
+    const endedAt = new Date(startedAt.getTime() + durationMinutes * 60000);
+
+    timeEntry = await prisma.timeEntry.create({
+      data: { taskId: task.id, userId: req.user!.id, startedAt, endedAt, durationMinutes, note: parsed.data.body },
+      include: { user: { select: { id: true, name: true } } },
+    });
+
+    await logActivity({
+      type: "TIME_LOGGED",
+      message: `${req.user!.name} logged ${parsed.data.hours.toFixed(1)}h on "${task.title}"`,
+      userId: req.user!.id,
+      softwareLineId: task.project.softwareLineId,
+      projectId: task.projectId,
+      taskId: task.id,
+    });
+  }
+
+  if (task.project.teamSupportTicketNumber) {
+    syncTaskUpdateToTeamSupport(task.project.teamSupportTicketNumber, req.user!.name, task.title, parsed.data.body, parsed.data.hours);
+  }
+
   emitUpdate({ scope: "task", taskId: task.id });
   emitUpdate({ scope: "dashboard" });
 
-  res.status(201).json(comment);
+  res.status(201).json({ comment, timeEntry });
 });
 
 // --- Attachments ---
@@ -316,6 +351,13 @@ router.post("/:id/time-entries", blockReadOnly, async (req, res) => {
     projectId: task.projectId,
     taskId: task.id,
   });
+
+  if (task.project.teamSupportTicketNumber) {
+    const hours = parsed.data.hours;
+    const body = parsed.data.note || `${hours.toFixed(1)}h logged`;
+    syncTaskUpdateToTeamSupport(task.project.teamSupportTicketNumber, req.user!.name, task.title, body, hours);
+  }
+
   emitUpdate({ scope: "task", taskId: task.id });
   emitUpdate({ scope: "dashboard" });
 

@@ -10,8 +10,8 @@ export class TeamSupportNotConfiguredError extends Error {}
 export class TeamSupportTicketNotFoundError extends Error {}
 
 // Carries the upstream HTTP status (or a network-level failure reason when there was no
-// response at all) so the route handler can return a diagnostic-enough message without
-// needing production log access to tell "wrong credentials" apart from "can't connect".
+// response at all) so callers can return a diagnostic-enough message without needing
+// production log access to tell "wrong credentials" apart from "can't connect".
 export class TeamSupportUpstreamError extends Error {
   status: number | null;
   constructor(message: string, status: number | null) {
@@ -28,6 +28,56 @@ export interface TeamSupportTicket {
   groupName: string | null;
   assigneeName: string | null;
   url: string;
+}
+
+function authHeader(): string {
+  const orgId = process.env.TEAMSUPPORT_ORG_ID;
+  const apiToken = process.env.TEAMSUPPORT_API_TOKEN;
+  if (!orgId || !apiToken) {
+    throw new TeamSupportNotConfiguredError("TeamSupport is not configured");
+  }
+  return `Basic ${Buffer.from(`${orgId}:${apiToken}`).toString("base64")}`;
+}
+
+// Shared request plumbing for both reading tickets and posting actions — same auth, same
+// base URL resolution, same network/HTTP-status/JSON-parse error handling so both paths
+// degrade the same way (and log the same diagnostic detail) when something's misconfigured.
+async function teamSupportRequest(path: string, init?: RequestInit): Promise<unknown> {
+  const url = `${apiBaseUrl()}${path}`;
+  // Computed before the try block so TeamSupportNotConfiguredError propagates as itself
+  // rather than being caught and relabeled as a generic network error below.
+  const authorization = authHeader();
+
+  let response: Response;
+  try {
+    response = await fetch(url, {
+      ...init,
+      headers: { Authorization: authorization, Accept: "application/json", ...init?.headers },
+    });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.error(`[teamSupport] network error calling ${url}: ${message}`);
+    throw new TeamSupportUpstreamError(`Network error reaching TeamSupport: ${message}`, null);
+  }
+
+  if (response.status === 404) {
+    throw new TeamSupportTicketNotFoundError(`Not found: ${path}`);
+  }
+  if (!response.ok) {
+    const body = await response.text().catch(() => "");
+    console.error(`[teamSupport] ${url} returned HTTP ${response.status}: ${body.slice(0, 500)}`);
+    throw new TeamSupportUpstreamError(`TeamSupport returned HTTP ${response.status}`, response.status);
+  }
+
+  const raw = await response.text();
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.error(`[teamSupport] failed to parse JSON from ${url}: ${message}`);
+    throw new TeamSupportUpstreamError(`TeamSupport returned a response that wasn't valid JSON`, response.status);
+  }
 }
 
 // TeamSupport's legacy JSON API isn't consistently RESTful about wrapping a single resource —
@@ -50,47 +100,16 @@ function ticketUrl(ticketNumber: string): string {
 }
 
 export async function fetchTicketByNumber(ticketNumber: string): Promise<TeamSupportTicket> {
-  const orgId = process.env.TEAMSUPPORT_ORG_ID;
-  const apiToken = process.env.TEAMSUPPORT_API_TOKEN;
-  if (!orgId || !apiToken) {
-    throw new TeamSupportNotConfiguredError("TeamSupport is not configured");
-  }
-
-  const auth = Buffer.from(`${orgId}:${apiToken}`).toString("base64");
-  const url = `${apiBaseUrl()}/api/json/tickets/${encodeURIComponent(ticketNumber)}.json`;
-
-  let response: Response;
-  try {
-    response = await fetch(url, {
-      headers: { Authorization: `Basic ${auth}`, Accept: "application/json" },
-    });
-  } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    console.error(`[teamSupport] network error calling ${url}: ${message}`);
-    throw new TeamSupportUpstreamError(`Network error reaching TeamSupport: ${message}`, null);
-  }
-
-  if (response.status === 404) {
-    throw new TeamSupportTicketNotFoundError(`Ticket ${ticketNumber} not found`);
-  }
-  if (!response.ok) {
-    const body = await response.text().catch(() => "");
-    console.error(`[teamSupport] ${url} returned HTTP ${response.status}: ${body.slice(0, 500)}`);
-    throw new TeamSupportUpstreamError(`TeamSupport returned HTTP ${response.status}`, response.status);
-  }
-
-  let raw: unknown;
-  try {
-    raw = await response.json();
-  } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    console.error(`[teamSupport] failed to parse JSON from ${url}: ${message}`);
-    throw new TeamSupportUpstreamError(`TeamSupport returned a response that wasn't valid JSON`, response.status);
-  }
+  const raw = await teamSupportRequest(`/api/json/tickets/${encodeURIComponent(ticketNumber)}.json`).catch((err) => {
+    if (err instanceof TeamSupportTicketNotFoundError) {
+      throw new TeamSupportTicketNotFoundError(`Ticket ${ticketNumber} not found`);
+    }
+    throw err;
+  });
 
   const payload = extractTicketPayload(raw);
   if (!payload) {
-    console.error(`[teamSupport] unrecognized response shape from ${url}: ${JSON.stringify(raw).slice(0, 500)}`);
+    console.error(`[teamSupport] unrecognized response shape for ticket ${ticketNumber}: ${JSON.stringify(raw).slice(0, 500)}`);
     throw new TeamSupportTicketNotFoundError(`Ticket ${ticketNumber} not found`);
   }
 
@@ -103,4 +122,39 @@ export async function fetchTicketByNumber(ticketNumber: string): Promise<TeamSup
     assigneeName: payload.UserName ? String(payload.UserName) : null,
     url: ticketUrl(ticketNumber),
   };
+}
+
+// Posts a new ticket action (TeamSupport's term for a note/comment on a ticket) via
+// POST Tickets/{TicketNumber}/Actions — confirmed against TeamSupport's own published API
+// endpoint reference. There's no documented field for structured "time worked" on an action,
+// so hours are embedded directly in the description text; TEAMSUPPORT_TIME_FIELD_NAME can be
+// set to a custom field's "API Field Name" (Admin > Custom Fields on the Action) to also
+// populate a structured field, for accounts that have one configured.
+export async function postTicketAction(ticketNumber: string, description: string, hours?: number): Promise<void> {
+  const action: Record<string, unknown> = { Description: description };
+  const timeFieldName = process.env.TEAMSUPPORT_TIME_FIELD_NAME;
+  if (hours && timeFieldName) {
+    action[timeFieldName] = hours;
+  }
+
+  await teamSupportRequest(`/api/json/tickets/${encodeURIComponent(ticketNumber)}/actions`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ Action: action }),
+  });
+}
+
+// Fire-and-forget: a comment or time log in Aurora should never fail (or wait) on
+// TeamSupport being slow or unreachable, so this is deliberately not awaited by callers.
+export function syncTaskUpdateToTeamSupport(
+  ticketNumber: string,
+  userName: string,
+  taskTitle: string,
+  body: string,
+  hours: number | undefined
+) {
+  const prefix = hours ? `${userName} logged ${hours.toFixed(1)}h on "${taskTitle}" via Aurora:` : `${userName} commented on "${taskTitle}" via Aurora:`;
+  postTicketAction(ticketNumber, `${prefix}\n\n${body}`, hours).catch((err) => {
+    console.error(`[teamSupport] failed to sync update to ticket ${ticketNumber}: ${err instanceof Error ? err.message : err}`);
+  });
 }

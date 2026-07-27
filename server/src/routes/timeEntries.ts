@@ -4,6 +4,7 @@ import { prisma } from "../lib/prisma";
 import { blockReadOnly, requireAuth } from "../middleware/auth";
 import { logActivity } from "../lib/activity";
 import { emitUpdate } from "../lib/realtime";
+import { syncTaskUpdateToTeamSupport } from "../lib/teamSupport";
 
 const router = Router();
 router.use(requireAuth);
@@ -51,6 +52,13 @@ router.post("/:id/stop", blockReadOnly, async (req, res) => {
     projectId: entry.task.projectId,
     taskId: entry.task.id,
   });
+
+  if (entry.task.project.teamSupportTicketNumber) {
+    const hours = durationMinutes / 60;
+    const body = updated.note || `${hours.toFixed(1)}h logged (timer)`;
+    syncTaskUpdateToTeamSupport(entry.task.project.teamSupportTicketNumber, req.user!.name, entry.task.title, body, hours);
+  }
+
   emitUpdate({ scope: "task", taskId: entry.task.id });
   emitUpdate({ scope: "dashboard" });
 
