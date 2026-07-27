@@ -268,14 +268,14 @@
     "activityTypeTimeLogged": "Time logged"
   },
   "calendar": {
-    "title": "Upcoming deadlines",
+    "title": "Calendar",
     "month": "Month",
     "week": "Week",
     "day": "Day",
     "today": "Today",
     "loadingCalendar": "Loading calendar…",
     "moreCount": "+{{count}} more",
-    "noDeadlines": "No deadlines on this day."
+    "noDeadlines": "Nothing scheduled for this day."
   },
   "settings": {
     "title": "Settings",

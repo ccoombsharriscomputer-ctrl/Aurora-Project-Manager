@@ -56,11 +56,27 @@ function priorityLabel(t: (key: string) => string, priority: Task["priority"]): 
   return t("common.priorityLow");
 }
 
+function statusLabel(t: (key: string) => string, status: Task["status"]): string {
+  if (status === "IN_PROGRESS") return t("common.statusInProgress");
+  if (status === "DONE") return t("common.statusDone");
+  if (status === "NA") return t("common.statusNA");
+  return t("common.statusTodo");
+}
+
+// Open tasks are colored by priority, since that's what's actionable about them. Once a
+// task is resolved (done or N/A), priority no longer matters — its own status is the more
+// useful signal for a calendar that also shows past days.
+function pillClassName(task: Task): string {
+  if (task.status === "DONE") return "calendar-task-pill done";
+  if (task.status === "NA") return "calendar-task-pill na";
+  return `calendar-task-pill priority-${task.priority}`;
+}
+
 function TaskPill({ task }: { task: Task }) {
   return (
     <Link
       to={`/tasks/${task.id}`}
-      className={`calendar-task-pill priority-${task.priority}`}
+      className={pillClassName(task)}
       title={task.project?.name ? `${task.project.name} — ${task.title}` : task.title}
     >
       {task.title}
@@ -170,7 +186,12 @@ export function DeadlinesCalendar() {
           {(tasksByDay.get(toDateKey(cursor)) ?? []).map((task) => (
             <div className="calendar-day-list-item" key={task.id}>
               <span className={`badge priority-${task.priority}`}>{priorityLabel(t, task.priority)}</span>
-              <Link to={`/tasks/${task.id}`}>{task.title}</Link>
+              {(task.status === "DONE" || task.status === "NA") && (
+                <span className="badge">{statusLabel(t, task.status)}</span>
+              )}
+              <Link to={`/tasks/${task.id}`} className={task.status === "DONE" ? "calendar-resolved-text" : task.status === "NA" ? "calendar-na-text" : undefined}>
+                {task.title}
+              </Link>
               {task.project?.name && <span className="muted">{task.project.name}</span>}
             </div>
           ))}

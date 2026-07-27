@@ -18,10 +18,17 @@ router.get("/", async (req, res) => {
   }
   const { start, end } = parsed.data;
 
+  // `end` is a plain date (e.g. "2026-07-27"); parsing it alone gives UTC midnight, which
+  // would exclude same-day tasks whose dueDate carries a later time-of-day component (e.g.
+  // one stamped at completion time). Push the upper bound to the end of that day instead.
+  const endOfDay = new Date(end);
+  endOfDay.setUTCHours(23, 59, 59, 999);
+
+  // Every task with a due date in range, regardless of status — this doubles as a schedule
+  // of what happened (or didn't) on past days, not just a forward-looking deadline list.
   const tasks = await prisma.task.findMany({
     where: {
-      status: { notIn: ["DONE", "NA"] },
-      dueDate: { gte: new Date(start), lte: new Date(end) },
+      dueDate: { gte: new Date(start), lte: endOfDay },
       project: { softwareLineId: effectiveSoftwareLineId(req.user!), archivedAt: null },
     },
     orderBy: { dueDate: "asc" },

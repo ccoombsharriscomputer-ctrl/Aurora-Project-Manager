@@ -268,14 +268,14 @@
     "activityTypeTimeLogged": "Horas registradas"
   },
   "calendar": {
-    "title": "Próximos vencimientos",
+    "title": "Calendario",
     "month": "Mes",
     "week": "Semana",
     "day": "Día",
     "today": "Hoy",
     "loadingCalendar": "Cargando calendario…",
     "moreCount": "+{{count}} más",
-    "noDeadlines": "No hay vencimientos este día."
+    "noDeadlines": "Nada programado para este día."
   },
   "settings": {
     "title": "Configuración",

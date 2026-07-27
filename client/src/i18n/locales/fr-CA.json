@@ -268,14 +268,14 @@
     "activityTypeTimeLogged": "Heures enregistrées"
   },
   "calendar": {
-    "title": "Échéances à venir",
+    "title": "Calendrier",
     "month": "Mois",
     "week": "Semaine",
     "day": "Jour",
     "today": "Aujourd'hui",
     "loadingCalendar": "Chargement du calendrier…",
     "moreCount": "+{{count}} de plus",
-    "noDeadlines": "Aucune échéance ce jour-là."
+    "noDeadlines": "Rien de prévu ce jour-là."
   },
   "settings": {
     "title": "Paramètres",

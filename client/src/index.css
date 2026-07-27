@@ -716,6 +716,28 @@ label {
   color: var(--success);
 }
 
+.calendar-task-pill.done {
+  background: var(--done-bg);
+  color: var(--muted);
+  text-decoration: line-through;
+}
+
+.calendar-task-pill.na {
+  background: var(--todo-bg);
+  color: var(--muted);
+  font-style: italic;
+}
+
+.calendar-resolved-text {
+  color: var(--muted);
+  text-decoration: line-through;
+}
+
+.calendar-na-text {
+  color: var(--muted);
+  font-style: italic;
+}
+
 .calendar-more {
   font-size: 11px;
   padding: 0 6px;
