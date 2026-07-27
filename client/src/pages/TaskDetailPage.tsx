@@ -101,6 +101,11 @@ export function TaskDetailPage() {
     onSuccess: invalidateTask,
   });
 
+  const deleteAttachment = useMutation({
+    mutationFn: (attachmentId: string) => api.delete(`/attachments/${attachmentId}`),
+    onSuccess: invalidateTask,
+  });
+
   const startTimer = useMutation({
     mutationFn: () => api.post(`/tasks/${taskId}/time-entries/start`),
     onSuccess: () => {
@@ -242,6 +247,18 @@ export function TaskDetailPage() {
                   <a href={`/api/attachments/${a.id}/download`} className="muted attachment-download-link">
                     {t("common.download")}
                   </a>
+                  {canWrite && (
+                    <button
+                      className="attachment-remove-link"
+                      onClick={() => {
+                        if (confirm(t("projectDetail.confirmDeleteAttachment", { name: a.originalName }))) {
+                          deleteAttachment.mutate(a.id);
+                        }
+                      }}
+                    >
+                      {t("projectDetail.remove")}
+                    </button>
+                  )}
                 </span>
                 <span className="muted">
                   {(a.size / 1024).toFixed(0)} KB · {a.uploader.name}

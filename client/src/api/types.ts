@@ -15,6 +15,7 @@ export type ActivityType =
   | "TASK_ASSIGNED"
   | "COMMENT_ADDED"
   | "ATTACHMENT_ADDED"
+  | "ATTACHMENT_DELETED"
   | "TIME_LOGGED";
 
 export interface SoftwareLine {

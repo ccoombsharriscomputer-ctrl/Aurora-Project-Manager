@@ -181,6 +181,11 @@ function AttachmentsPanel({ projectId }: { projectId: string }) {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["project-attachments", projectId] }),
   });
 
+  const deleteAttachment = useMutation({
+    mutationFn: (attachmentId: string) => api.delete(`/attachments/${attachmentId}`),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["project-attachments", projectId] }),
+  });
+
   return (
     <div className="card">
       <div className="flex-between">
@@ -213,6 +218,18 @@ function AttachmentsPanel({ projectId }: { projectId: string }) {
             <a href={`/api/attachments/${a.id}/download`} className="muted attachment-download-link">
               {t("common.download")}
             </a>
+            {canWrite && (
+              <button
+                className="attachment-remove-link"
+                onClick={() => {
+                  if (confirm(t("projectDetail.confirmDeleteAttachment", { name: a.originalName }))) {
+                    deleteAttachment.mutate(a.id);
+                  }
+                }}
+              >
+                {t("projectDetail.remove")}
+              </button>
+            )}
           </span>
           <span className="muted">
             {(a.size / 1024).toFixed(0)} KB · {a.uploader.name}

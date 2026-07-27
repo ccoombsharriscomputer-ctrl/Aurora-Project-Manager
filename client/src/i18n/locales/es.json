@@ -148,7 +148,8 @@
     "loadingSubProjects": "Cargando subproyectos…",
     "noSubProjectsYet": "Aún no hay subproyectos — añade uno para empezar a crear tareas.",
     "removeSubProject": "Quitar",
-    "confirmRemoveSubProject": "¿Quitar el subproyecto \"{{name}}\"? Esto también elimina sus tareas y no se puede deshacer."
+    "confirmRemoveSubProject": "¿Quitar el subproyecto \"{{name}}\"? Esto también elimina sus tareas y no se puede deshacer.",
+    "confirmDeleteAttachment": "¿Eliminar el archivo adjunto \"{{name}}\"? Esta acción no se puede deshacer."
   },
   "subProjectDetail": {
     "newTask": "Nueva tarea",
@@ -266,6 +267,7 @@
     "activityTypeTaskAssigned": "Asignación cambiada",
     "activityTypeCommentAdded": "Comentario añadido",
     "activityTypeAttachmentAdded": "Archivo adjuntado",
+    "activityTypeAttachmentDeleted": "Archivo adjunto eliminado",
     "activityTypeTimeLogged": "Horas registradas"
   },
   "calendar": {

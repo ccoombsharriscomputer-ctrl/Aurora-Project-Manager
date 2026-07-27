@@ -44,6 +44,7 @@ const ACTIVITY_TYPES: ActivityType[] = [
   "TASK_ASSIGNED",
   "COMMENT_ADDED",
   "ATTACHMENT_ADDED",
+  "ATTACHMENT_DELETED",
   "TIME_LOGGED",
 ];
 
@@ -57,6 +58,7 @@ function activityTypeLabel(t: TFunction, type: ActivityType): string {
   if (type === "TASK_ASSIGNED") return t("reports.activityTypeTaskAssigned");
   if (type === "COMMENT_ADDED") return t("reports.activityTypeCommentAdded");
   if (type === "ATTACHMENT_ADDED") return t("reports.activityTypeAttachmentAdded");
+  if (type === "ATTACHMENT_DELETED") return t("reports.activityTypeAttachmentDeleted");
   return t("reports.activityTypeTimeLogged");
 }
 
