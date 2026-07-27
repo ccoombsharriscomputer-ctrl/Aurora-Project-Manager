@@ -1,3 +1,5 @@
+import { formatHours } from "./format";
+
 // TeamSupport shards accounts across regional servers (NA1, NA2, NA3, NA4) — NA1 happens to
 // be reachable at the bare "app.teamsupport.com", but every other server needs its own
 // subdomain (e.g. "app.na2.teamsupport.com"). There's no way to know which one an account is
@@ -126,15 +128,13 @@ export async function fetchTicketByNumber(ticketNumber: string): Promise<TeamSup
 
 // Posts a new ticket action (TeamSupport's term for a note/comment on a ticket) via
 // POST Tickets/{TicketNumber}/Actions — confirmed against TeamSupport's own published API
-// endpoint reference. Time is tracked as separate integer Hours/Minutes fields, not a single
-// decimal — confirmed directly against TeamSupport's own "edit action" UI, since HoursSpent
-// (what the API read-side exposes) turned out to be a read-only rollup computed from these,
-// not something settable directly.
+// endpoint reference. Time is a single TimeSpent field in total minutes (not HoursSpent, and
+// not separate Hours/Minutes fields) — confirmed by intercepting the actual request
+// TeamSupport's own web UI sends when saving time on an action.
 export async function postTicketAction(ticketNumber: string, description: string, hours?: number): Promise<void> {
   const action: Record<string, unknown> = { Description: description };
   if (hours) {
-    action.Hours = Math.floor(hours);
-    action.Minutes = Math.round((hours - Math.floor(hours)) * 60);
+    action.TimeSpent = Math.round(hours * 60);
   }
 
   await teamSupportRequest(`/api/json/tickets/${encodeURIComponent(ticketNumber)}/actions`, {
@@ -153,7 +153,7 @@ export function syncTaskUpdateToTeamSupport(
   body: string,
   hours: number | undefined
 ) {
-  const prefix = hours ? `${userName} logged ${hours.toFixed(1)}h on "${taskTitle}" via Aurora:` : `${userName} commented on "${taskTitle}" via Aurora:`;
+  const prefix = hours ? `${userName} logged ${formatHours(hours)}h on "${taskTitle}" via Aurora:` : `${userName} commented on "${taskTitle}" via Aurora:`;
   postTicketAction(ticketNumber, `${prefix}\n\n${body}`, hours).catch((err) => {
     console.error(`[teamSupport] failed to sync update to ticket ${ticketNumber}: ${err instanceof Error ? err.message : err}`);
   });

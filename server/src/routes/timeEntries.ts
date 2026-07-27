@@ -5,6 +5,7 @@ import { blockReadOnly, requireAuth } from "../middleware/auth";
 import { logActivity } from "../lib/activity";
 import { emitUpdate } from "../lib/realtime";
 import { syncTaskUpdateToTeamSupport } from "../lib/teamSupport";
+import { formatHours } from "../lib/format";
 
 const router = Router();
 router.use(requireAuth);
@@ -46,7 +47,7 @@ router.post("/:id/stop", blockReadOnly, async (req, res) => {
 
   await logActivity({
     type: "TIME_LOGGED",
-    message: `${req.user!.name} logged ${(durationMinutes / 60).toFixed(1)}h on "${entry.task.title}"`,
+    message: `${req.user!.name} logged ${formatHours(durationMinutes / 60)}h on "${entry.task.title}"`,
     userId: req.user!.id,
     softwareLineId: entry.task.project.softwareLineId,
     projectId: entry.task.projectId,
@@ -55,7 +56,7 @@ router.post("/:id/stop", blockReadOnly, async (req, res) => {
 
   if (entry.task.project.teamSupportTicketNumber) {
     const hours = durationMinutes / 60;
-    const body = updated.note || `${hours.toFixed(1)}h logged (timer)`;
+    const body = updated.note || `${formatHours(hours)}h logged (timer)`;
     syncTaskUpdateToTeamSupport(entry.task.project.teamSupportTicketNumber, req.user!.name, entry.task.title, body, hours);
   }
 

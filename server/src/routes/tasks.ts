@@ -7,6 +7,7 @@ import { emitUpdate } from "../lib/realtime";
 import { upload } from "../lib/upload";
 import { loadTaskInScope } from "../lib/scope";
 import { syncTaskUpdateToTeamSupport } from "../lib/teamSupport";
+import { formatHours } from "../lib/format";
 
 const router = Router();
 router.use(requireAuth);
@@ -207,7 +208,7 @@ router.post("/:id/comments", blockReadOnly, async (req, res) => {
 
     await logActivity({
       type: "TIME_LOGGED",
-      message: `${req.user!.name} logged ${parsed.data.hours.toFixed(1)}h on "${task.title}"`,
+      message: `${req.user!.name} logged ${formatHours(parsed.data.hours)}h on "${task.title}"`,
       userId: req.user!.id,
       softwareLineId: task.project.softwareLineId,
       projectId: task.projectId,
@@ -345,7 +346,7 @@ router.post("/:id/time-entries", blockReadOnly, async (req, res) => {
 
   await logActivity({
     type: "TIME_LOGGED",
-    message: `${req.user!.name} logged ${(durationMinutes / 60).toFixed(1)}h on "${task.title}"`,
+    message: `${req.user!.name} logged ${formatHours(durationMinutes / 60)}h on "${task.title}"`,
     userId: req.user!.id,
     softwareLineId: task.project.softwareLineId,
     projectId: task.projectId,
@@ -354,7 +355,7 @@ router.post("/:id/time-entries", blockReadOnly, async (req, res) => {
 
   if (task.project.teamSupportTicketNumber) {
     const hours = parsed.data.hours;
-    const body = parsed.data.note || `${hours.toFixed(1)}h logged`;
+    const body = parsed.data.note || `${formatHours(hours)}h logged`;
     syncTaskUpdateToTeamSupport(task.project.teamSupportTicketNumber, req.user!.name, task.title, body, hours);
   }
 
