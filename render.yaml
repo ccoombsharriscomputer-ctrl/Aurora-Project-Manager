@@ -28,10 +28,15 @@ services:
       # returns a friendly error; everything else works fine.
       - key: ANTHROPIC_API_KEY
         sync: false
-      # Only needed to show live TeamSupport ticket status on projects — set both in the
-      # Render dashboard from TeamSupport's Setup > API page. Without them, that section
-      # returns a friendly error; everything else works fine.
+      # Only needed to show live TeamSupport ticket status on projects — Org ID is under
+      # Admin > My Company, API Token under Admin > Integration > TeamSupport API. Without
+      # them, that section returns a friendly error; everything else works fine.
       - key: TEAMSUPPORT_ORG_ID
         sync: false
       - key: TEAMSUPPORT_API_TOKEN
+        sync: false
+      # Required if the account isn't on TeamSupport's NA1 server — check the URL when
+      # logged into TeamSupport (app.teamsupport.com = NA1, leave blank; app.na2.teamsupport.com
+      # etc. = set this to that same origin).
+      - key: TEAMSUPPORT_API_BASE_URL
         sync: false

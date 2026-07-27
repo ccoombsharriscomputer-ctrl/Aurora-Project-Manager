@@ -1,4 +1,10 @@
-const TEAMSUPPORT_BASE_URL = "https://app.teamsupport.com";
+// TeamSupport shards accounts across regional servers (NA1, NA2, NA3, NA4) — NA1 happens to
+// be reachable at the bare "app.teamsupport.com", but every other server needs its own
+// subdomain (e.g. "app.na2.teamsupport.com"). There's no way to know which one an account is
+// on without being told, so this must be configurable rather than assumed.
+function apiBaseUrl(): string {
+  return (process.env.TEAMSUPPORT_API_BASE_URL || "https://app.teamsupport.com").replace(/\/$/, "");
+}
 
 export class TeamSupportNotConfiguredError extends Error {}
 export class TeamSupportTicketNotFoundError extends Error {}
@@ -39,7 +45,7 @@ function extractTicketPayload(raw: unknown): Record<string, unknown> | null {
 }
 
 function ticketUrl(ticketNumber: string): string {
-  const template = process.env.TEAMSUPPORT_TICKET_URL_TEMPLATE || `${TEAMSUPPORT_BASE_URL}/vcr/1_7_0/Pages/Ticket.html?TicketNumber={ticketNumber}`;
+  const template = process.env.TEAMSUPPORT_TICKET_URL_TEMPLATE || `${apiBaseUrl()}/vcr/1_7_0/Pages/Ticket.html?TicketNumber={ticketNumber}`;
   return template.replace("{ticketNumber}", encodeURIComponent(ticketNumber));
 }
 
@@ -51,7 +57,7 @@ export async function fetchTicketByNumber(ticketNumber: string): Promise<TeamSup
   }
 
   const auth = Buffer.from(`${orgId}:${apiToken}`).toString("base64");
-  const url = `${TEAMSUPPORT_BASE_URL}/api/json/tickets/${encodeURIComponent(ticketNumber)}.json`;
+  const url = `${apiBaseUrl()}/api/json/tickets/${encodeURIComponent(ticketNumber)}.json`;
 
   let response: Response;
   try {

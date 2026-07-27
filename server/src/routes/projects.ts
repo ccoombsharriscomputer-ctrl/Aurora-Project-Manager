@@ -263,7 +263,7 @@ router.get("/:id/teamsupport-ticket", async (req, res) => {
     if (err instanceof TeamSupportUpstreamError) {
       const hint =
         err.status === 401 || err.status === 403
-          ? " Double-check TEAMSUPPORT_ORG_ID and TEAMSUPPORT_API_TOKEN are correct."
+          ? " Double-check TEAMSUPPORT_ORG_ID and TEAMSUPPORT_API_TOKEN are correct, and that TEAMSUPPORT_API_BASE_URL matches your account's server (NA1/NA2/NA3/NA4 — check the URL when logged into TeamSupport)."
           : "";
       return res.status(502).json({ error: `Couldn't reach TeamSupport (${err.message}).${hint}` });
     }
