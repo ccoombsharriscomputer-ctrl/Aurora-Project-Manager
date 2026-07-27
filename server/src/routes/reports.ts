@@ -208,7 +208,10 @@ router.get("/overdue", async (req, res) => {
 
 const ACTIVITY_TYPES = [
   "PROJECT_CREATED",
+  "PROJECT_DELETED",
+  "SUBPROJECT_DELETED",
   "TASK_CREATED",
+  "TASK_DELETED",
   "TASK_STATUS_CHANGED",
   "TASK_ASSIGNED",
   "COMMENT_ADDED",
@@ -232,7 +235,7 @@ router.get("/activity", async (req, res) => {
 
   const activities = await prisma.activity.findMany({
     where: {
-      project: { softwareLineId: lineId },
+      softwareLineId: lineId,
       ...(userId ? { userId } : {}),
       ...(type ? { type } : {}),
       ...(range.from || range.to

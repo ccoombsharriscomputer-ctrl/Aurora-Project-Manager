@@ -19,7 +19,10 @@ router.get("/active", async (req, res) => {
 const stopSchema = z.object({ note: z.string().max(1000).optional() });
 
 router.post("/:id/stop", blockReadOnly, async (req, res) => {
-  const entry = await prisma.timeEntry.findUnique({ where: { id: req.params.id }, include: { task: true } });
+  const entry = await prisma.timeEntry.findUnique({
+    where: { id: req.params.id },
+    include: { task: { include: { project: true } } },
+  });
   if (!entry) {
     return res.status(404).json({ error: "Time entry not found" });
   }
@@ -44,6 +47,7 @@ router.post("/:id/stop", blockReadOnly, async (req, res) => {
     type: "TIME_LOGGED",
     message: `${req.user!.name} logged ${(durationMinutes / 60).toFixed(1)}h on "${entry.task.title}"`,
     userId: req.user!.id,
+    softwareLineId: entry.task.project.softwareLineId,
     projectId: entry.task.projectId,
     taskId: entry.task.id,
   });

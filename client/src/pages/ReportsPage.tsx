@@ -36,7 +36,10 @@ function buildQuery(filters: Filters): string {
 
 const ACTIVITY_TYPES: ActivityType[] = [
   "PROJECT_CREATED",
+  "PROJECT_DELETED",
+  "SUBPROJECT_DELETED",
   "TASK_CREATED",
+  "TASK_DELETED",
   "TASK_STATUS_CHANGED",
   "TASK_ASSIGNED",
   "COMMENT_ADDED",
@@ -46,7 +49,10 @@ const ACTIVITY_TYPES: ActivityType[] = [
 
 function activityTypeLabel(t: TFunction, type: ActivityType): string {
   if (type === "PROJECT_CREATED") return t("reports.activityTypeProjectCreated");
+  if (type === "PROJECT_DELETED") return t("reports.activityTypeProjectDeleted");
+  if (type === "SUBPROJECT_DELETED") return t("reports.activityTypeSubprojectDeleted");
   if (type === "TASK_CREATED") return t("reports.activityTypeTaskCreated");
+  if (type === "TASK_DELETED") return t("reports.activityTypeTaskDeleted");
   if (type === "TASK_STATUS_CHANGED") return t("reports.activityTypeStatusChanged");
   if (type === "TASK_ASSIGNED") return t("reports.activityTypeTaskAssigned");
   if (type === "COMMENT_ADDED") return t("reports.activityTypeCommentAdded");

@@ -7,7 +7,10 @@ export type AccentColor = "BLUE" | "GREEN" | "PURPLE" | "ORANGE" | "RED" | "TEAL
 export type Locale = "EN" | "ES" | "FR_CA";
 export type ActivityType =
   | "PROJECT_CREATED"
+  | "PROJECT_DELETED"
+  | "SUBPROJECT_DELETED"
   | "TASK_CREATED"
+  | "TASK_DELETED"
   | "TASK_STATUS_CHANGED"
   | "TASK_ASSIGNED"
   | "COMMENT_ADDED"

@@ -94,6 +94,7 @@ router.patch("/:id", blockReadOnly, async (req, res) => {
       type: "TASK_STATUS_CHANGED",
       message,
       userId: req.user!.id,
+      softwareLineId: existing.project.softwareLineId,
       projectId: task.projectId,
       taskId: task.id,
     });
@@ -105,6 +106,7 @@ router.patch("/:id", blockReadOnly, async (req, res) => {
         ? `${req.user!.name} assigned "${task.title}" to ${task.assignee.name}`
         : `${req.user!.name} unassigned "${task.title}"`,
       userId: req.user!.id,
+      softwareLineId: existing.project.softwareLineId,
       projectId: task.projectId,
       taskId: task.id,
     });
@@ -126,6 +128,15 @@ router.delete("/:id", blockReadOnly, async (req, res) => {
     return res.status(404).json({ error: "Task not found" });
   }
   await prisma.task.delete({ where: { id: req.params.id } }).catch(() => null);
+  // Logged after the delete, with taskId omitted since the task is already gone by this
+  // point — projectId still stands since only the task, not the project, was removed.
+  await logActivity({
+    type: "TASK_DELETED",
+    message: `${req.user!.name} deleted task "${task.title}"`,
+    userId: req.user!.id,
+    softwareLineId: task.project.softwareLineId,
+    projectId: task.projectId,
+  });
   emitUpdate({ scope: "project", projectId: task.projectId });
   emitUpdate({ scope: "sub-project", subProjectId: task.subProjectId });
   emitUpdate({ scope: "task", taskId: task.id });
@@ -169,6 +180,7 @@ router.post("/:id/comments", blockReadOnly, async (req, res) => {
     type: "COMMENT_ADDED",
     message: `${req.user!.name} commented on "${task.title}"`,
     userId: req.user!.id,
+    softwareLineId: task.project.softwareLineId,
     projectId: task.projectId,
     taskId: task.id,
   });
@@ -218,6 +230,7 @@ router.post("/:id/attachments", blockReadOnly, upload.single("file"), async (req
     type: "ATTACHMENT_ADDED",
     message: `${req.user!.name} attached "${attachment.originalName}" to "${task.title}"`,
     userId: req.user!.id,
+    softwareLineId: task.project.softwareLineId,
     projectId: task.projectId,
     taskId: task.id,
   });
@@ -299,6 +312,7 @@ router.post("/:id/time-entries", blockReadOnly, async (req, res) => {
     type: "TIME_LOGGED",
     message: `${req.user!.name} logged ${(durationMinutes / 60).toFixed(1)}h on "${task.title}"`,
     userId: req.user!.id,
+    softwareLineId: task.project.softwareLineId,
     projectId: task.projectId,
     taskId: task.id,
   });

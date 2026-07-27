@@ -34,8 +34,12 @@ router.get("/summary", async (req, res) => {
       include: { project: { select: { id: true, name: true } } },
       take: 20,
     }),
+    // Activity carries its own softwareLineId (not derived through project), so this stays
+    // scoped correctly even for entries whose project/task has since been deleted — except
+    // a PROJECT_DELETED entry itself, which has no project left to satisfy "not archived"
+    // and so naturally drops off this live feed while still living on in the Activity report.
     prisma.activity.findMany({
-      where: inLine,
+      where: { softwareLineId: lineId, project: { archivedAt: null } },
       orderBy: { createdAt: "desc" },
       take: 20,
       include: {

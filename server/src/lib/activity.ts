@@ -5,6 +5,7 @@ export function logActivity(params: {
   type: ActivityType;
   message: string;
   userId: string;
+  softwareLineId: string;
   projectId?: string;
   taskId?: string;
 }) {

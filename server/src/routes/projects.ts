@@ -156,6 +156,7 @@ router.post("/", blockReadOnly, async (req, res) => {
     type: "PROJECT_CREATED",
     message: `${req.user!.name} created project "${project.name}"`,
     userId: req.user!.id,
+    softwareLineId: lineId,
     projectId: project.id,
   });
   emitUpdate({ scope: "dashboard" });
@@ -230,6 +231,15 @@ router.delete("/:id", blockReadOnly, async (req, res) => {
     return res.status(403).json({ error: "Only the project creator or an admin can delete this project" });
   }
   await prisma.project.delete({ where: { id: req.params.id } });
+  // Logged after the delete (rather than before) so a failed delete can never leave behind
+  // a "deleted" entry for a project that's still there — projectId is omitted since the
+  // project is already gone by this point; softwareLineId keeps the entry scoped to the line.
+  await logActivity({
+    type: "PROJECT_DELETED",
+    message: `${req.user!.name} deleted project "${project.name}"`,
+    userId: req.user!.id,
+    softwareLineId: project.softwareLineId,
+  });
   emitUpdate({ scope: "dashboard" });
   emitUpdate({ scope: "projects" });
   emitUpdate({ scope: "project", projectId: req.params.id });
@@ -314,6 +324,7 @@ router.post("/:id/duplicate", blockReadOnly, async (req, res) => {
     type: "PROJECT_CREATED",
     message: `${req.user!.name} copied project "${source.name}" to create "${project.name}"`,
     userId: req.user!.id,
+    softwareLineId: lineId,
     projectId: project.id,
   });
   emitUpdate({ scope: "dashboard" });
@@ -497,6 +508,7 @@ router.post("/:id/attachments", blockReadOnly, upload.single("file"), async (req
     type: "ATTACHMENT_ADDED",
     message: `${req.user!.name} attached "${attachment.originalName}" to project "${project.name}"`,
     userId: req.user!.id,
+    softwareLineId: project.softwareLineId,
     projectId: project.id,
   });
   emitUpdate({ scope: "project", projectId: project.id });

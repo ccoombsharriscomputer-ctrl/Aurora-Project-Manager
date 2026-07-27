@@ -76,7 +76,21 @@ router.delete("/:id", blockReadOnly, async (req, res) => {
   if (!canManageProject(subProject.project.createdById, req)) {
     return res.status(403).json({ error: "Only the project creator or an admin can delete this sub-project" });
   }
+  const checklistItem = await prisma.checklistItem.findUnique({
+    where: { id: subProject.checklistItemId },
+    select: { name: true },
+  });
+  const displayName = subProject.name || checklistItem?.name || "sub-project";
+
   await prisma.subProject.delete({ where: { id: req.params.id } });
+  // The parent project isn't being deleted, so projectId stays valid here.
+  await logActivity({
+    type: "SUBPROJECT_DELETED",
+    message: `${req.user!.name} deleted sub-project "${displayName}" from "${subProject.project.name}"`,
+    userId: req.user!.id,
+    softwareLineId: subProject.project.softwareLineId,
+    projectId: subProject.projectId,
+  });
   emitUpdate({ scope: "project", projectId: subProject.projectId });
   emitUpdate({ scope: "dashboard" });
   res.status(204).send();
@@ -144,6 +158,7 @@ router.post("/:id/tasks", blockReadOnly, async (req, res) => {
     type: "TASK_CREATED",
     message: `${req.user!.name} created task "${task.title}"`,
     userId: req.user!.id,
+    softwareLineId: subProject.project.softwareLineId,
     projectId: subProject.projectId,
     taskId: task.id,
   });
