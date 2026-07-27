@@ -126,15 +126,15 @@ export async function fetchTicketByNumber(ticketNumber: string): Promise<TeamSup
 
 // Posts a new ticket action (TeamSupport's term for a note/comment on a ticket) via
 // POST Tickets/{TicketNumber}/Actions — confirmed against TeamSupport's own published API
-// endpoint reference. There's no documented field for structured "time worked" on an action,
-// so hours are embedded directly in the description text; TEAMSUPPORT_TIME_FIELD_NAME can be
-// set to a custom field's "API Field Name" (Admin > Custom Fields on the Action) to also
-// populate a structured field, for accounts that have one configured.
+// endpoint reference. Hours populate the native HoursSpent field on the action (confirmed
+// against TeamSupport's own API client's TicketAction model) as well as being embedded in
+// the description text, so the time shows up whether or not the account's UI surfaces
+// HoursSpent prominently. TEAMSUPPORT_TIME_FIELD_NAME can override the field name for an
+// account that uses a differently-named custom field instead.
 export async function postTicketAction(ticketNumber: string, description: string, hours?: number): Promise<void> {
   const action: Record<string, unknown> = { Description: description };
-  const timeFieldName = process.env.TEAMSUPPORT_TIME_FIELD_NAME;
-  if (hours && timeFieldName) {
-    action[timeFieldName] = hours;
+  if (hours) {
+    action[process.env.TEAMSUPPORT_TIME_FIELD_NAME || "HoursSpent"] = hours;
   }
 
   await teamSupportRequest(`/api/json/tickets/${encodeURIComponent(ticketNumber)}/actions`, {
