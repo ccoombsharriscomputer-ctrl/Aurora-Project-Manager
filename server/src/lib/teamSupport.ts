@@ -3,6 +3,17 @@ const TEAMSUPPORT_BASE_URL = "https://app.teamsupport.com";
 export class TeamSupportNotConfiguredError extends Error {}
 export class TeamSupportTicketNotFoundError extends Error {}
 
+// Carries the upstream HTTP status (or a network-level failure reason when there was no
+// response at all) so the route handler can return a diagnostic-enough message without
+// needing production log access to tell "wrong credentials" apart from "can't connect".
+export class TeamSupportUpstreamError extends Error {
+  status: number | null;
+  constructor(message: string, status: number | null) {
+    super(message);
+    this.status = status;
+  }
+}
+
 export interface TeamSupportTicket {
   ticketNumber: string;
   name: string;
@@ -40,19 +51,40 @@ export async function fetchTicketByNumber(ticketNumber: string): Promise<TeamSup
   }
 
   const auth = Buffer.from(`${orgId}:${apiToken}`).toString("base64");
-  const response = await fetch(`${TEAMSUPPORT_BASE_URL}/api/json/tickets/${encodeURIComponent(ticketNumber)}.json`, {
-    headers: { Authorization: `Basic ${auth}`, Accept: "application/json" },
-  });
+  const url = `${TEAMSUPPORT_BASE_URL}/api/json/tickets/${encodeURIComponent(ticketNumber)}.json`;
+
+  let response: Response;
+  try {
+    response = await fetch(url, {
+      headers: { Authorization: `Basic ${auth}`, Accept: "application/json" },
+    });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.error(`[teamSupport] network error calling ${url}: ${message}`);
+    throw new TeamSupportUpstreamError(`Network error reaching TeamSupport: ${message}`, null);
+  }
 
   if (response.status === 404) {
     throw new TeamSupportTicketNotFoundError(`Ticket ${ticketNumber} not found`);
   }
   if (!response.ok) {
-    throw new Error(`TeamSupport API error: ${response.status}`);
+    const body = await response.text().catch(() => "");
+    console.error(`[teamSupport] ${url} returned HTTP ${response.status}: ${body.slice(0, 500)}`);
+    throw new TeamSupportUpstreamError(`TeamSupport returned HTTP ${response.status}`, response.status);
   }
 
-  const payload = extractTicketPayload(await response.json());
+  let raw: unknown;
+  try {
+    raw = await response.json();
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.error(`[teamSupport] failed to parse JSON from ${url}: ${message}`);
+    throw new TeamSupportUpstreamError(`TeamSupport returned a response that wasn't valid JSON`, response.status);
+  }
+
+  const payload = extractTicketPayload(raw);
   if (!payload) {
+    console.error(`[teamSupport] unrecognized response shape from ${url}: ${JSON.stringify(raw).slice(0, 500)}`);
     throw new TeamSupportTicketNotFoundError(`Ticket ${ticketNumber} not found`);
   }
 

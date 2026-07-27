@@ -8,7 +8,12 @@ import { emitUpdate } from "../lib/realtime";
 import { upload } from "../lib/upload";
 import { loadProjectInScope } from "../lib/scope";
 import { extractProjectDetailsFromContract, extractTextFromPdf } from "../lib/contractExtraction";
-import { fetchTicketByNumber, TeamSupportNotConfiguredError, TeamSupportTicketNotFoundError } from "../lib/teamSupport";
+import {
+  fetchTicketByNumber,
+  TeamSupportNotConfiguredError,
+  TeamSupportTicketNotFoundError,
+  TeamSupportUpstreamError,
+} from "../lib/teamSupport";
 
 const router = Router();
 
@@ -254,6 +259,13 @@ router.get("/:id/teamsupport-ticket", async (req, res) => {
     }
     if (err instanceof TeamSupportTicketNotFoundError) {
       return res.status(404).json({ error: `Ticket ${project.teamSupportTicketNumber} wasn't found in TeamSupport.` });
+    }
+    if (err instanceof TeamSupportUpstreamError) {
+      const hint =
+        err.status === 401 || err.status === 403
+          ? " Double-check TEAMSUPPORT_ORG_ID and TEAMSUPPORT_API_TOKEN are correct."
+          : "";
+      return res.status(502).json({ error: `Couldn't reach TeamSupport (${err.message}).${hint}` });
     }
     res.status(502).json({ error: "Couldn't reach TeamSupport. Try again shortly." });
   }
