@@ -59,8 +59,6 @@ router.post("/:id/stop", blockReadOnly, async (req, res) => {
     const body = updated.note || `${formatHours(hours)}h logged (timer)`;
     syncTaskUpdateToTeamSupport(
       entry.task.project.teamSupportTicketNumber,
-      req.user!.name,
-      entry.task.title,
       body,
       hours,
       req.user!.teamSupportUserId

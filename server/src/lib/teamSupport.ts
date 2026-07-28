@@ -1,5 +1,3 @@
-import { formatHours } from "./format";
-
 // TeamSupport shards accounts across regional servers (NA1, NA2, NA3, NA4) — NA1 happens to
 // be reachable at the bare "app.teamsupport.com", but every other server needs its own
 // subdomain (e.g. "app.na2.teamsupport.com"). There's no way to know which one an account is
@@ -159,14 +157,11 @@ export async function postTicketAction(
 // TeamSupport being slow or unreachable, so this is deliberately not awaited by callers.
 export function syncTaskUpdateToTeamSupport(
   ticketNumber: string,
-  userName: string,
-  taskTitle: string,
   body: string,
   hours: number | undefined,
   creatorId: string | null | undefined
 ) {
-  const prefix = hours ? `${userName} logged ${formatHours(hours)}h on "${taskTitle}" via Aurora:` : `${userName} commented on "${taskTitle}" via Aurora:`;
-  postTicketAction(ticketNumber, `${prefix}\n\n${body}`, hours, creatorId).catch((err) => {
+  postTicketAction(ticketNumber, `Via Aurora Project Manager\n\n${body}`, hours, creatorId).catch((err) => {
     console.error(`[teamSupport] failed to sync update to ticket ${ticketNumber}: ${err instanceof Error ? err.message : err}`);
   });
 }
