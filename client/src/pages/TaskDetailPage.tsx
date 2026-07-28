@@ -68,6 +68,7 @@ export function TaskDetailPage() {
   const [commentHours, setCommentHours] = useState("");
   const [actionTypeId, setActionTypeId] = useState("");
   const [isPublic, setIsPublic] = useState(false);
+  const [followUpDate, setFollowUpDate] = useState("");
   const [expanded, setExpanded] = useState(false);
 
   function invalidateTask() {
@@ -114,6 +115,7 @@ export function TaskDetailPage() {
         date: commentHours ? commentDate : undefined,
         actionTypeId: actionTypeId || undefined,
         isPublic,
+        followUpDate: followUpDate || undefined,
       }),
     onSuccess: () => {
       setCommentBody("");
@@ -121,6 +123,10 @@ export function TaskDetailPage() {
       setCommentHours("");
       setActionTypeId("");
       setIsPublic(false);
+      if (followUpDate) {
+        queryClient.invalidateQueries({ queryKey: ["calendar"] });
+      }
+      setFollowUpDate("");
       invalidateTask();
     },
     onError: (err) => setCommentError(extractErrorMessage(err)),
@@ -302,6 +308,10 @@ export function TaskDetailPage() {
                       onChange={(e) => setCommentHours(e.target.value)}
                     />
                   </div>
+                </div>
+                <div className="field" style={{ marginTop: 8, maxWidth: 200 }}>
+                  <label>{t("taskDetail.followUpDate")}</label>
+                  <input type="date" value={followUpDate} onChange={(e) => setFollowUpDate(e.target.value)} />
                 </div>
                 {project?.teamSupportTicketNumber && (
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginTop: 8 }}>

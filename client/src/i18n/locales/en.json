@@ -181,6 +181,7 @@
     "stopOtherTimerFirst": "Stop your other running timer first",
     "date": "Date",
     "hours": "Hours",
+    "followUpDate": "Follow-up date",
     "running": "running…",
     "actionType": "Action type",
     "noActionType": "None",

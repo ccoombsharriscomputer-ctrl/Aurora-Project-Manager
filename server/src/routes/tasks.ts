@@ -179,7 +179,13 @@ const commentSchema = z.object({
     .optional(),
   actionTypeId: z.string().optional(),
   isPublic: z.boolean().optional(),
+  followUpDate: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, "Follow-up date must be in YYYY-MM-DD format")
+    .optional(),
 });
+
+const FOLLOW_UP_TITLE_MAX = 80;
 
 router.post("/:id/comments", blockReadOnly, async (req, res) => {
   const task = await loadTaskInScope(req.params.id, effectiveSoftwareLineId(req.user!));
@@ -257,10 +263,44 @@ router.post("/:id/comments", blockReadOnly, async (req, res) => {
     });
   }
 
+  // A follow-up is just a normal task due on the chosen date, in the same sub-project as the
+  // one being commented on — it shows up on the Dashboard calendar the same way any other
+  // open task with a due date does, no separate reminder mechanism needed.
+  let followUpTask = null;
+  if (parsed.data.followUpDate) {
+    const titleSource = parsed.data.body.trim().replace(/\s+/g, " ");
+    const title = `Follow up: ${
+      titleSource.length > FOLLOW_UP_TITLE_MAX ? `${titleSource.slice(0, FOLLOW_UP_TITLE_MAX)}…` : titleSource
+    }`;
+
+    followUpTask = await prisma.task.create({
+      data: {
+        projectId: task.projectId,
+        subProjectId: task.subProjectId,
+        projectTypeId: task.projectTypeId,
+        title,
+        dueDate: new Date(parsed.data.followUpDate),
+        assigneeId: req.user!.id,
+        createdById: req.user!.id,
+      },
+    });
+
+    await logActivity({
+      type: "TASK_CREATED",
+      message: `${req.user!.name} scheduled a follow-up: "${followUpTask.title}"`,
+      userId: req.user!.id,
+      softwareLineId: task.project.softwareLineId,
+      projectId: task.projectId,
+      taskId: followUpTask.id,
+    });
+
+    emitUpdate({ scope: "sub-project", subProjectId: task.subProjectId });
+  }
+
   emitUpdate({ scope: "task", taskId: task.id });
   emitUpdate({ scope: "dashboard" });
 
-  res.status(201).json({ comment, timeEntry });
+  res.status(201).json({ comment, timeEntry, followUpTask });
 });
 
 // --- Attachments ---

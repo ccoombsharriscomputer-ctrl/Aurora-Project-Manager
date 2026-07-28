@@ -181,6 +181,7 @@
     "stopOtherTimerFirst": "Arrêtez d'abord votre autre minuteur en cours",
     "date": "Date",
     "hours": "Heures",
+    "followUpDate": "Date de suivi",
     "running": "en cours…",
     "actionType": "Type d'action",
     "noActionType": "Aucun",

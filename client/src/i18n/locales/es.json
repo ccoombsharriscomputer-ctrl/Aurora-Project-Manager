@@ -181,6 +181,7 @@
     "stopOtherTimerFirst": "Detén primero tu otro cronómetro en marcha",
     "date": "Fecha",
     "hours": "Horas",
+    "followUpDate": "Fecha de seguimiento",
     "running": "en curso…",
     "actionType": "Tipo de acción",
     "noActionType": "Ninguno",
