@@ -45,6 +45,7 @@ enum ActivityType {
   ATTACHMENT_ADDED
   ATTACHMENT_DELETED
   TIME_LOGGED
+  FOLLOW_UP_SCHEDULED
 }
 
 enum AccessRequestStatus {
@@ -118,6 +119,7 @@ model User {
   createdChecklistItems ChecklistItem[]
   createdTaskTemplates  TaskTemplate[]
   decidedAccessRequests AccessRequest[]
+  followUps             FollowUp[]
 }
 
 model Project {
@@ -238,6 +240,7 @@ model Task {
   attachments Attachment[]
   timeEntries TimeEntry[]
   activities  Activity[]
+  followUps   FollowUp[]
 }
 
 model Comment {
@@ -287,6 +290,19 @@ model TimeEntry {
   durationMinutes Int?
   note            String?
   createdAt       DateTime  @default(now())
+}
+
+// A calendar reminder to check back on a task — deliberately not a Task itself, so it never
+// shows up as an open task in reports, dashboard counts, or a sub-project's board. The
+// calendar just shows "Follow up" and links back to `task`.
+model FollowUp {
+  id        String   @id @default(cuid())
+  taskId    String
+  task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  dueDate   DateTime
+  createdAt DateTime @default(now())
 }
 
 model Activity {

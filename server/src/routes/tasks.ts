@@ -185,8 +185,6 @@ const commentSchema = z.object({
     .optional(),
 });
 
-const FOLLOW_UP_TITLE_MAX = 80;
-
 router.post("/:id/comments", blockReadOnly, async (req, res) => {
   const task = await loadTaskInScope(req.params.id, effectiveSoftwareLineId(req.user!));
   if (!task) {
@@ -274,44 +272,33 @@ router.post("/:id/comments", blockReadOnly, async (req, res) => {
     });
   }
 
-  // A follow-up is just a normal task due on the chosen date, in the same sub-project as the
-  // one being commented on — it shows up on the Dashboard calendar the same way any other
-  // open task with a due date does, no separate reminder mechanism needed.
-  let followUpTask = null;
+  // A follow-up is a calendar reminder, not a task of its own — it never shows up as an open
+  // task in reports, dashboard counts, or a sub-project's board; the calendar just shows
+  // "Follow up" and links back to this task.
+  let followUp = null;
   if (parsed.data.followUpDate) {
-    const titleSource = parsed.data.body.trim().replace(/\s+/g, " ");
-    const title = `Follow up: ${
-      titleSource.length > FOLLOW_UP_TITLE_MAX ? `${titleSource.slice(0, FOLLOW_UP_TITLE_MAX)}…` : titleSource
-    }`;
-
-    followUpTask = await prisma.task.create({
+    followUp = await prisma.followUp.create({
       data: {
-        projectId: task.projectId,
-        subProjectId: task.subProjectId,
-        projectTypeId: task.projectTypeId,
-        title,
+        taskId: task.id,
+        userId: req.user!.id,
         dueDate: new Date(parsed.data.followUpDate),
-        assigneeId: req.user!.id,
-        createdById: req.user!.id,
       },
     });
 
     await logActivity({
-      type: "TASK_CREATED",
-      message: `${req.user!.name} scheduled a follow-up: "${followUpTask.title}"`,
+      type: "FOLLOW_UP_SCHEDULED",
+      message: `${req.user!.name} scheduled a follow-up on "${task.title}" for ${parsed.data.followUpDate}`,
       userId: req.user!.id,
       softwareLineId: task.project.softwareLineId,
       projectId: task.projectId,
-      taskId: followUpTask.id,
+      taskId: task.id,
     });
-
-    emitUpdate({ scope: "sub-project", subProjectId: task.subProjectId });
   }
 
   emitUpdate({ scope: "task", taskId: task.id });
   emitUpdate({ scope: "dashboard" });
 
-  res.status(201).json({ comment, timeEntry, followUpTask });
+  res.status(201).json({ comment, timeEntry, followUp });
 });
 
 // Aurora-only — never touches whatever note this comment may have synced to TeamSupport,

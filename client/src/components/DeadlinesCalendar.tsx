@@ -4,11 +4,15 @@ import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import i18n from "../i18n";
 import { api } from "../api/client";
-import type { Task } from "../api/types";
+import type { CalendarResponse, FollowUpItem, Task } from "../api/types";
 
 type ViewMode = "month" | "week" | "day";
 
 const VISIBLE_TASKS_PER_DAY = 4;
+
+// A follow-up is a calendar reminder, not a task — it carries no priority/status of its own,
+// so it's kept as its own entry kind rather than shoehorned into the Task shape.
+type CalendarEntry = ({ kind: "task" } & Task) | ({ kind: "followUp" } & FollowUpItem);
 
 function toDateKey(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
@@ -72,14 +76,26 @@ function pillClassName(task: Task): string {
   return `calendar-task-pill priority-${task.priority}`;
 }
 
-function TaskPill({ task }: { task: Task }) {
+function EntryPill({ entry }: { entry: CalendarEntry }) {
+  const { t } = useTranslation();
+  if (entry.kind === "followUp") {
+    return (
+      <Link
+        to={`/tasks/${entry.taskId}`}
+        className="calendar-task-pill follow-up"
+        title={entry.project?.name ? `${entry.project.name} — ${entry.taskTitle}` : entry.taskTitle}
+      >
+        {t("calendar.followUp")}
+      </Link>
+    );
+  }
   return (
     <Link
-      to={`/tasks/${task.id}`}
-      className={pillClassName(task)}
-      title={task.project?.name ? `${task.project.name} — ${task.title}` : task.title}
+      to={`/tasks/${entry.id}`}
+      className={pillClassName(entry)}
+      title={entry.project?.name ? `${entry.project.name} — ${entry.title}` : entry.title}
     >
-      {task.title}
+      {entry.title}
     </Link>
   );
 }
@@ -98,22 +114,27 @@ export function DeadlinesCalendar() {
   const startKey = toDateKey(days[0]);
   const endKey = toDateKey(days[days.length - 1]);
 
-  const { data: tasks, isLoading } = useQuery({
+  const { data, isLoading } = useQuery({
     queryKey: ["calendar", startKey, endKey],
-    queryFn: () => api.get<Task[]>(`/calendar?start=${startKey}&end=${endKey}`),
+    queryFn: () => api.get<CalendarResponse>(`/calendar?start=${startKey}&end=${endKey}`),
   });
 
-  const tasksByDay = useMemo(() => {
-    const map = new Map<string, Task[]>();
-    for (const task of tasks ?? []) {
-      if (!task.dueDate) continue;
-      const key = dueDateKey(task.dueDate);
+  const entriesByDay = useMemo(() => {
+    const map = new Map<string, CalendarEntry[]>();
+    function add(key: string, entry: CalendarEntry) {
       const list = map.get(key);
-      if (list) list.push(task);
-      else map.set(key, [task]);
+      if (list) list.push(entry);
+      else map.set(key, [entry]);
+    }
+    for (const task of data?.tasks ?? []) {
+      if (!task.dueDate) continue;
+      add(dueDateKey(task.dueDate), { kind: "task", ...task });
+    }
+    for (const followUp of data?.followUps ?? []) {
+      add(dueDateKey(followUp.dueDate), { kind: "followUp", ...followUp });
     }
     return map;
-  }, [tasks]);
+  }, [data]);
 
   const weekdayLabels = useMemo(() => {
     const sunday = new Date(2024, 0, 7);
@@ -183,19 +204,27 @@ export function DeadlinesCalendar() {
         <p className="muted">{t("calendar.loadingCalendar")}</p>
       ) : view === "day" ? (
         <div className="calendar-day-list">
-          {(tasksByDay.get(toDateKey(cursor)) ?? []).map((task) => (
-            <div className="calendar-day-list-item" key={task.id}>
-              <span className={`badge priority-${task.priority}`}>{priorityLabel(t, task.priority)}</span>
-              {(task.status === "DONE" || task.status === "NA") && (
-                <span className="badge">{statusLabel(t, task.status)}</span>
-              )}
-              <Link to={`/tasks/${task.id}`} className={task.status === "DONE" ? "calendar-resolved-text" : task.status === "NA" ? "calendar-na-text" : undefined}>
-                {task.title}
-              </Link>
-              {task.project?.name && <span className="muted">{task.project.name}</span>}
-            </div>
-          ))}
-          {(tasksByDay.get(toDateKey(cursor)) ?? []).length === 0 && (
+          {(entriesByDay.get(toDateKey(cursor)) ?? []).map((entry) =>
+            entry.kind === "followUp" ? (
+              <div className="calendar-day-list-item" key={`followup-${entry.id}`}>
+                <span className="badge badge-admin">{t("calendar.followUp")}</span>
+                <Link to={`/tasks/${entry.taskId}`}>{entry.taskTitle}</Link>
+                {entry.project?.name && <span className="muted">{entry.project.name}</span>}
+              </div>
+            ) : (
+              <div className="calendar-day-list-item" key={entry.id}>
+                <span className={`badge priority-${entry.priority}`}>{priorityLabel(t, entry.priority)}</span>
+                {(entry.status === "DONE" || entry.status === "NA") && (
+                  <span className="badge">{statusLabel(t, entry.status)}</span>
+                )}
+                <Link to={`/tasks/${entry.id}`} className={entry.status === "DONE" ? "calendar-resolved-text" : entry.status === "NA" ? "calendar-na-text" : undefined}>
+                  {entry.title}
+                </Link>
+                {entry.project?.name && <span className="muted">{entry.project.name}</span>}
+              </div>
+            )
+          )}
+          {(entriesByDay.get(toDateKey(cursor)) ?? []).length === 0 && (
             <p className="muted">{t("calendar.noDeadlines")}</p>
           )}
         </div>
@@ -209,18 +238,18 @@ export function DeadlinesCalendar() {
             ))}
             {days.map((day) => {
               const key = toDateKey(day);
-              const dayTasks = tasksByDay.get(key) ?? [];
+              const dayEntries = entriesByDay.get(key) ?? [];
               const cap = view === "week" ? undefined : VISIBLE_TASKS_PER_DAY;
-              const visible = cap ? dayTasks.slice(0, cap) : dayTasks;
-              const hiddenCount = dayTasks.length - visible.length;
+              const visible = cap ? dayEntries.slice(0, cap) : dayEntries;
+              const hiddenCount = dayEntries.length - visible.length;
               const isOutside = view === "month" && day.getMonth() !== cursor.getMonth();
               const isToday = key === todayKey;
               return (
                 <div className={`calendar-day${isOutside ? " outside" : ""}${view === "week" ? " week-cell" : ""}`} key={key}>
                   <div className={`calendar-day-number${isToday ? " today" : ""}`}>{day.getDate()}</div>
                   <div className="calendar-day-tasks">
-                    {visible.map((task) => (
-                      <TaskPill task={task} key={task.id} />
+                    {visible.map((entry) => (
+                      <EntryPill entry={entry} key={entry.kind === "followUp" ? `followup-${entry.id}` : entry.id} />
                     ))}
                     {hiddenCount > 0 && (
                       <span className="calendar-more muted">{t("calendar.moreCount", { count: hiddenCount })}</span>

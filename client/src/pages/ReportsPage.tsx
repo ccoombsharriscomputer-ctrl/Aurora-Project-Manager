@@ -47,6 +47,7 @@ const ACTIVITY_TYPES: ActivityType[] = [
   "ATTACHMENT_ADDED",
   "ATTACHMENT_DELETED",
   "TIME_LOGGED",
+  "FOLLOW_UP_SCHEDULED",
 ];
 
 function activityTypeLabel(t: TFunction, type: ActivityType): string {
@@ -61,7 +62,8 @@ function activityTypeLabel(t: TFunction, type: ActivityType): string {
   if (type === "COMMENT_DELETED") return t("reports.activityTypeCommentDeleted");
   if (type === "ATTACHMENT_ADDED") return t("reports.activityTypeAttachmentAdded");
   if (type === "ATTACHMENT_DELETED") return t("reports.activityTypeAttachmentDeleted");
-  return t("reports.activityTypeTimeLogged");
+  if (type === "TIME_LOGGED") return t("reports.activityTypeTimeLogged");
+  return t("reports.activityTypeFollowUpScheduled");
 }
 
 function roleLabel(t: TFunction, role: UserRole): string {

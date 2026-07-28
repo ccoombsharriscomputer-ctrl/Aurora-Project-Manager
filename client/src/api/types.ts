@@ -17,7 +17,8 @@ export type ActivityType =
   | "COMMENT_DELETED"
   | "ATTACHMENT_ADDED"
   | "ATTACHMENT_DELETED"
-  | "TIME_LOGGED";
+  | "TIME_LOGGED"
+  | "FOLLOW_UP_SCHEDULED";
 
 export interface SoftwareLine {
   id: string;
@@ -152,6 +153,20 @@ export interface Task {
   updatedAt: string;
   project?: { id: string; name: string };
   _count?: { comments: number; attachments: number };
+}
+
+export interface FollowUpItem {
+  id: string;
+  taskId: string;
+  taskTitle: string;
+  dueDate: string;
+  user: UserSummary;
+  project: { id: string; name: string } | null;
+}
+
+export interface CalendarResponse {
+  tasks: Task[];
+  followUps: FollowUpItem[];
 }
 
 export interface Comment {

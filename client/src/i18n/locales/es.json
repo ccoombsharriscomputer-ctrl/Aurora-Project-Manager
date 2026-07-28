@@ -280,7 +280,8 @@
     "activityTypeCommentDeleted": "Comentario eliminado",
     "activityTypeAttachmentAdded": "Archivo adjuntado",
     "activityTypeAttachmentDeleted": "Archivo adjunto eliminado",
-    "activityTypeTimeLogged": "Horas registradas"
+    "activityTypeTimeLogged": "Horas registradas",
+    "activityTypeFollowUpScheduled": "Seguimiento programado"
   },
   "calendar": {
     "title": "Calendario",
@@ -290,7 +291,8 @@
     "today": "Hoy",
     "loadingCalendar": "Cargando calendario…",
     "moreCount": "+{{count}} más",
-    "noDeadlines": "Nada programado para este día."
+    "noDeadlines": "Nada programado para este día.",
+    "followUp": "Seguimiento"
   },
   "settings": {
     "title": "Configuración",

@@ -760,6 +760,12 @@ label {
   font-style: italic;
 }
 
+.calendar-task-pill.follow-up {
+  background: color-mix(in srgb, var(--primary) 18%, transparent);
+  color: var(--primary);
+  font-weight: 600;
+}
+
 .calendar-resolved-text {
   color: var(--muted);
   text-decoration: line-through;

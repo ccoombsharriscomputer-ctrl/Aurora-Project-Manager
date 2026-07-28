@@ -39,7 +39,27 @@ router.get("/", async (req, res) => {
     },
   });
 
-  res.json(tasks);
+  const followUpRows = await prisma.followUp.findMany({
+    where: {
+      dueDate: { gte: new Date(start), lte: endOfDay },
+      task: { project: { softwareLineId: effectiveSoftwareLineId(req.user!), archivedAt: null } },
+    },
+    orderBy: { dueDate: "asc" },
+    include: {
+      task: { select: { id: true, title: true, project: { select: { id: true, name: true } } } },
+      user: { select: { id: true, name: true, email: true } },
+    },
+  });
+  const followUps = followUpRows.map((f) => ({
+    id: f.id,
+    taskId: f.task.id,
+    taskTitle: f.task.title,
+    dueDate: f.dueDate,
+    user: f.user,
+    project: f.task.project,
+  }));
+
+  res.json({ tasks, followUps });
 });
 
 export default router;
