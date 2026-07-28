@@ -153,6 +153,12 @@ export async function postTicketAction(
   });
 }
 
+// TeamSupport renders Action descriptions as HTML, so a plain "\n" collapses away like any
+// other whitespace in a browser — real line breaks need <br> tags instead.
+function toHtmlLines(text: string): string {
+  return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\n/g, "<br>");
+}
+
 // Fire-and-forget: a comment or time log in Aurora should never fail (or wait) on
 // TeamSupport being slow or unreachable, so this is deliberately not awaited by callers.
 export function syncTaskUpdateToTeamSupport(
@@ -161,7 +167,8 @@ export function syncTaskUpdateToTeamSupport(
   hours: number | undefined,
   creatorId: string | null | undefined
 ) {
-  postTicketAction(ticketNumber, `Via Aurora Project Manager\n\n\n${body}`, hours, creatorId).catch((err) => {
+  const description = `Via Aurora Project Manager<br><br><br>${toHtmlLines(body)}`;
+  postTicketAction(ticketNumber, description, hours, creatorId).catch((err) => {
     console.error(`[teamSupport] failed to sync update to ticket ${ticketNumber}: ${err instanceof Error ? err.message : err}`);
   });
 }
