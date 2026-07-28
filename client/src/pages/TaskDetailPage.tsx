@@ -318,7 +318,12 @@ export function TaskDetailPage() {
                     <input type="date" value={commentDate} onChange={(e) => setCommentDate(e.target.value)} />
                   </div>
                   <div className="field">
-                    <label>{t("taskDetail.hours")}</label>
+                    <label>
+                      {t("taskDetail.hours")}
+                      {project?.teamSupportTicketNumber && (
+                        <span className="required-marker"> {t("taskDetail.requiredMarker")}</span>
+                      )}
+                    </label>
                     <input
                       type="number"
                       min="0.25"
@@ -338,7 +343,9 @@ export function TaskDetailPage() {
                 {project?.teamSupportTicketNumber && (
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginTop: 8 }}>
                     <div className="field">
-                      <label>{t("taskDetail.actionType")}</label>
+                      <label>
+                        {t("taskDetail.actionType")} <span className="required-marker">{t("taskDetail.requiredMarker")}</span>
+                      </label>
                       <select value={actionTypeId} onChange={(e) => setActionTypeId(e.target.value)} required>
                         <option value="">{t("taskDetail.noActionType")}</option>
                         {(actionTypes ?? []).map((a) => (

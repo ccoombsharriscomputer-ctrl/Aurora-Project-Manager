@@ -185,6 +185,7 @@
     "followUpDate": "Follow-up date",
     "running": "running…",
     "actionType": "Action type",
+    "requiredMarker": "* required",
     "noActionType": "Select an action type…",
     "visibility": "Visibility",
     "public": "Public",

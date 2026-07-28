@@ -185,6 +185,7 @@
     "followUpDate": "Date de suivi",
     "running": "en cours…",
     "actionType": "Type d'action",
+    "requiredMarker": "* obligatoire",
     "noActionType": "Sélectionnez un type d'action…",
     "visibility": "Visibilité",
     "public": "Public",
