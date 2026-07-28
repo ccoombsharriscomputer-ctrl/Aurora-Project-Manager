@@ -21,6 +21,7 @@ import reportRoutes from "./routes/reports";
 import calendarRoutes from "./routes/calendar";
 import softwareLineRoutes from "./routes/softwareLines";
 import teamSupportUserRoutes from "./routes/teamSupportUsers";
+import teamSupportActionTypeRoutes from "./routes/teamSupportActionTypes";
 import { attachRealtime } from "./lib/realtime";
 
 const app = express();
@@ -51,6 +52,7 @@ app.use("/api/reports", reportRoutes);
 app.use("/api/calendar", calendarRoutes);
 app.use("/api/software-lines", softwareLineRoutes);
 app.use("/api/teamsupport-users", teamSupportUserRoutes);
+app.use("/api/teamsupport-action-types", teamSupportActionTypeRoutes);
 
 app.get("/api/health", (_req, res) => res.json({ ok: true }));
 

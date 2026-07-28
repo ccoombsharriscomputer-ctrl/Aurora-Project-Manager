@@ -3,12 +3,23 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { api } from "../api/client";
-import type { Project, TaskDetail, TaskPriority, TaskStatus, UserSummary } from "../api/types";
+import type { Project, TaskDetail, TaskPriority, TaskStatus, TeamSupportActionType, UserSummary } from "../api/types";
 import { extractErrorMessage, useAuth } from "../context/AuthContext";
 import { formatDate, formatMinutes, formatRelativeTime } from "../utils/format";
 import { useActiveTimer } from "../hooks/useActiveTimer";
 
 const COLLAPSED_COUNT = 3;
+
+interface FeedItem {
+  id: string;
+  createdAt: string;
+  authorName: string;
+  body: string | null;
+  durationMinutes: number | null;
+  running: boolean;
+  actionType: string | null;
+  isPublic: boolean;
+}
 
 function statusLabel(t: (key: string) => string, status: TaskStatus): string {
   if (status === "IN_PROGRESS") return t("common.statusInProgress");
@@ -43,14 +54,21 @@ export function TaskDetailPage() {
     enabled: !!task,
   });
 
+  const { data: actionTypes } = useQuery({
+    queryKey: ["teamsupport-action-types"],
+    queryFn: () => api.get<TeamSupportActionType[]>("/teamsupport-action-types"),
+    enabled: !!project?.teamSupportTicketNumber,
+  });
+
   const { activeTimer, stop } = useActiveTimer();
 
   const [commentBody, setCommentBody] = useState("");
   const [commentError, setCommentError] = useState<string | null>(null);
   const [commentDate, setCommentDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [commentHours, setCommentHours] = useState("");
-  const [expandedComments, setExpandedComments] = useState(false);
-  const [expandedTimeEntries, setExpandedTimeEntries] = useState(false);
+  const [actionTypeId, setActionTypeId] = useState("");
+  const [isPublic, setIsPublic] = useState(false);
+  const [expanded, setExpanded] = useState(false);
 
   function invalidateTask() {
     queryClient.invalidateQueries({ queryKey: ["task", taskId] });
@@ -94,11 +112,15 @@ export function TaskDetailPage() {
         body: commentBody,
         hours: commentHours ? Number(commentHours) : undefined,
         date: commentHours ? commentDate : undefined,
+        actionTypeId: actionTypeId || undefined,
+        isPublic,
       }),
     onSuccess: () => {
       setCommentBody("");
       setCommentError(null);
       setCommentHours("");
+      setActionTypeId("");
+      setIsPublic(false);
       invalidateTask();
     },
     onError: (err) => setCommentError(extractErrorMessage(err)),
@@ -133,10 +155,33 @@ export function TaskDetailPage() {
   const isTimerRunningHere = activeTimer?.taskId === task.id;
   const isTimerRunningElsewhere = !!activeTimer && activeTimer.taskId !== task.id;
 
-  // Comments render oldest-first, so "most recent" is the tail of the array; time entries
-  // already come back newest-first, so it's the head.
-  const visibleComments = expandedComments ? task.comments : task.comments.slice(-COLLAPSED_COUNT);
-  const visibleTimeEntries = expandedTimeEntries ? task.timeEntries : task.timeEntries.slice(0, COLLAPSED_COUNT);
+  // Comments and time entries are two separate tables, but a comment logged with hours
+  // creates both — task.timeEntries only ever contains the bare (Start Timer/Stop) ones, so
+  // combining them here can't double-count. Sorted newest-first, matching Recent Activity.
+  const feedItems: FeedItem[] = [
+    ...task.comments.map((c) => ({
+      id: `comment-${c.id}`,
+      createdAt: c.createdAt,
+      authorName: c.author.name,
+      body: c.body,
+      durationMinutes: c.timeEntry?.durationMinutes ?? null,
+      running: false,
+      actionType: c.teamSupportActionType,
+      isPublic: c.teamSupportIsPublic,
+    })),
+    ...task.timeEntries.map((entry) => ({
+      id: `time-${entry.id}`,
+      createdAt: entry.startedAt,
+      authorName: entry.user.name,
+      body: entry.note,
+      durationMinutes: entry.durationMinutes,
+      running: !entry.endedAt,
+      actionType: null,
+      isPublic: false,
+    })),
+  ].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+  const visibleFeedItems = expanded ? feedItems : feedItems.slice(0, COLLAPSED_COUNT);
 
   function handleCommentSubmit(e: FormEvent) {
     e.preventDefault();
@@ -189,21 +234,50 @@ export function TaskDetailPage() {
               <div className="section-title" style={{ marginBottom: 0 }}>
                 {t("taskDetail.comments")}
               </div>
-              {task.comments.length > COLLAPSED_COUNT && (
-                <button className="btn btn-sm" onClick={() => setExpandedComments((v) => !v)}>
-                  {expandedComments ? t("common.showLess") : t("common.showMore")}
-                </button>
-              )}
+              <div className="gap-8">
+                {feedItems.length > COLLAPSED_COUNT && (
+                  <button className="btn btn-sm" onClick={() => setExpanded((v) => !v)}>
+                    {expanded ? t("common.showLess") : t("common.showMore")}
+                  </button>
+                )}
+                {canWrite &&
+                  (isTimerRunningHere ? (
+                    <button className="btn btn-sm" onClick={() => stop.mutate(activeTimer!.id)}>
+                      {t("taskDetail.stopTimer")}
+                    </button>
+                  ) : (
+                    <button
+                      className="btn btn-primary btn-sm"
+                      onClick={() => startTimer.mutate()}
+                      disabled={isTimerRunningElsewhere || startTimer.isPending}
+                      title={isTimerRunningElsewhere ? t("taskDetail.stopOtherTimerFirst") : undefined}
+                    >
+                      {t("taskDetail.startTimer")}
+                    </button>
+                  ))}
+              </div>
             </div>
-            {visibleComments.map((c) => (
-              <div className="comment" key={c.id}>
+            {visibleFeedItems.map((item) => (
+              <div className="comment" key={item.id}>
                 <div className="meta">
-                  {c.author.name} · {formatRelativeTime(c.createdAt)}
+                  {item.authorName} · {formatRelativeTime(item.createdAt)}
+                  {item.durationMinutes != null && <> · {formatMinutes(item.durationMinutes)}</>}
+                  {item.running && <> · ({t("taskDetail.running")})</>}
+                  {item.actionType && (
+                    <span className="badge" style={{ marginLeft: 6 }}>
+                      {item.actionType}
+                    </span>
+                  )}
+                  {item.isPublic && (
+                    <span className="badge badge-admin" style={{ marginLeft: 6 }}>
+                      {t("taskDetail.public")}
+                    </span>
+                  )}
                 </div>
-                <div>{c.body}</div>
+                {item.body && <div>{item.body}</div>}
               </div>
             ))}
-            {task.comments.length === 0 && <p className="muted">{t("taskDetail.noCommentsYet")}</p>}
+            {feedItems.length === 0 && <p className="muted">{t("taskDetail.noCommentsYet")}</p>}
             {canWrite && (
               <form onSubmit={handleCommentSubmit} style={{ marginTop: 12 }}>
                 <textarea
@@ -229,6 +303,28 @@ export function TaskDetailPage() {
                     />
                   </div>
                 </div>
+                {project?.teamSupportTicketNumber && (
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginTop: 8 }}>
+                    <div className="field">
+                      <label>{t("taskDetail.actionType")}</label>
+                      <select value={actionTypeId} onChange={(e) => setActionTypeId(e.target.value)}>
+                        <option value="">{t("taskDetail.noActionType")}</option>
+                        {(actionTypes ?? []).map((a) => (
+                          <option key={a.id} value={a.id}>
+                            {a.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="field">
+                      <label>{t("taskDetail.visibility")}</label>
+                      <select value={isPublic ? "public" : "private"} onChange={(e) => setIsPublic(e.target.value === "public")}>
+                        <option value="private">{t("taskDetail.private")}</option>
+                        <option value="public">{t("taskDetail.public")}</option>
+                      </select>
+                    </div>
+                  </div>
+                )}
                 {commentError && <div className="error-text">{commentError}</div>}
                 <button className="btn btn-primary btn-sm" type="submit" disabled={addComment.isPending} style={{ marginTop: 8 }}>
                   {t("taskDetail.postUpdate")}
@@ -284,47 +380,6 @@ export function TaskDetailPage() {
                 <span className="muted">
                   {(a.size / 1024).toFixed(0)} KB · {a.uploader.name}
                 </span>
-              </div>
-            ))}
-          </div>
-
-          <div className="card">
-            <div className="flex-between">
-              <div className="section-title" style={{ marginBottom: 0 }}>
-                {t("taskDetail.timeEntries")}
-              </div>
-              <div className="gap-8">
-                {task.timeEntries.length > COLLAPSED_COUNT && (
-                  <button className="btn btn-sm" onClick={() => setExpandedTimeEntries((v) => !v)}>
-                    {expandedTimeEntries ? t("common.showLess") : t("common.showMore")}
-                  </button>
-                )}
-                {canWrite &&
-                  (isTimerRunningHere ? (
-                    <button className="btn btn-sm" onClick={() => stop.mutate(activeTimer!.id)}>
-                      {t("taskDetail.stopTimer")}
-                    </button>
-                  ) : (
-                    <button
-                      className="btn btn-primary btn-sm"
-                      onClick={() => startTimer.mutate()}
-                      disabled={isTimerRunningElsewhere || startTimer.isPending}
-                      title={isTimerRunningElsewhere ? t("taskDetail.stopOtherTimerFirst") : undefined}
-                    >
-                      {t("taskDetail.startTimer")}
-                    </button>
-                  ))}
-              </div>
-            </div>
-            <p className="muted" style={{ marginTop: 8, fontSize: 13 }}>{t("taskDetail.logTimeHint")}</p>
-            {task.timeEntries.length === 0 && <p className="muted" style={{ marginTop: 12 }}>{t("taskDetail.noTimeLoggedYet")}</p>}
-            {visibleTimeEntries.map((entry) => (
-              <div className="task-list-item" key={entry.id}>
-                <span>
-                  {entry.user.name} {entry.endedAt ? "" : `(${t("taskDetail.running")})`}
-                  {entry.note && <span className="muted"> — {entry.note}</span>}
-                </span>
-                <span className="muted">{formatMinutes(entry.durationMinutes)}</span>
               </div>
             ))}
           </div>

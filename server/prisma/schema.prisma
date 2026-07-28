@@ -246,7 +246,13 @@ model Comment {
   authorId  String
   author    User     @relation(fields: [authorId], references: [id])
   body      String
+  // Snapshotted at post time from TeamSupport's "PS - ..." action type catalog, and whether
+  // the synced note was posted Public or Private — display-only, doesn't affect anything.
+  teamSupportActionType String?
+  teamSupportIsPublic   Boolean  @default(false)
   createdAt DateTime @default(now())
+
+  timeEntry TimeEntry?
 }
 
 model Attachment {
@@ -270,6 +276,11 @@ model TimeEntry {
   task            Task      @relation(fields: [taskId], references: [id], onDelete: Cascade)
   userId          String
   user            User      @relation(fields: [userId], references: [id])
+  // Set when this entry came from logging hours alongside a comment, so the UI can show the
+  // two as one line instead of two separate entries. Null for Start Timer/Stop entries, which
+  // have no comment of their own.
+  commentId       String?   @unique
+  comment         Comment?  @relation(fields: [commentId], references: [id], onDelete: SetNull)
   startedAt       DateTime
   endedAt         DateTime?
   durationMinutes Int?

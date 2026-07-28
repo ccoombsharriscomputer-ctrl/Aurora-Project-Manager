@@ -6,7 +6,7 @@ import { logActivity } from "../lib/activity";
 import { emitUpdate } from "../lib/realtime";
 import { upload } from "../lib/upload";
 import { loadTaskInScope } from "../lib/scope";
-import { syncTaskUpdateToTeamSupport } from "../lib/teamSupport";
+import { PS_ACTION_TYPES, syncTaskUpdateToTeamSupport } from "../lib/teamSupport";
 import { formatHours } from "../lib/format";
 
 const router = Router();
@@ -26,13 +26,19 @@ router.get("/:id", async (req, res) => {
       createdBy: { select: { id: true, name: true } },
       comments: {
         orderBy: { createdAt: "asc" },
-        include: { author: { select: { id: true, name: true } } },
+        include: {
+          author: { select: { id: true, name: true } },
+          timeEntry: { select: { id: true, durationMinutes: true } },
+        },
       },
       attachments: {
         orderBy: { createdAt: "asc" },
         include: { uploader: { select: { id: true, name: true } } },
       },
+      // Entries with a commentId are already represented by their comment above (which
+      // carries its own durationMinutes) — only bare Start Timer/Stop entries belong here.
       timeEntries: {
+        where: { commentId: null },
         orderBy: { startedAt: "desc" },
         include: { user: { select: { id: true, name: true } } },
       },
@@ -156,7 +162,10 @@ router.get("/:id/comments", async (req, res) => {
   const comments = await prisma.comment.findMany({
     where: { taskId: req.params.id },
     orderBy: { createdAt: "asc" },
-    include: { author: { select: { id: true, name: true } } },
+    include: {
+      author: { select: { id: true, name: true } },
+      timeEntry: { select: { id: true, durationMinutes: true } },
+    },
   });
   res.json(comments);
 });
@@ -168,6 +177,8 @@ const commentSchema = z.object({
     .string()
     .regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be in YYYY-MM-DD format")
     .optional(),
+  actionTypeId: z.string().optional(),
+  isPublic: z.boolean().optional(),
 });
 
 router.post("/:id/comments", blockReadOnly, async (req, res) => {
@@ -180,9 +191,22 @@ router.post("/:id/comments", blockReadOnly, async (req, res) => {
     return res.status(400).json({ error: parsed.error.issues[0].message });
   }
 
+  const actionType = parsed.data.actionTypeId
+    ? PS_ACTION_TYPES.find((t) => t.id === parsed.data.actionTypeId)
+    : undefined;
+
   const comment = await prisma.comment.create({
-    data: { taskId: task.id, authorId: req.user!.id, body: parsed.data.body },
-    include: { author: { select: { id: true, name: true } } },
+    data: {
+      taskId: task.id,
+      authorId: req.user!.id,
+      body: parsed.data.body,
+      teamSupportActionType: actionType?.name ?? null,
+      teamSupportIsPublic: parsed.data.isPublic ?? false,
+    },
+    include: {
+      author: { select: { id: true, name: true } },
+      timeEntry: { select: { id: true, durationMinutes: true } },
+    },
   });
 
   await logActivity({
@@ -202,7 +226,15 @@ router.post("/:id/comments", blockReadOnly, async (req, res) => {
     const endedAt = new Date(startedAt.getTime() + durationMinutes * 60000);
 
     timeEntry = await prisma.timeEntry.create({
-      data: { taskId: task.id, userId: req.user!.id, startedAt, endedAt, durationMinutes, note: parsed.data.body },
+      data: {
+        taskId: task.id,
+        userId: req.user!.id,
+        startedAt,
+        endedAt,
+        durationMinutes,
+        note: parsed.data.body,
+        commentId: comment.id,
+      },
       include: { user: { select: { id: true, name: true } } },
     });
 
@@ -217,12 +249,12 @@ router.post("/:id/comments", blockReadOnly, async (req, res) => {
   }
 
   if (task.project.teamSupportTicketNumber) {
-    syncTaskUpdateToTeamSupport(
-      task.project.teamSupportTicketNumber,
-      parsed.data.body,
-      parsed.data.hours,
-      req.user!.teamSupportUserId
-    );
+    syncTaskUpdateToTeamSupport(task.project.teamSupportTicketNumber, parsed.data.body, {
+      hours: parsed.data.hours,
+      creatorId: req.user!.teamSupportUserId,
+      actionTypeId: actionType?.id,
+      isPublic: parsed.data.isPublic ?? false,
+    });
   }
 
   emitUpdate({ scope: "task", taskId: task.id });
@@ -289,7 +321,7 @@ router.get("/:id/time-entries", async (req, res) => {
     return res.status(404).json({ error: "Task not found" });
   }
   const entries = await prisma.timeEntry.findMany({
-    where: { taskId: req.params.id },
+    where: { taskId: req.params.id, commentId: null },
     orderBy: { startedAt: "desc" },
     include: { user: { select: { id: true, name: true } } },
   });
@@ -361,7 +393,10 @@ router.post("/:id/time-entries", blockReadOnly, async (req, res) => {
   if (task.project.teamSupportTicketNumber) {
     const hours = parsed.data.hours;
     const body = parsed.data.note || `${formatHours(hours)}h logged`;
-    syncTaskUpdateToTeamSupport(task.project.teamSupportTicketNumber, body, hours, req.user!.teamSupportUserId);
+    syncTaskUpdateToTeamSupport(task.project.teamSupportTicketNumber, body, {
+      hours,
+      creatorId: req.user!.teamSupportUserId,
+    });
   }
 
   emitUpdate({ scope: "task", taskId: task.id });

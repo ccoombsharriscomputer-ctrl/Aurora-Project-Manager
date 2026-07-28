@@ -159,6 +159,14 @@ export interface Comment {
   body: string;
   author: UserSummary;
   createdAt: string;
+  teamSupportActionType: string | null;
+  teamSupportIsPublic: boolean;
+  timeEntry: { id: string; durationMinutes: number | null } | null;
+}
+
+export interface TeamSupportActionType {
+  id: string;
+  name: string;
 }
 
 export interface Attachment {

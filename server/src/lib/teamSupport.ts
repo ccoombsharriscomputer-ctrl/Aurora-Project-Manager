@@ -124,6 +124,34 @@ export async function fetchTicketByNumber(ticketNumber: string): Promise<TeamSup
   };
 }
 
+// TeamSupport's Action Type catalog is org-wide and covers every software line's own
+// workflow, not just Professional Services'. These are just the "PS - ..." ones, captured
+// directly from the Action Type dropdown in TeamSupport's ticket UI (Harris Computer's NA2
+// instance) on 2026-07-28 — there's no public API endpoint for listing action types, so if
+// TeamSupport admins add, rename, or remove a PS type later, this list needs a manual update.
+export const PS_ACTION_TYPES: { id: string; name: string }[] = [
+  { id: "34922", name: "PS - Scheduling/Coordinating" },
+  { id: "34923", name: "PS - Server Install, User Setup" },
+  { id: "34924", name: "PS - Data Audit/Issues" },
+  { id: "34925", name: "PS - Data Conversion" },
+  { id: "34926", name: "PS - License Delivery/Module Install" },
+  { id: "34927", name: "PS - Go Live" },
+  { id: "34928", name: "PS - Post Go-Live Support" },
+  { id: "34929", name: "PS - Training" },
+  { id: "34930", name: "PS - Support" },
+  { id: "34931", name: "PS - Testing Jiras/Software Updates/Other" },
+  { id: "34932", name: "PS - Project Management" },
+  { id: "34933", name: "PS - Non-billable Customer Calls/Meetings" },
+  { id: "30841", name: "PS - Onsite Visit" },
+];
+
+export interface PostTicketActionOptions {
+  hours?: number;
+  creatorId?: string | null;
+  actionTypeId?: string | null;
+  isPublic?: boolean;
+}
+
 // Posts a new ticket action (TeamSupport's term for a note/comment on a ticket) via
 // POST Tickets/{TicketNumber}/Actions — confirmed against TeamSupport's own published API
 // endpoint reference. Time is a single TimeSpent field in total minutes (not HoursSpent, and
@@ -131,19 +159,24 @@ export async function fetchTicketByNumber(ticketNumber: string): Promise<TeamSup
 // TeamSupport's own web UI sends when saving time on an action. creatorId (a TeamSupport
 // UserID) is attempted on a best-effort basis — TeamSupport may or may not honor a caller-
 // specified author on top of the API-token identity; if it's silently ignored, the note
-// still shows the real Aurora user's name in its text either way.
+// still shows the real Aurora user's name in its text either way. IsVisibleOnPortal (Public
+// vs Private) and ActionTypeID were both confirmed the same way, by intercepting TeamSupport's
+// own "+ Public/Private Action" save requests.
 export async function postTicketAction(
   ticketNumber: string,
   description: string,
-  hours?: number,
-  creatorId?: string | null
+  options: PostTicketActionOptions = {}
 ): Promise<void> {
-  const action: Record<string, unknown> = { Description: description };
+  const { hours, creatorId, actionTypeId, isPublic = false } = options;
+  const action: Record<string, unknown> = { Description: description, IsVisibleOnPortal: isPublic };
   if (hours) {
     action.TimeSpent = Math.round(hours * 60);
   }
   if (creatorId) {
     action.CreatorID = Number(creatorId);
+  }
+  if (actionTypeId) {
+    action.ActionTypeID = Number(actionTypeId);
   }
 
   await teamSupportRequest(`/api/json/tickets/${encodeURIComponent(ticketNumber)}/actions`, {
@@ -161,14 +194,9 @@ function toHtmlLines(text: string): string {
 
 // Fire-and-forget: a comment or time log in Aurora should never fail (or wait) on
 // TeamSupport being slow or unreachable, so this is deliberately not awaited by callers.
-export function syncTaskUpdateToTeamSupport(
-  ticketNumber: string,
-  body: string,
-  hours: number | undefined,
-  creatorId: string | null | undefined
-) {
+export function syncTaskUpdateToTeamSupport(ticketNumber: string, body: string, options: PostTicketActionOptions = {}) {
   const description = `Via Aurora Project Manager<br><br><br>${toHtmlLines(body)}`;
-  postTicketAction(ticketNumber, description, hours, creatorId).catch((err) => {
+  postTicketAction(ticketNumber, description, options).catch((err) => {
     console.error(`[teamSupport] failed to sync update to ticket ${ticketNumber}: ${err instanceof Error ? err.message : err}`);
   });
 }
