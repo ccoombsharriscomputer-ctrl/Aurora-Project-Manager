@@ -343,6 +343,14 @@ label {
   gap: 20px;
 }
 
+/* Grid items default to min-width: auto, which sizes them to fit their content instead of
+   their track — a long unwrapped line of text (e.g. mid-typing, before the next word wraps)
+   can then force the whole column wider instead of just wrapping. min-width: 0 lets them
+   shrink to the assigned track width like the layout intends. */
+.dashboard-grid > * {
+  min-width: 0;
+}
+
 @media (max-width: 900px) {
   .dashboard-grid {
     grid-template-columns: 1fr;
@@ -552,6 +560,9 @@ label {
   border-bottom: 1px solid var(--border);
   padding: 10px 0;
   font-size: 13px;
+  /* A comment with no spaces to break at (a pasted URL, log line, long ID) would otherwise
+     stay on one line and push the whole column wider instead of wrapping. */
+  overflow-wrap: anywhere;
 }
 
 .comment:last-child {
