@@ -161,7 +161,7 @@ export function syncTaskUpdateToTeamSupport(
   hours: number | undefined,
   creatorId: string | null | undefined
 ) {
-  postTicketAction(ticketNumber, `Via Aurora Project Manager\n\n${body}`, hours, creatorId).catch((err) => {
+  postTicketAction(ticketNumber, `Via Aurora Project Manager\n\n\n${body}`, hours, creatorId).catch((err) => {
     console.error(`[teamSupport] failed to sync update to ticket ${ticketNumber}: ${err instanceof Error ? err.message : err}`);
   });
 }
