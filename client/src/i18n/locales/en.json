@@ -184,7 +184,7 @@
     "followUpDate": "Follow-up date",
     "running": "running…",
     "actionType": "Action type",
-    "noActionType": "None",
+    "noActionType": "Select an action type…",
     "visibility": "Visibility",
     "public": "Public",
     "private": "Private",

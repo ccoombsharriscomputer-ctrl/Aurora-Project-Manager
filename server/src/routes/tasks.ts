@@ -201,6 +201,17 @@ router.post("/:id/comments", blockReadOnly, async (req, res) => {
     ? PS_ACTION_TYPES.find((t) => t.id === parsed.data.actionTypeId)
     : undefined;
 
+  // Hours and action type are only ever shown to the user on a task whose project has a
+  // TeamSupport ticket linked — that's the only place this requirement applies.
+  if (task.project.teamSupportTicketNumber) {
+    if (!parsed.data.hours) {
+      return res.status(400).json({ error: "Hours are required when posting an update on a project linked to TeamSupport" });
+    }
+    if (!actionType) {
+      return res.status(400).json({ error: "An action type is required when posting an update on a project linked to TeamSupport" });
+    }
+  }
+
   const comment = await prisma.comment.create({
     data: {
       taskId: task.id,

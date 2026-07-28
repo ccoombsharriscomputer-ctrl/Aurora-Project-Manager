@@ -184,7 +184,7 @@
     "followUpDate": "Fecha de seguimiento",
     "running": "en curso…",
     "actionType": "Tipo de acción",
-    "noActionType": "Ninguno",
+    "noActionType": "Selecciona un tipo de acción…",
     "visibility": "Visibilidad",
     "public": "Público",
     "private": "Privado",

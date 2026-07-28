@@ -306,6 +306,7 @@ export function TaskDetailPage() {
                       placeholder="e.g. 2.5"
                       value={commentHours}
                       onChange={(e) => setCommentHours(e.target.value)}
+                      required={!!project?.teamSupportTicketNumber}
                     />
                   </div>
                 </div>
@@ -317,7 +318,7 @@ export function TaskDetailPage() {
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginTop: 8 }}>
                     <div className="field">
                       <label>{t("taskDetail.actionType")}</label>
-                      <select value={actionTypeId} onChange={(e) => setActionTypeId(e.target.value)}>
+                      <select value={actionTypeId} onChange={(e) => setActionTypeId(e.target.value)} required>
                         <option value="">{t("taskDetail.noActionType")}</option>
                         {(actionTypes ?? []).map((a) => (
                           <option key={a.id} value={a.id}>
