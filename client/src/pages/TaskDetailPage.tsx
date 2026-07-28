@@ -12,6 +12,7 @@ const COLLAPSED_COUNT = 3;
 
 interface FeedItem {
   id: string;
+  commentId: string | null;
   createdAt: string;
   authorName: string;
   body: string | null;
@@ -146,6 +147,11 @@ export function TaskDetailPage() {
     onSuccess: invalidateTask,
   });
 
+  const deleteComment = useMutation({
+    mutationFn: (commentId: string) => api.delete(`/tasks/${taskId}/comments/${commentId}`),
+    onSuccess: invalidateTask,
+  });
+
   const startTimer = useMutation({
     mutationFn: () => api.post(`/tasks/${taskId}/time-entries/start`),
     onSuccess: () => {
@@ -167,6 +173,7 @@ export function TaskDetailPage() {
   const feedItems: FeedItem[] = [
     ...task.comments.map((c) => ({
       id: `comment-${c.id}`,
+      commentId: c.id,
       createdAt: c.createdAt,
       authorName: c.author.name,
       body: c.body,
@@ -177,6 +184,7 @@ export function TaskDetailPage() {
     })),
     ...task.timeEntries.map((entry) => ({
       id: `time-${entry.id}`,
+      commentId: null,
       createdAt: entry.startedAt,
       authorName: entry.user.name,
       body: entry.note,
@@ -278,6 +286,19 @@ export function TaskDetailPage() {
                     <span className="badge badge-admin" style={{ marginLeft: 6 }}>
                       {t("taskDetail.public")}
                     </span>
+                  )}
+                  {canWrite && item.commentId && (
+                    <button
+                      className="remove-link"
+                      style={{ marginLeft: 6 }}
+                      onClick={() => {
+                        if (confirm(t("taskDetail.confirmDeleteComment"))) {
+                          deleteComment.mutate(item.commentId!);
+                        }
+                      }}
+                    >
+                      {t("projectDetail.remove")}
+                    </button>
                   )}
                 </div>
                 {item.body && <div>{item.body}</div>}

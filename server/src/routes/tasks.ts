@@ -314,6 +314,43 @@ router.post("/:id/comments", blockReadOnly, async (req, res) => {
   res.status(201).json({ comment, timeEntry, followUpTask });
 });
 
+// Aurora-only — never touches whatever note this comment may have synced to TeamSupport,
+// since there's no confirmed API for retracting a TeamSupport Action.
+router.delete("/:id/comments/:commentId", blockReadOnly, async (req, res) => {
+  const task = await loadTaskInScope(req.params.id, effectiveSoftwareLineId(req.user!));
+  if (!task) {
+    return res.status(404).json({ error: "Task not found" });
+  }
+  const comment = await prisma.comment.findUnique({
+    where: { id: req.params.commentId },
+    include: { timeEntry: true },
+  });
+  if (!comment || comment.taskId !== task.id) {
+    return res.status(404).json({ error: "Comment not found" });
+  }
+
+  // Delete the linked time entry (if this comment logged hours) along with it, rather than
+  // leaving it behind as an orphaned bare entry with the deleted comment's old text.
+  if (comment.timeEntry) {
+    await prisma.timeEntry.delete({ where: { id: comment.timeEntry.id } });
+  }
+  await prisma.comment.delete({ where: { id: comment.id } });
+
+  await logActivity({
+    type: "COMMENT_DELETED",
+    message: `${req.user!.name} deleted a comment on "${task.title}"`,
+    userId: req.user!.id,
+    softwareLineId: task.project.softwareLineId,
+    projectId: task.projectId,
+    taskId: task.id,
+  });
+
+  emitUpdate({ scope: "task", taskId: task.id });
+  emitUpdate({ scope: "dashboard" });
+
+  res.status(204).send();
+});
+
 // --- Attachments ---
 
 router.get("/:id/attachments", async (req, res) => {

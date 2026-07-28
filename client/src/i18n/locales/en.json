@@ -170,6 +170,7 @@
   "taskDetail": {
     "loadingTask": "Loading task…",
     "confirmDeleteTask": "Delete this task? This cannot be undone.",
+    "confirmDeleteComment": "Delete this comment and any time logged with it? This only removes it from Aurora — it won't touch anything already synced to TeamSupport. This cannot be undone.",
     "deleteTask": "Delete task",
     "comments": "Comments",
     "noCommentsYet": "No comments yet.",
@@ -275,6 +276,7 @@
     "activityTypeStatusChanged": "Status changed",
     "activityTypeTaskAssigned": "Assignee changed",
     "activityTypeCommentAdded": "Comment added",
+    "activityTypeCommentDeleted": "Comment deleted",
     "activityTypeAttachmentAdded": "Attachment added",
     "activityTypeAttachmentDeleted": "Attachment deleted",
     "activityTypeTimeLogged": "Time logged"

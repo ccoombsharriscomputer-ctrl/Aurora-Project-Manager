@@ -220,7 +220,7 @@ function AttachmentsPanel({ projectId }: { projectId: string }) {
             </a>
             {canWrite && (
               <button
-                className="attachment-remove-link"
+                className="remove-link"
                 onClick={() => {
                   if (confirm(t("projectDetail.confirmDeleteAttachment", { name: a.originalName }))) {
                     deleteAttachment.mutate(a.id);

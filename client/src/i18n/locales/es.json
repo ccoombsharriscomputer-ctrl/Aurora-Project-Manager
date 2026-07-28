@@ -170,6 +170,7 @@
   "taskDetail": {
     "loadingTask": "Cargando tarea…",
     "confirmDeleteTask": "¿Eliminar esta tarea? Esta acción no se puede deshacer.",
+    "confirmDeleteComment": "¿Eliminar este comentario y el tiempo registrado con él? Esto solo lo elimina de Aurora — no afecta nada ya sincronizado con TeamSupport. Esta acción no se puede deshacer.",
     "deleteTask": "Eliminar tarea",
     "comments": "Comentarios",
     "noCommentsYet": "Aún no hay comentarios.",
@@ -275,6 +276,7 @@
     "activityTypeStatusChanged": "Estado cambiado",
     "activityTypeTaskAssigned": "Asignación cambiada",
     "activityTypeCommentAdded": "Comentario añadido",
+    "activityTypeCommentDeleted": "Comentario eliminado",
     "activityTypeAttachmentAdded": "Archivo adjuntado",
     "activityTypeAttachmentDeleted": "Archivo adjunto eliminado",
     "activityTypeTimeLogged": "Horas registradas"
