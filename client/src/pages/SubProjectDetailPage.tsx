@@ -159,6 +159,58 @@ export function SubProjectDetailPage() {
     updateStatus.mutate({ taskId, status });
   }
 
+  const [draggedTaskId, setDraggedTaskId] = useState<string | null>(null);
+
+  const reorderTasks = useMutation({
+    mutationFn: (taskIds: string[]) => api.patch(`/sub-projects/${subProjectId}/tasks/reorder`, { taskIds }),
+    onMutate: async (taskIds: string[]) => {
+      await queryClient.cancelQueries({ queryKey: ["sub-project-tasks", subProjectId] });
+      const previous = queryClient.getQueryData<Task[]>(["sub-project-tasks", subProjectId]);
+      if (previous) {
+        const reordered = new Map(taskIds.map((id, index) => [id, index]));
+        queryClient.setQueryData<Task[]>(
+          ["sub-project-tasks", subProjectId],
+          [...previous].sort((a, b) => {
+            const ai = reordered.get(a.id);
+            const bi = reordered.get(b.id);
+            if (ai === undefined || bi === undefined) return 0;
+            return ai - bi;
+          })
+        );
+      }
+      return { previous };
+    },
+    onError: (_err, _taskIds, context) => {
+      if (context?.previous) {
+        queryClient.setQueryData(["sub-project-tasks", subProjectId], context.previous);
+      }
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ["sub-project-tasks", subProjectId] });
+    },
+  });
+
+  function handleDrop(columnTasks: Task[], targetTaskId: string) {
+    if (!draggedTaskId || draggedTaskId === targetTaskId) return;
+    const ids = columnTasks.map((task) => task.id);
+    const from = ids.indexOf(draggedTaskId);
+    const to = ids.indexOf(targetTaskId);
+    if (from === -1 || to === -1) return;
+    ids.splice(to, 0, ids.splice(from, 1)[0]);
+    reorderTasks.mutate(ids);
+  }
+
+  // Dropping in the empty space below a column's cards (rather than onto a specific
+  // card) moves the dragged task to the end of that column instead of no-oping.
+  function handleDropOnColumn(columnTasks: Task[]) {
+    if (!draggedTaskId) return;
+    const ids = columnTasks.map((task) => task.id);
+    const from = ids.indexOf(draggedTaskId);
+    if (from === -1 || from === ids.length - 1) return;
+    ids.push(ids.splice(from, 1)[0]);
+    reorderTasks.mutate(ids);
+  }
+
   if (subProjectLoading || !subProject) {
     return <div className="muted">{t("subProjectDetail.loadingSubProject")}</div>;
   }
@@ -178,13 +230,33 @@ export function SubProjectDetailPage() {
 
       {tasksLoading && <p className="muted">{t("subProjectDetail.loadingTasks")}</p>}
       <div className="board">
-        {COLUMNS.map((col) => (
-          <div className="board-column" key={col.status}>
-            <h3>{t(col.labelKey)}</h3>
-            {tasks
-              ?.filter((t) => t.status === col.status)
-              .map((task) => (
-                <div className="task-card" key={task.id}>
+        {COLUMNS.map((col) => {
+          const columnTasks = tasks?.filter((t) => t.status === col.status) ?? [];
+          return (
+            <div
+              className="board-column"
+              key={col.status}
+              onDragOver={(e) => canWrite && e.preventDefault()}
+              onDrop={(e) => {
+                e.preventDefault();
+                handleDropOnColumn(columnTasks);
+              }}
+            >
+              <h3>{t(col.labelKey)}</h3>
+              {columnTasks.map((task) => (
+                <div
+                  className={`task-card${draggedTaskId === task.id ? " dragging" : ""}`}
+                  key={task.id}
+                  draggable={canWrite}
+                  onDragStart={() => setDraggedTaskId(task.id)}
+                  onDragEnd={() => setDraggedTaskId(null)}
+                  onDragOver={(e) => canWrite && e.preventDefault()}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    handleDrop(columnTasks, task.id);
+                  }}
+                >
                   <Link to={`/tasks/${task.id}`}>
                     <div className="title">{task.title}</div>
                   </Link>
@@ -214,8 +286,9 @@ export function SubProjectDetailPage() {
                   )}
                 </div>
               ))}
-          </div>
-        ))}
+            </div>
+          );
+        })}
       </div>
     </div>
   );

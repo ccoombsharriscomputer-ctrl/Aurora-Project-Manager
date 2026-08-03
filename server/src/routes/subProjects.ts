@@ -104,7 +104,7 @@ router.get("/:id/tasks", async (req, res) => {
 
   const tasks = await prisma.task.findMany({
     where: { subProjectId: req.params.id },
-    orderBy: { createdAt: "asc" },
+    orderBy: [{ order: "asc" }, { createdAt: "asc" }],
     include: {
       assignee: { select: { id: true, name: true } },
       createdBy: { select: { id: true, name: true } },
@@ -142,6 +142,11 @@ router.post("/:id/tasks", blockReadOnly, async (req, res) => {
     }
   }
 
+  const maxOrder = await prisma.task.aggregate({
+    where: { subProjectId: subProject.id },
+    _max: { order: true },
+  });
+
   const task = await prisma.task.create({
     data: {
       subProjectId: subProject.id,
@@ -153,6 +158,7 @@ router.post("/:id/tasks", blockReadOnly, async (req, res) => {
       assigneeId: parsed.data.assigneeId ?? null,
       dueDate: parsed.data.dueDate ? new Date(parsed.data.dueDate) : null,
       createdById: req.user!.id,
+      order: (maxOrder._max.order ?? -10) + 10,
     },
     include: { assignee: { select: { id: true, name: true } } },
   });
@@ -170,6 +176,40 @@ router.post("/:id/tasks", blockReadOnly, async (req, res) => {
   emitUpdate({ scope: "dashboard" });
 
   res.status(201).json(task);
+});
+
+const reorderTasksSchema = z.object({
+  taskIds: z.array(z.string().min(1)).min(1),
+});
+
+// Reorders whichever subset of a sub-project's tasks the client sends — typically one
+// kanban column's worth, since that's the only set the board ever drags within — by
+// re-numbering just those tasks' `order` field. Tasks outside the subset keep their
+// existing order value, so this can't be used to smuggle in tasks from elsewhere.
+router.patch("/:id/tasks/reorder", blockReadOnly, async (req, res) => {
+  const subProject = await loadSubProjectInScope(req.params.id, effectiveSoftwareLineId(req.user!));
+  if (!subProject) {
+    return res.status(404).json({ error: "Sub-project not found" });
+  }
+  const parsed = reorderTasksSchema.safeParse(req.body);
+  if (!parsed.success) {
+    return res.status(400).json({ error: parsed.error.issues[0].message });
+  }
+
+  const matching = await prisma.task.findMany({
+    where: { id: { in: parsed.data.taskIds }, subProjectId: subProject.id },
+    select: { id: true },
+  });
+  if (matching.length !== parsed.data.taskIds.length) {
+    return res.status(400).json({ error: "One or more tasks don't belong to this sub-project" });
+  }
+
+  await prisma.$transaction(
+    parsed.data.taskIds.map((id, index) => prisma.task.update({ where: { id }, data: { order: index * 10 } }))
+  );
+
+  emitUpdate({ scope: "sub-project", subProjectId: subProject.id });
+  res.status(204).send();
 });
 
 export default router;

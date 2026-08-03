@@ -150,6 +150,7 @@ export interface Task {
   description: string | null;
   status: TaskStatus;
   priority: TaskPriority;
+  order: number;
   assignee: UserSummary | null;
   createdBy: UserSummary;
   dueDate: string | null;

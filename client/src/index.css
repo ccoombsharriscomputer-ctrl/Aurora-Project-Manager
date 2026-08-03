@@ -518,6 +518,14 @@ label {
   border-color: var(--primary);
 }
 
+.task-card[draggable="true"] {
+  cursor: grab;
+}
+
+.task-card.dragging {
+  opacity: 0.5;
+}
+
 .task-card .title {
   font-weight: 600;
   margin-bottom: 6px;

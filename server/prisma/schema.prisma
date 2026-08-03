@@ -242,6 +242,7 @@ model Task {
   description String?
   status      TaskStatus   @default(TODO)
   priority    TaskPriority @default(MEDIUM)
+  order       Int          @default(0)
   assigneeId  String?
   assignee    User?        @relation("TaskAssignee", fields: [assigneeId], references: [id])
   dueDate     DateTime?
