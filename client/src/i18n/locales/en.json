@@ -218,6 +218,7 @@
   "products": {
     "taskTemplatesIntro": "These to-do tasks auto-create under the sub-project whenever this product is used on a project.",
     "noTaskTemplatesYet": "No to-do tasks yet.",
+    "confirmDeleteTaskTemplate": "Delete \"{{title}}\"? Projects that already used this product keep their copy of this task — only new ones stop getting it. This cannot be undone.",
     "taskTitlePlaceholder": "e.g. Export legacy data",
     "productNamePlaceholder": "e.g. Data Conversion",
     "addProduct": "Add product",

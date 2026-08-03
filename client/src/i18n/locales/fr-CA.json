@@ -218,6 +218,7 @@
   "products": {
     "taskTemplatesIntro": "Ces tâches sont créées automatiquement dans le sous-projet chaque fois que ce produit est utilisé sur un projet.",
     "noTaskTemplatesYet": "Aucune tâche pour l'instant.",
+    "confirmDeleteTaskTemplate": "Supprimer « {{title}} »? Les projets ayant déjà utilisé ce produit conservent leur copie de cette tâche — seuls les nouveaux ne la recevront plus. Cette action est irréversible.",
     "taskTitlePlaceholder": "p. ex. Exporter les données existantes",
     "productNamePlaceholder": "p. ex. Conversion des données",
     "addProduct": "Ajouter un produit",

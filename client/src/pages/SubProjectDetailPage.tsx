@@ -149,14 +149,6 @@ export function SubProjectDetailPage() {
     },
   });
 
-  const deleteTask = useMutation({
-    mutationFn: (taskId: string) => api.delete(`/tasks/${taskId}`),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["sub-project-tasks", subProjectId] });
-      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
-    },
-  });
-
   function handleStatusChange(taskId: string, status: Task["status"]) {
     if (status === "NA") {
       const reason = window.prompt(t("subProjectDetail.naReasonPrompt"));
@@ -218,20 +210,6 @@ export function SubProjectDetailPage() {
                   {task.status === "NA" && task.naReason && (
                     <div className="muted" style={{ marginTop: 6, fontSize: 12, fontStyle: "italic" }}>
                       {task.naReason}
-                    </div>
-                  )}
-                  {canWrite && (
-                    <div style={{ marginTop: 6, textAlign: "right" }}>
-                      <button
-                        className="remove-link"
-                        onClick={() => {
-                          if (confirm(t("taskDetail.confirmDeleteTask"))) {
-                            deleteTask.mutate(task.id);
-                          }
-                        }}
-                      >
-                        {t("taskDetail.deleteTask")}
-                      </button>
                     </div>
                   )}
                 </div>

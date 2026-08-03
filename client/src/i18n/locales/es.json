@@ -218,6 +218,7 @@
   "products": {
     "taskTemplatesIntro": "Estas tareas se crean automáticamente en el subproyecto cada vez que se usa este producto en un proyecto.",
     "noTaskTemplatesYet": "Aún no hay tareas.",
+    "confirmDeleteTaskTemplate": "¿Eliminar \"{{title}}\"? Los proyectos que ya usaron este producto conservan su copia de esta tarea; solo los nuevos dejarán de recibirla. Esta acción no se puede deshacer.",
     "taskTitlePlaceholder": "p. ej., Exportar datos heredados",
     "productNamePlaceholder": "p. ej., Conversión de datos",
     "addProduct": "Añadir producto",

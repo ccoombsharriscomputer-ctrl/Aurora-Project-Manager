@@ -39,6 +39,11 @@ function TaskTemplatesPanel({ checklistItemId }: { checklistItemId: string }) {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["task-templates", checklistItemId] }),
   });
 
+  const deleteTemplate = useMutation({
+    mutationFn: (id: string) => api.delete(`/task-templates/${id}`),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["task-templates", checklistItemId] }),
+  });
+
   return (
     <div style={{ marginLeft: 20, marginTop: 6, marginBottom: 10, paddingLeft: 12, borderLeft: "2px solid var(--border)" }}>
       <p className="muted" style={{ fontSize: 12, marginBottom: 8 }}>
@@ -54,6 +59,16 @@ function TaskTemplatesPanel({ checklistItemId }: { checklistItemId: string }) {
             <span className="muted">{template.active ? t("common.active") : t("common.inactive")}</span>
             <button className="btn btn-sm" onClick={() => toggleActive.mutate({ id: template.id, active: !template.active })}>
               {template.active ? t("common.deactivate") : t("common.reactivate")}
+            </button>
+            <button
+              className="btn btn-sm btn-danger"
+              onClick={() => {
+                if (confirm(t("products.confirmDeleteTaskTemplate", { title: template.title }))) {
+                  deleteTemplate.mutate(template.id);
+                }
+              }}
+            >
+              {t("common.delete")}
             </button>
           </span>
         </div>

@@ -29,4 +29,10 @@ router.patch("/:id", requireProjectTypeManager, async (req, res) => {
   res.json(template);
 });
 
+router.delete("/:id", requireProjectTypeManager, async (req, res) => {
+  await prisma.taskTemplate.delete({ where: { id: req.params.id } }).catch(() => null);
+  emitUpdate({ scope: "products" });
+  res.status(204).send();
+});
+
 export default router;
