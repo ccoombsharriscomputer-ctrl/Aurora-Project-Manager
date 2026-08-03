@@ -264,7 +264,7 @@ router.post("/:id/comments", blockReadOnly, async (req, res) => {
   }
 
   if (task.project.teamSupportTicketNumber) {
-    syncTaskUpdateToTeamSupport(task.project.teamSupportTicketNumber, parsed.data.body, {
+    syncTaskUpdateToTeamSupport(task.project.teamSupportTicketNumber, parsed.data.body, task.project.softwareLine.name, {
       hours: parsed.data.hours,
       creatorId: req.user!.teamSupportUserId,
       actionTypeId: actionType?.id,
@@ -468,7 +468,7 @@ router.post("/:id/time-entries", blockReadOnly, async (req, res) => {
   if (task.project.teamSupportTicketNumber) {
     const hours = parsed.data.hours;
     const body = parsed.data.note || `${formatHours(hours)}h logged`;
-    syncTaskUpdateToTeamSupport(task.project.teamSupportTicketNumber, body, {
+    syncTaskUpdateToTeamSupport(task.project.teamSupportTicketNumber, body, task.project.softwareLine.name, {
       hours,
       creatorId: req.user!.teamSupportUserId,
     });

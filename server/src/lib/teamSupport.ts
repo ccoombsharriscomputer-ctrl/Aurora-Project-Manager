@@ -187,8 +187,16 @@ function toHtmlLines(text: string): string {
 
 // Fire-and-forget: a comment or time log in Aurora should never fail (or wait) on
 // TeamSupport being slow or unreachable, so this is deliberately not awaited by callers.
-export function syncTaskUpdateToTeamSupport(ticketNumber: string, body: string, options: PostTicketActionOptions = {}) {
-  const description = `Via Aurora Project Manager<br><br><br>${toHtmlLines(body)}`;
+// The header names the specific software line's Project Manager (e.g. "Via TRIO Project
+// Manager") rather than "Aurora" generically, since that's what actually means something to
+// whoever reads the note in TeamSupport.
+export function syncTaskUpdateToTeamSupport(
+  ticketNumber: string,
+  body: string,
+  productLineName: string,
+  options: PostTicketActionOptions = {}
+) {
+  const description = `Via ${productLineName} Project Manager<br><br><br>${toHtmlLines(body)}`;
   postTicketAction(ticketNumber, description, options).catch((err) => {
     console.error(`[teamSupport] failed to sync update to ticket ${ticketNumber}: ${err instanceof Error ? err.message : err}`);
   });

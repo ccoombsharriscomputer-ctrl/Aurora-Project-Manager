@@ -21,7 +21,7 @@ export async function loadSubProjectInScope(subProjectId: string, lineId: string
 export async function loadTaskInScope(taskId: string, lineId: string) {
   const task = await prisma.task.findUnique({
     where: { id: taskId },
-    include: { project: true },
+    include: { project: { include: { softwareLine: true } } },
   });
   if (!task || task.project.softwareLineId !== lineId) return null;
   return task;
