@@ -76,7 +76,6 @@
     "stop": "Stop",
     "loadingDashboard": "Loading dashboard…",
     "totalProjects": "Total projects",
-    "openTasks": "Open tasks",
     "completedThisWeek": "Completed this week",
     "loggedThisWeek": "Logged this week",
     "projectProgress": "Project progress",
@@ -93,7 +92,6 @@
     "date": "Date",
     "hours": "Hours",
     "note": "Note",
-    "noOpenTasks": "No open tasks.",
     "noCompletedThisWeek": "No tasks completed this week.",
     "noHoursLoggedThisWeek": "No time logged this week."
   },

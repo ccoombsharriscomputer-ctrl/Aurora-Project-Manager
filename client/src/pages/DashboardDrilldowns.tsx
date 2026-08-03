@@ -129,26 +129,6 @@ function TaskDrilldownTable({ tasks, showDueDate }: { tasks: Task[]; showDueDate
   );
 }
 
-export function OpenTasksPage() {
-  const { t } = useTranslation();
-  const { data: tasks, isLoading } = useQuery({
-    queryKey: ["dashboard-open-tasks"],
-    queryFn: () => api.get<Task[]>("/dashboard/open-tasks"),
-  });
-
-  return (
-    <div>
-      <BackToDashboard />
-      <div className="page-header">
-        <h1>{t("dashboard.openTasks")}</h1>
-      </div>
-      {isLoading && <p className="muted">{t("common.loading")}</p>}
-      {!isLoading && tasks?.length === 0 && <p className="muted">{t("dashboard.noOpenTasks")}</p>}
-      {!isLoading && tasks && tasks.length > 0 && <TaskDrilldownTable tasks={tasks} showDueDate />}
-    </div>
-  );
-}
-
 export function CompletedThisWeekPage() {
   const { t } = useTranslation();
   const { data: tasks, isLoading } = useQuery({

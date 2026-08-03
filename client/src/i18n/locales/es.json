@@ -76,7 +76,6 @@
     "stop": "Detener",
     "loadingDashboard": "Cargando panel…",
     "totalProjects": "Proyectos totales",
-    "openTasks": "Tareas abiertas",
     "completedThisWeek": "Completadas esta semana",
     "loggedThisWeek": "Horas registradas esta semana",
     "projectProgress": "Progreso del proyecto",
@@ -93,7 +92,6 @@
     "date": "Fecha",
     "hours": "Horas",
     "note": "Nota",
-    "noOpenTasks": "No hay tareas abiertas.",
     "noCompletedThisWeek": "No se completó ninguna tarea esta semana.",
     "noHoursLoggedThisWeek": "No se registraron horas esta semana."
   },

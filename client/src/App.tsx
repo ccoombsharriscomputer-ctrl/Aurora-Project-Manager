@@ -4,7 +4,7 @@ import { ProtectedRoute, AdminRoute, ProjectLeadRoute } from "./components/Prote
 import { LoginPage } from "./pages/LoginPage";
 import { RequestAccessPage } from "./pages/RequestAccessPage";
 import { DashboardPage } from "./pages/DashboardPage";
-import { OpenTasksPage, CompletedThisWeekPage, TimeEntriesThisWeekPage } from "./pages/DashboardDrilldowns";
+import { CompletedThisWeekPage, TimeEntriesThisWeekPage } from "./pages/DashboardDrilldowns";
 import { ProjectsPage } from "./pages/ProjectsPage";
 import { ProjectDetailPage } from "./pages/ProjectDetailPage";
 import { SubProjectDetailPage } from "./pages/SubProjectDetailPage";
@@ -31,7 +31,6 @@ function App() {
       <Route element={<ProtectedRoute />}>
         <Route element={<Layout />}>
           <Route path="/dashboard" element={<DashboardPage />} />
-          <Route path="/dashboard/open-tasks" element={<OpenTasksPage />} />
           <Route path="/dashboard/completed-this-week" element={<CompletedThisWeekPage />} />
           <Route path="/dashboard/time-entries-this-week" element={<TimeEntriesThisWeekPage />} />
           <Route path="/projects" element={<ProjectsPage />} />

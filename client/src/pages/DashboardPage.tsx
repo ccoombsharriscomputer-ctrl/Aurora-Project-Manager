@@ -129,10 +129,6 @@ export function DashboardPage() {
           <div className="value">{data.totalProjects}</div>
           <div className="label">{t("dashboard.totalProjects")}</div>
         </Link>
-        <Link to="/dashboard/open-tasks" className="stat-tile">
-          <div className="value">{data.totalOpenTasks}</div>
-          <div className="label">{t("dashboard.openTasks")}</div>
-        </Link>
         <Link to="/dashboard/completed-this-week" className="stat-tile">
           <div className="value">{data.tasksCompletedThisWeek}</div>
           <div className="label">{t("dashboard.completedThisWeek")}</div>

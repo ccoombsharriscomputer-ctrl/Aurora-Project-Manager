@@ -76,7 +76,6 @@
     "stop": "Arrêter",
     "loadingDashboard": "Chargement du tableau de bord…",
     "totalProjects": "Projets au total",
-    "openTasks": "Tâches ouvertes",
     "completedThisWeek": "Terminées cette semaine",
     "loggedThisWeek": "Heures enregistrées cette semaine",
     "projectProgress": "Progression du projet",
@@ -93,7 +92,6 @@
     "date": "Date",
     "hours": "Heures",
     "note": "Note",
-    "noOpenTasks": "Aucune tâche ouverte.",
     "noCompletedThisWeek": "Aucune tâche terminée cette semaine.",
     "noHoursLoggedThisWeek": "Aucune heure enregistrée cette semaine."
   },
