@@ -389,9 +389,6 @@ export function ProjectDetailPage() {
                     {teamSupportTicket.ticket.status}
                   </span>
                   <span className="muted">{teamSupportTicket.ticket.name}</span>
-                  <a href={teamSupportTicket.ticket.url} target="_blank" rel="noopener noreferrer" className="attachment-download-link">
-                    {t("projectDetail.viewInTeamSupport")}
-                  </a>
                 </>
               ) : null}
             </div>

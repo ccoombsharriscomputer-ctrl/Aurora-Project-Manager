@@ -303,7 +303,6 @@ export interface TeamSupportTicket {
   severity: string | null;
   groupName: string | null;
   assigneeName: string | null;
-  url: string;
 }
 
 export type TeamSupportTicketResponse = { linked: false } | { linked: true; ticket: TeamSupportTicket };

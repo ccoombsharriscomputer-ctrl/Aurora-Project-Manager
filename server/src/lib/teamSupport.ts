@@ -27,7 +27,6 @@ export interface TeamSupportTicket {
   severity: string | null;
   groupName: string | null;
   assigneeName: string | null;
-  url: string;
 }
 
 function authHeader(): string {
@@ -94,21 +93,6 @@ function extractTicketPayload(raw: unknown): Record<string, unknown> | null {
   return null;
 }
 
-// There is no URL that opens a specific ticket standalone: TeamSupport's ticket detail page
-// (both the legacy "/vcr/1_7_0/Pages/Ticket.html" path this used to default to, and the current
-// "/Resources/Pages/Ticket.html" path it actually lives at) only renders correctly inside that
-// app's own shell — its ticket.js reads `window.parent.Ts...` during setup, so opened directly
-// in a new tab it throws immediately and the page spins forever. Confirmed live: navigating
-// between tickets through TeamSupport's real UI never changes the browser's address bar either,
-// so there's no deep-link this app exposes at all, not even an internal one to copy. The
-// TEAMSUPPORT_TICKET_URL_TEMPLATE override exists in case a different TeamSupport
-// account/version does support one; the safe default is the app's root, which always loads.
-function ticketUrl(ticketNumber: string): string {
-  const template = process.env.TEAMSUPPORT_TICKET_URL_TEMPLATE;
-  if (!template) return apiBaseUrl();
-  return template.replace("{ticketNumber}", encodeURIComponent(ticketNumber));
-}
-
 export async function fetchTicketByNumber(ticketNumber: string): Promise<TeamSupportTicket> {
   const raw = await teamSupportRequest(`/api/json/tickets/${encodeURIComponent(ticketNumber)}.json`).catch((err) => {
     if (err instanceof TeamSupportTicketNotFoundError) {
@@ -130,7 +114,6 @@ export async function fetchTicketByNumber(ticketNumber: string): Promise<TeamSup
     severity: payload.Severity ? String(payload.Severity) : null,
     groupName: payload.GroupName ? String(payload.GroupName) : null,
     assigneeName: payload.UserName ? String(payload.UserName) : null,
-    url: ticketUrl(ticketNumber),
   };
 }
 

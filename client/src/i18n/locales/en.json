@@ -146,7 +146,6 @@
     "loadingProject": "Loading project…",
     "teamSupportTicket": "TeamSupport Ticket #",
     "teamSupportLoading": "Loading ticket status…",
-    "viewInTeamSupport": "Open TeamSupport",
     "confirmDeleteProject": "Delete project \"{{name}}\"? This cannot be undone.",
     "deleteProject": "Delete project",
     "loadingSubProjects": "Loading sub-projects…",
