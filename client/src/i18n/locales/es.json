@@ -78,6 +78,8 @@
     "totalProjects": "Proyectos totales",
     "completedThisWeek": "Completadas esta semana",
     "loggedThisWeek": "Horas registradas esta semana",
+    "loggedThisMonth": "Horas registradas este mes",
+    "loggedToday": "Horas registradas hoy",
     "projectProgress": "Progreso del proyecto",
     "noProjectsYet": "Aún no hay proyectos.",
     "tasksCount": "{{done}}/{{total}} tareas",

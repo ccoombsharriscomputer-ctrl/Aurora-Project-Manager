@@ -236,10 +236,13 @@ export interface Activity {
 export interface DashboardSummary {
   totalProjects: number;
   tasksCompletedThisWeek: number;
-  hoursLoggedThisWeek: number;
   projectProgress: { id: string; name: string; totalTasks: number; doneTasks: number; percent: number }[];
   myTasks: Task[];
   recentActivity: Activity[];
+}
+
+export interface HoursLoggedResponse {
+  hours: number;
 }
 
 interface ReportStats {

@@ -1,12 +1,13 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { api } from "../api/client";
-import type { Activity, DashboardSummary } from "../api/types";
+import type { Activity, DashboardSummary, HoursLoggedResponse } from "../api/types";
 import { formatDueDate, formatElapsed, formatRelativeTime } from "../utils/format";
 import { useActiveTimer } from "../hooks/useActiveTimer";
 import { DeadlinesCalendar } from "../components/DeadlinesCalendar";
+import { HOURS_LOGGED_TITLE_KEY, periodRange, startOfDay, type ViewMode } from "../utils/calendarPeriod";
 
 function TimerBanner() {
   const { t } = useTranslation();
@@ -112,6 +113,20 @@ export function DashboardPage() {
     refetchInterval: 15000,
   });
 
+  const [calendarView, setCalendarView] = useState<ViewMode>("week");
+  const [calendarCursor, setCalendarCursor] = useState(() => startOfDay(new Date()));
+
+  const { start, end } = useMemo(() => periodRange(calendarView, calendarCursor), [calendarView, calendarCursor]);
+
+  const { data: hoursLogged } = useQuery({
+    queryKey: ["dashboard-hours-logged", start.getTime(), end.getTime()],
+    queryFn: () =>
+      api.get<HoursLoggedResponse>(
+        `/dashboard/hours-logged?start=${encodeURIComponent(start.toISOString())}&end=${encodeURIComponent(end.toISOString())}`
+      ),
+    refetchInterval: 15000,
+  });
+
   if (isLoading || !data) {
     return <div className="muted">{t("dashboard.loadingDashboard")}</div>;
   }
@@ -133,13 +148,21 @@ export function DashboardPage() {
           <div className="value">{data.tasksCompletedThisWeek}</div>
           <div className="label">{t("dashboard.completedThisWeek")}</div>
         </Link>
-        <Link to="/dashboard/time-entries-this-week" className="stat-tile">
-          <div className="value">{data.hoursLoggedThisWeek}h</div>
-          <div className="label">{t("dashboard.loggedThisWeek")}</div>
+        <Link
+          to={`/dashboard/time-entries-this-week?start=${encodeURIComponent(start.toISOString())}&end=${encodeURIComponent(end.toISOString())}&view=${calendarView}`}
+          className="stat-tile"
+        >
+          <div className="value">{hoursLogged?.hours ?? 0}h</div>
+          <div className="label">{t(HOURS_LOGGED_TITLE_KEY[calendarView])}</div>
         </Link>
       </div>
 
-      <DeadlinesCalendar />
+      <DeadlinesCalendar
+        view={calendarView}
+        cursor={calendarCursor}
+        onViewChange={setCalendarView}
+        onCursorChange={setCalendarCursor}
+      />
 
       <div className="dashboard-grid" style={{ marginTop: 20 }}>
         <div>

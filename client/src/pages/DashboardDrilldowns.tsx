@@ -1,11 +1,12 @@
 import { useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import type { TFunction } from "i18next";
 import { api } from "../api/client";
 import type { Task, TaskStatus, TimeEntry } from "../api/types";
 import { formatDate, formatDueDate, formatMinutes } from "../utils/format";
+import { formatDateRangeLabel, HOURS_LOGGED_TITLE_KEY, type ViewMode } from "../utils/calendarPeriod";
 
 function statusLabel(t: TFunction, status: TaskStatus): string {
   if (status === "IN_PROGRESS") return t("common.statusInProgress");
@@ -151,17 +152,35 @@ export function CompletedThisWeekPage() {
 
 export function TimeEntriesThisWeekPage() {
   const { t } = useTranslation();
+  const [searchParams] = useSearchParams();
+  const startParam = searchParams.get("start");
+  const endParam = searchParams.get("end");
+  const viewParam = searchParams.get("view") as ViewMode | null;
+  const titleKey = viewParam && viewParam in HOURS_LOGGED_TITLE_KEY ? HOURS_LOGGED_TITLE_KEY[viewParam] : "dashboard.loggedThisWeek";
+
   const { data: entries, isLoading } = useQuery({
-    queryKey: ["dashboard-time-entries-this-week"],
-    queryFn: () => api.get<TimeEntry[]>("/dashboard/time-entries-this-week"),
+    queryKey: ["dashboard-time-entries-this-week", startParam, endParam],
+    queryFn: () => {
+      const query =
+        startParam && endParam
+          ? `?start=${encodeURIComponent(startParam)}&end=${encodeURIComponent(endParam)}`
+          : "";
+      return api.get<TimeEntry[]>(`/dashboard/time-entries-this-week${query}`);
+    },
   });
+
+  const rangeLabel = useMemo(() => {
+    if (!startParam || !endParam) return null;
+    return formatDateRangeLabel(new Date(startParam), new Date(endParam));
+  }, [startParam, endParam]);
 
   return (
     <div>
       <BackToDashboard />
       <div className="page-header">
-        <h1>{t("dashboard.loggedThisWeek")}</h1>
+        <h1>{t(titleKey)}</h1>
       </div>
+      {rangeLabel && <p className="muted" style={{ marginTop: -12 }}>{rangeLabel}</p>}
       {isLoading && <p className="muted">{t("common.loading")}</p>}
       {!isLoading && entries?.length === 0 && <p className="muted">{t("dashboard.noHoursLoggedThisWeek")}</p>}
       {!isLoading && entries && entries.length > 0 && (

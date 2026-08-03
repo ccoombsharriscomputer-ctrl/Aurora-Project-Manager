@@ -1,12 +1,11 @@
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import i18n from "../i18n";
 import { api } from "../api/client";
 import type { CalendarResponse, FollowUpItem, Task } from "../api/types";
-
-type ViewMode = "month" | "week" | "day";
+import { buildMonthGridDays, buildWeekDays, startOfDay, toDateKey, type ViewMode } from "../utils/calendarPeriod";
 
 const VISIBLE_TASKS_PER_DAY = 4;
 
@@ -14,44 +13,12 @@ const VISIBLE_TASKS_PER_DAY = 4;
 // so it's kept as its own entry kind rather than shoehorned into the Task shape.
 type CalendarEntry = ({ kind: "task" } & Task) | ({ kind: "followUp" } & FollowUpItem);
 
-function toDateKey(d: Date): string {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-}
-
 // Due dates are entered as a plain calendar date and stored as UTC midnight, so they must
 // be read back with UTC getters — otherwise a negative-offset browser timezone (e.g.
 // US/Canada) buckets the task under the previous day.
 function dueDateKey(iso: string): string {
   const d = new Date(iso);
   return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}-${String(d.getUTCDate()).padStart(2, "0")}`;
-}
-
-function startOfDay(d: Date): Date {
-  return new Date(d.getFullYear(), d.getMonth(), d.getDate());
-}
-
-function startOfWeek(d: Date): Date {
-  const start = startOfDay(d);
-  start.setDate(start.getDate() - start.getDay());
-  return start;
-}
-
-function buildMonthGridDays(cursor: Date): Date[] {
-  const gridStart = startOfWeek(new Date(cursor.getFullYear(), cursor.getMonth(), 1));
-  return Array.from({ length: 42 }, (_, i) => {
-    const d = new Date(gridStart);
-    d.setDate(gridStart.getDate() + i);
-    return d;
-  });
-}
-
-function buildWeekDays(cursor: Date): Date[] {
-  const start = startOfWeek(cursor);
-  return Array.from({ length: 7 }, (_, i) => {
-    const d = new Date(start);
-    d.setDate(start.getDate() + i);
-    return d;
-  });
 }
 
 function priorityLabel(t: (key: string) => string, priority: Task["priority"]): string {
@@ -100,10 +67,18 @@ function EntryPill({ entry }: { entry: CalendarEntry }) {
   );
 }
 
-export function DeadlinesCalendar() {
+export function DeadlinesCalendar({
+  view,
+  cursor,
+  onViewChange,
+  onCursorChange,
+}: {
+  view: ViewMode;
+  cursor: Date;
+  onViewChange: (view: ViewMode) => void;
+  onCursorChange: (cursor: Date) => void;
+}) {
   const { t } = useTranslation();
-  const [view, setView] = useState<ViewMode>("week");
-  const [cursor, setCursor] = useState(() => startOfDay(new Date()));
 
   const days = useMemo(() => {
     if (view === "month") return buildMonthGridDays(cursor);
@@ -158,13 +133,11 @@ export function DeadlinesCalendar() {
   }, [view, cursor, days, i18n.language]);
 
   function shift(amount: number) {
-    setCursor((c) => {
-      const next = new Date(c);
-      if (view === "month") next.setMonth(next.getMonth() + amount);
-      else if (view === "week") next.setDate(next.getDate() + amount * 7);
-      else next.setDate(next.getDate() + amount);
-      return next;
-    });
+    const next = new Date(cursor);
+    if (view === "month") next.setMonth(next.getMonth() + amount);
+    else if (view === "week") next.setDate(next.getDate() + amount * 7);
+    else next.setDate(next.getDate() + amount);
+    onCursorChange(next);
   }
 
   const todayKey = toDateKey(new Date());
@@ -181,7 +154,7 @@ export function DeadlinesCalendar() {
               <button
                 key={v}
                 className={`btn btn-sm${view === v ? " btn-primary" : ""}`}
-                onClick={() => setView(v)}
+                onClick={() => onViewChange(v)}
               >
                 {t(`calendar.${v}`)}
               </button>
@@ -194,7 +167,7 @@ export function DeadlinesCalendar() {
           <button className="btn btn-sm" onClick={() => shift(1)}>
             ›
           </button>
-          <button className="btn btn-sm" onClick={() => setCursor(startOfDay(new Date()))}>
+          <button className="btn btn-sm" onClick={() => onCursorChange(startOfDay(new Date()))}>
             {t("calendar.today")}
           </button>
         </div>

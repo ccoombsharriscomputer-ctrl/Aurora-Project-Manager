@@ -1,4 +1,4 @@
-import { Router } from "express";
+import { Request, Router } from "express";
 import { prisma } from "../lib/prisma";
 import { effectiveSoftwareLineId, requireAuth } from "../middleware/auth";
 
@@ -14,17 +14,12 @@ router.get("/summary", async (req, res) => {
   const [
     totalProjects,
     tasksCompletedThisWeek,
-    timeEntriesThisWeek,
     projects,
     myTasks,
     recentActivity,
   ] = await Promise.all([
     prisma.project.count({ where: { softwareLineId: lineId, archivedAt: null } }),
     prisma.task.count({ where: { status: "DONE", updatedAt: { gte: weekAgo }, ...inLine } }),
-    prisma.timeEntry.findMany({
-      where: { startedAt: { gte: weekAgo }, durationMinutes: { not: null }, task: inLine },
-      select: { durationMinutes: true },
-    }),
     prisma.project.findMany({ where: { softwareLineId: lineId, archivedAt: null }, select: { id: true, name: true } }),
     prisma.task.findMany({
       where: { assigneeId: req.user!.id, status: { notIn: ["DONE", "NA"] }, ...inLine },
@@ -51,9 +46,6 @@ router.get("/summary", async (req, res) => {
     }),
   ]);
 
-  const hoursLoggedThisWeek =
-    timeEntriesThisWeek.reduce((sum, e) => sum + (e.durationMinutes ?? 0), 0) / 60;
-
   const projectProgress = await Promise.all(
     projects.map(async (p) => {
       const [total, done] = await Promise.all([
@@ -73,11 +65,37 @@ router.get("/summary", async (req, res) => {
   res.json({
     totalProjects,
     tasksCompletedThisWeek,
-    hoursLoggedThisWeek: Math.round(hoursLoggedThisWeek * 10) / 10,
     projectProgress,
     myTasks,
     recentActivity,
   });
+});
+
+// Backs the "Hours logged" dashboard tile, which tracks whatever period the deadlines
+// calendar is currently showing (day/week/month) rather than a fixed rolling window.
+function parseRangeParam(req: Request, key: "start" | "end", fallback: Date): Date {
+  const raw = req.query[key];
+  if (typeof raw !== "string") return fallback;
+  const parsed = new Date(raw);
+  return Number.isNaN(parsed.getTime()) ? fallback : parsed;
+}
+
+router.get("/hours-logged", async (req, res) => {
+  const lineId = effectiveSoftwareLineId(req.user!);
+  const start = parseRangeParam(req, "start", new Date(Date.now() - 7 * 24 * 60 * 60 * 1000));
+  const end = parseRangeParam(req, "end", new Date());
+
+  const entries = await prisma.timeEntry.findMany({
+    where: {
+      startedAt: { gte: start, lte: end },
+      durationMinutes: { not: null },
+      task: { project: { softwareLineId: lineId, archivedAt: null } },
+    },
+    select: { durationMinutes: true },
+  });
+
+  const hours = entries.reduce((sum, e) => sum + (e.durationMinutes ?? 0), 0) / 60;
+  res.json({ hours: Math.round(hours * 10) / 10 });
 });
 
 // Drill-down lists behind the dashboard's clickable stat tiles — each mirrors the exact
@@ -99,12 +117,13 @@ router.get("/completed-this-week", async (req, res) => {
 });
 
 router.get("/time-entries-this-week", async (req, res) => {
-  const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
   const lineId = effectiveSoftwareLineId(req.user!);
+  const start = parseRangeParam(req, "start", new Date(Date.now() - 7 * 24 * 60 * 60 * 1000));
+  const end = parseRangeParam(req, "end", new Date());
 
   const entries = await prisma.timeEntry.findMany({
     where: {
-      startedAt: { gte: weekAgo },
+      startedAt: { gte: start, lte: end },
       durationMinutes: { not: null },
       task: { project: { softwareLineId: lineId, archivedAt: null } },
     },

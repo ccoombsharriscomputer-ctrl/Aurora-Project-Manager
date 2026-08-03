@@ -78,6 +78,8 @@
     "totalProjects": "Total projects",
     "completedThisWeek": "Completed this week",
     "loggedThisWeek": "Logged this week",
+    "loggedThisMonth": "Logged this month",
+    "loggedToday": "Logged today",
     "projectProgress": "Project progress",
     "noProjectsYet": "No projects yet.",
     "tasksCount": "{{done}}/{{total}} tasks",
