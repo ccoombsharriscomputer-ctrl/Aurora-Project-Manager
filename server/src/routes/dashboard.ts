@@ -29,7 +29,10 @@ router.get("/summary", async (req, res) => {
     prisma.task.findMany({
       where: { assigneeId: req.user!.id, status: { notIn: ["DONE", "NA"] }, ...inLine },
       orderBy: [{ dueDate: "asc" }, { createdAt: "asc" }],
-      include: { project: { select: { id: true, name: true } } },
+      include: {
+        project: { select: { id: true, name: true } },
+        subProject: { select: { id: true, name: true, checklistItem: { select: { name: true } } } },
+      },
       take: 20,
     }),
     // Activity carries its own softwareLineId (not derived through project), so this stays

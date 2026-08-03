@@ -158,6 +158,7 @@ export interface Task {
   createdAt: string;
   updatedAt: string;
   project?: { id: string; name: string };
+  subProject?: { id: string; name: string | null; checklistItem: { name: string } };
   _count?: { comments: number; attachments: number };
 }
 

@@ -152,7 +152,9 @@ export function DashboardPage() {
           {data.myTasks.length === 0 && <p className="muted">{t("dashboard.nothingAssigned")}</p>}
           {data.myTasks.map((t) => (
             <div className="task-list-item" key={t.id}>
-              <Link to={`/tasks/${t.id}`}>{t.title}</Link>
+              <Link to={`/tasks/${t.id}`}>
+                {t.project?.name} - {t.subProject?.name || t.subProject?.checklistItem.name} - {t.title}
+              </Link>
               <span className="muted">{formatDueDate(t.dueDate)}</span>
             </div>
           ))}
