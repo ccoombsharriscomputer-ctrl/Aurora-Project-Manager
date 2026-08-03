@@ -16,7 +16,17 @@ const userSelect = {
   createdAt: true,
   teamSupportUserId: true,
   softwareLine: { select: { id: true, name: true } },
+  softwareLineGrants: { select: { softwareLine: { select: { id: true, name: true } } } },
 } as const;
+
+// The raw join-table shape (softwareLineGrants: [{ softwareLine: {...} }]) is awkward for
+// clients to consume directly — flatten it to the same shape as softwareLine itself.
+function serializeUser<T extends { softwareLineGrants: { softwareLine: { id: string; name: string } }[] }>(
+  user: T
+): Omit<T, "softwareLineGrants"> & { grantedSoftwareLines: { id: string; name: string }[] } {
+  const { softwareLineGrants, ...rest } = user;
+  return { ...rest, grantedSoftwareLines: softwareLineGrants.map((g) => g.softwareLine) };
+}
 
 // Default: only users in the caller's effective line (safe for every assignee/member
 // picker, every role). `?all=true` is admin-only and returns every user across every
@@ -28,7 +38,7 @@ router.get("/", requireAuth, async (req, res) => {
     select: userSelect,
     orderBy: { name: "asc" },
   });
-  res.json(users);
+  res.json(users.map(serializeUser));
 });
 
 const createSchema = z.object({
@@ -107,7 +117,7 @@ router.post("/", attachUserIfPresent, async (req, res) => {
 
     emitUpdate({ scope: "users" });
     if (accessRequestId) emitUpdate({ scope: "access-requests" });
-    res.status(201).json(user);
+    res.status(201).json(serializeUser(user));
   } catch (err) {
     if (err instanceof HttpError) {
       return res.status(err.status).json({ error: err.message });
@@ -124,6 +134,10 @@ const updateSchema = z.object({
   active: z.boolean().optional(),
   softwareLineId: z.string().min(1).optional(),
   teamSupportUserId: z.string().min(1).nullable().optional(),
+  // Extra software lines a Project Lead/Member can switch into beyond their home line —
+  // replace-all semantics (the full desired set, not a delta). Only meaningful for those two
+  // roles; anyone else keeps an empty set (see the auto-clear below).
+  grantedSoftwareLineIds: z.array(z.string().min(1)).optional(),
 });
 
 router.patch("/:id", requireAuth, requireAdmin, async (req, res) => {
@@ -133,6 +147,11 @@ router.patch("/:id", requireAuth, requireAdmin, async (req, res) => {
   }
   if (req.params.id === req.user!.id && parsed.data.active === false) {
     return res.status(400).json({ error: "You cannot deactivate your own account" });
+  }
+
+  const target = await prisma.user.findUnique({ where: { id: req.params.id } });
+  if (!target) {
+    return res.status(404).json({ error: "User not found" });
   }
 
   if (parsed.data.softwareLineId) {
@@ -151,7 +170,30 @@ router.patch("/:id", requireAuth, requireAdmin, async (req, res) => {
     }
   }
 
-  const { password, ...rest } = parsed.data;
+  const effectiveRole = parsed.data.role ?? target.role;
+  const canHaveGrants = effectiveRole === "PROJECT_LEAD" || effectiveRole === "MEMBER";
+  if (parsed.data.grantedSoftwareLineIds?.length && !canHaveGrants) {
+    return res.status(400).json({ error: "Only Project Leads and Members can be granted extra software lines." });
+  }
+
+  const homeLineId = parsed.data.softwareLineId ?? target.softwareLineId;
+  // Explicit grants are provided as the full desired set; a role change away from
+  // Project Lead/Member (with no explicit grants in this same request) clears any it had —
+  // an admin or read-only account has no use for them, so don't leave stale rows behind.
+  const nextGrantIds = parsed.data.grantedSoftwareLineIds !== undefined
+    ? Array.from(new Set(parsed.data.grantedSoftwareLineIds)).filter((id) => id !== homeLineId)
+    : !canHaveGrants
+      ? []
+      : undefined;
+
+  if (nextGrantIds !== undefined && nextGrantIds.length > 0) {
+    const validCount = await prisma.softwareLine.count({ where: { id: { in: nextGrantIds } } });
+    if (validCount !== nextGrantIds.length) {
+      return res.status(400).json({ error: "One or more software lines were not found." });
+    }
+  }
+
+  const { password, grantedSoftwareLineIds, ...rest } = parsed.data;
   const data: Record<string, unknown> = { ...rest };
   if (password) {
     data.passwordHash = await hashPassword(password);
@@ -160,13 +202,28 @@ router.patch("/:id", requireAuth, requireAdmin, async (req, res) => {
   // Reassigning a user's line does not retroactively touch their existing project
   // memberships or task assignments in the old line — accepted data-hygiene debt, not a
   // bug: the by-user report is membership-driven, so they simply stop appearing there.
-  const user = await prisma.user.update({
-    where: { id: req.params.id },
-    data,
-    select: userSelect,
-  });
+  const [user] = await prisma.$transaction([
+    prisma.user.update({ where: { id: req.params.id }, data, select: userSelect }),
+    ...(nextGrantIds !== undefined
+      ? [
+          prisma.userSoftwareLineGrant.deleteMany({ where: { userId: req.params.id } }),
+          ...(nextGrantIds.length
+            ? [
+                prisma.userSoftwareLineGrant.createMany({
+                  data: nextGrantIds.map((softwareLineId) => ({ userId: req.params.id, softwareLineId })),
+                }),
+              ]
+            : []),
+        ]
+      : []),
+  ]);
+  // The transaction's first result reflects the user row from before the grant rows changed
+  // in this same call — re-select once more so the response's grantedSoftwareLines is current.
+  const fresh = nextGrantIds !== undefined
+    ? await prisma.user.findUniqueOrThrow({ where: { id: req.params.id }, select: userSelect })
+    : user;
   emitUpdate({ scope: "users" });
-  res.json(user);
+  res.json(serializeUser(fresh));
 });
 
 router.delete("/:id", requireAuth, requireAdmin, async (req, res) => {

@@ -27,6 +27,18 @@ export async function loadTaskInScope(taskId: string, lineId: string) {
   return task;
 }
 
+// Whether a user can be assigned a task, added as a project member, etc. in the given
+// software line: admins always can; everyone else needs it to be their home line or one
+// they've been explicitly granted. Used everywhere a target user's line was previously
+// checked against just their home softwareLineId, so a granted Project Lead/Member isn't
+// wrongly treated as belonging to "a different software line" once they have access to it.
+export function userHasLineAccess(
+  user: { role: string; softwareLineId: string; softwareLineGrants: { softwareLineId: string }[] },
+  lineId: string
+): boolean {
+  return user.role === "ADMIN" || user.softwareLineId === lineId || user.softwareLineGrants.some((g) => g.softwareLineId === lineId);
+}
+
 export async function loadAttachmentInScope(attachmentId: string, lineId: string) {
   const attachment = await prisma.attachment.findUnique({
     where: { id: attachmentId },

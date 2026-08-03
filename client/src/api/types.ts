@@ -35,6 +35,9 @@ export interface CurrentUser {
   locale: Locale;
   softwareLineId: string;
   activeSoftwareLineId: string | null;
+  // Lines this user can switch into: every line for an admin, or home + granted for
+  // everyone else. Length 1 means there's nothing to switch between.
+  accessibleSoftwareLines: SoftwareLine[];
 }
 
 export interface UserSummary {
@@ -48,6 +51,9 @@ export interface AdminUser extends UserSummary {
   active: boolean;
   createdAt: string;
   softwareLine: SoftwareLine;
+  // Extra lines this user can switch into beyond their home softwareLine — only ever
+  // non-empty for PROJECT_LEAD/MEMBER roles.
+  grantedSoftwareLines: SoftwareLine[];
   teamSupportUserId: string | null;
 }
 

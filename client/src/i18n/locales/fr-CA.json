@@ -206,7 +206,11 @@
     "deactivated": "Désactivé",
     "confirmDeleteUser": "Supprimer {{name}}? Cette action est irréversible.",
     "teamSupportUser": "Utilisateur TeamSupport",
-    "notLinked": "Non lié"
+    "notLinked": "Non lié",
+    "extraLines": "Lignes supplémentaires",
+    "manageLines": "Gérer les lignes ({{count}})",
+    "hideLines": "Masquer les lignes",
+    "extraLinesIntro": "Les chefs de projet et les membres peuvent recevoir un accès à des lignes de produit supplémentaires. Ils pourront basculer entre elles depuis la barre latérale, avec les mêmes permissions déjà associées à leur rôle."
   },
   "projectTypes": {
     "newProjectType": "Nouveau type de projet",

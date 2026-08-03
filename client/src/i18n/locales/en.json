@@ -206,7 +206,11 @@
     "deactivated": "Deactivated",
     "confirmDeleteUser": "Delete {{name}}? This cannot be undone.",
     "teamSupportUser": "TeamSupport user",
-    "notLinked": "Not linked"
+    "notLinked": "Not linked",
+    "extraLines": "Extra lines",
+    "manageLines": "Manage lines ({{count}})",
+    "hideLines": "Hide lines",
+    "extraLinesIntro": "Project Leads and Members can be granted access to additional software lines. They'll be able to switch into them from the sidebar, with the same role-based permissions they already have."
   },
   "projectTypes": {
     "newProjectType": "New project type",

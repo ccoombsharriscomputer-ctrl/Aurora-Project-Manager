@@ -4,7 +4,7 @@ import { prisma } from "../lib/prisma";
 import { blockReadOnly, effectiveSoftwareLineId, requireAuth } from "../middleware/auth";
 import { logActivity } from "../lib/activity";
 import { emitUpdate } from "../lib/realtime";
-import { loadSubProjectInScope } from "../lib/scope";
+import { loadSubProjectInScope, userHasLineAccess } from "../lib/scope";
 
 const router = Router();
 router.use(requireAuth);
@@ -133,8 +133,11 @@ router.post("/:id/tasks", blockReadOnly, async (req, res) => {
   }
 
   if (parsed.data.assigneeId) {
-    const assignee = await prisma.user.findUnique({ where: { id: parsed.data.assigneeId } });
-    if (!assignee || (assignee.role !== "ADMIN" && assignee.softwareLineId !== subProject.project.softwareLineId)) {
+    const assignee = await prisma.user.findUnique({
+      where: { id: parsed.data.assigneeId },
+      include: { softwareLineGrants: true },
+    });
+    if (!assignee || !userHasLineAccess(assignee, subProject.project.softwareLineId)) {
       return res.status(400).json({ error: "Assignee belongs to a different software line" });
     }
   }

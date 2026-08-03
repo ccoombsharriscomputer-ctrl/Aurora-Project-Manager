@@ -6,7 +6,7 @@ import { blockReadOnly, effectiveSoftwareLineId, requireAuth } from "../middlewa
 import { logActivity } from "../lib/activity";
 import { emitUpdate } from "../lib/realtime";
 import { upload } from "../lib/upload";
-import { loadProjectInScope } from "../lib/scope";
+import { loadProjectInScope, userHasLineAccess } from "../lib/scope";
 import { extractProjectDetailsFromContract, extractTextFromPdf } from "../lib/contractExtraction";
 import {
   fetchTicketByNumber,
@@ -92,14 +92,15 @@ router.post("/", blockReadOnly, async (req, res) => {
   const requestedMemberIds = [...new Set(parsed.data.memberIds ?? [])].filter((id) => id !== req.user!.id);
   const memberUsers =
     requestedMemberIds.length > 0
-      ? await prisma.user.findMany({ where: { id: { in: requestedMemberIds } } })
+      ? await prisma.user.findMany({ where: { id: { in: requestedMemberIds } }, include: { softwareLineGrants: true } })
       : [];
   if (memberUsers.length !== requestedMemberIds.length) {
     return res.status(404).json({ error: "One or more selected users were not found" });
   }
-  // Same rule as adding a member after creation: a non-admin permanently locked to another
-  // line would be orphaned by membership on a project they can never switch into.
-  const wrongLineUser = memberUsers.find((u) => u.role !== "ADMIN" && u.softwareLineId !== lineId);
+  // Same rule as adding a member after creation: someone with no access to this line at all
+  // (not their home line, not a granted one, and not an admin) would be orphaned by
+  // membership on a project they can never switch into.
+  const wrongLineUser = memberUsers.find((u) => !userHasLineAccess(u, lineId));
   if (wrongLineUser) {
     return res
       .status(400)
@@ -435,14 +436,17 @@ router.post("/:id/members", blockReadOnly, async (req, res) => {
     return res.status(400).json({ error: parsed.error.issues[0].message });
   }
 
-  const user = await prisma.user.findUnique({ where: { id: parsed.data.userId } });
+  const user = await prisma.user.findUnique({
+    where: { id: parsed.data.userId },
+    include: { softwareLineGrants: true },
+  });
   if (!user) {
     return res.status(404).json({ error: "User not found" });
   }
-  // Non-admins are permanently locked to one line, so adding one from another line would
-  // orphan their own membership (they could never load a project they can't switch into).
-  // Admins can always switch into any line later, so they're exempt from this check.
-  if (user.role !== "ADMIN" && user.softwareLineId !== project.softwareLineId) {
+  // Adding someone with no access to this line at all would orphan their own membership
+  // (they could never load a project they can't switch into). Admins are always exempt;
+  // Project Leads/Members are fine too as long as it's their home line or a granted one.
+  if (!userHasLineAccess(user, project.softwareLineId)) {
     return res.status(400).json({ error: `${user.name} belongs to a different software line and can't be added to this project` });
   }
 

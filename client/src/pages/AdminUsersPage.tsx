@@ -321,10 +321,39 @@ interface UserEditData {
   role?: AdminUser["role"];
   active?: boolean;
   softwareLineId?: string;
+  grantedSoftwareLineIds?: string[];
   teamSupportUserId?: string | null;
   name?: string;
   email?: string;
   password?: string;
+}
+
+function GrantedLinesPanel({
+  user,
+  allLines,
+  onToggle,
+}: {
+  user: AdminUser;
+  allLines: SoftwareLine[];
+  onToggle: (lineId: string) => void;
+}) {
+  const { t } = useTranslation();
+  const grantedIds = new Set(user.grantedSoftwareLines.map((l) => l.id));
+  const otherLines = allLines.filter((l) => l.id !== user.softwareLine.id);
+
+  return (
+    <div style={{ marginLeft: 20, marginTop: 6, marginBottom: 10, paddingLeft: 12, borderLeft: "2px solid var(--border)" }}>
+      <p className="muted" style={{ fontSize: 12, marginBottom: 8 }}>
+        {t("adminUsers.extraLinesIntro")}
+      </p>
+      {otherLines.map((line) => (
+        <label key={line.id} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+          <input type="checkbox" checked={grantedIds.has(line.id)} onChange={() => onToggle(line.id)} />
+          {line.name}
+        </label>
+      ))}
+    </div>
+  );
 }
 
 export function AdminUsersPage() {
@@ -334,6 +363,7 @@ export function AdminUsersPage() {
   const [deleteErrors, setDeleteErrors] = useState<Record<string, string>>({});
   const [prefill, setPrefill] = useState<CreateUserPrefill | null>(null);
   const [editingUserId, setEditingUserId] = useState<string | null>(null);
+  const [expandedGrantsUserId, setExpandedGrantsUserId] = useState<string | null>(null);
   const [editName, setEditName] = useState("");
   const [editEmail, setEditEmail] = useState("");
   const [editPassword, setEditPassword] = useState("");
@@ -361,6 +391,12 @@ export function AdminUsersPage() {
     mutationFn: ({ id, data }: { id: string; data: UserEditData }) => api.patch(`/users/${id}`, data),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["users"] }),
   });
+
+  function toggleGrant(u: AdminUser, lineId: string) {
+    const current = u.grantedSoftwareLines.map((l) => l.id);
+    const next = current.includes(lineId) ? current.filter((id) => id !== lineId) : [...current, lineId];
+    updateUser.mutate({ id: u.id, data: { grantedSoftwareLineIds: next } });
+  }
 
   const saveEdit = useMutation({
     mutationFn: ({ id, data }: { id: string; data: UserEditData }) => api.patch<AdminUser>(`/users/${id}`, data),
@@ -412,6 +448,7 @@ export function AdminUsersPage() {
               <th>{t("common.email")}</th>
               <th>{t("common.role")}</th>
               <th>{t("common.softwareLine")}</th>
+              <th>{t("adminUsers.extraLines")}</th>
               <th>{t("adminUsers.teamSupportUser")}</th>
               <th>{t("common.status")}</th>
               <th>{t("adminUsers.joined")}</th>
@@ -422,7 +459,7 @@ export function AdminUsersPage() {
             {users.map((u) =>
               editingUserId === u.id ? (
                 <tr key={u.id}>
-                  <td colSpan={8}>
+                  <td colSpan={9}>
                     <form
                       className="card"
                       style={{ margin: "8px 0" }}
@@ -501,6 +538,20 @@ export function AdminUsersPage() {
                       </select>
                     </td>
                     <td>
+                      {u.role === "PROJECT_LEAD" || u.role === "MEMBER" ? (
+                        <button
+                          className="btn btn-sm"
+                          onClick={() => setExpandedGrantsUserId(expandedGrantsUserId === u.id ? null : u.id)}
+                        >
+                          {expandedGrantsUserId === u.id
+                            ? t("adminUsers.hideLines")
+                            : t("adminUsers.manageLines", { count: u.grantedSoftwareLines.length })}
+                        </button>
+                      ) : (
+                        <span className="muted">—</span>
+                      )}
+                    </td>
+                    <td>
                       <TeamSupportUserPicker
                         value={u.teamSupportUserId}
                         users={teamSupportUsers ?? []}
@@ -534,9 +585,20 @@ export function AdminUsersPage() {
                       </button>
                     </td>
                   </tr>
+                  {expandedGrantsUserId === u.id && (u.role === "PROJECT_LEAD" || u.role === "MEMBER") && (
+                    <tr>
+                      <td colSpan={9}>
+                        <GrantedLinesPanel
+                          user={u}
+                          allLines={softwareLines ?? []}
+                          onToggle={(lineId) => toggleGrant(u, lineId)}
+                        />
+                      </td>
+                    </tr>
+                  )}
                   {deleteErrors[u.id] && (
                     <tr>
-                      <td colSpan={8}>
+                      <td colSpan={9}>
                         <div className="error-text">{deleteErrors[u.id]}</div>
                       </td>
                     </tr>

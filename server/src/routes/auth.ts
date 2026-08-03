@@ -2,7 +2,8 @@ import { Router } from "express";
 import { z } from "zod";
 import { prisma } from "../lib/prisma";
 import { COOKIE_NAME, comparePassword, hashPassword, signToken } from "../lib/auth";
-import { requireAdmin, requireAuth } from "../middleware/auth";
+import { requireAuth } from "../middleware/auth";
+import { buildCurrentUserPayload } from "../lib/currentUser";
 
 const router = Router();
 
@@ -35,27 +36,26 @@ router.post("/login", async (req, res) => {
     return res.status(401).json({ error: "Invalid email or password" });
   }
 
-  // Each fresh login starts an admin back on their home line, even if a
-  // previous session left them switched into another one. Mid-session
-  // switches (via PATCH /active-line) still stick until the next login.
-  const loggedInUser =
-    user.role === "ADMIN" && user.activeSoftwareLineId
-      ? await prisma.user.update({ where: { id: user.id }, data: { activeSoftwareLineId: null } })
-      : user;
+  // Each fresh login starts a user back on their home line, even if a previous session
+  // left them switched into another one (admin or a granted Project Lead/Member alike).
+  // Mid-session switches (via PATCH /active-line) still stick until the next login.
+  const loggedInUser = user.activeSoftwareLineId
+    ? await prisma.user.update({ where: { id: user.id }, data: { activeSoftwareLineId: null } })
+    : user;
+
+  const grants = await prisma.userSoftwareLineGrant.findMany({
+    where: { userId: loggedInUser.id },
+    select: { softwareLineId: true },
+  });
 
   const token = signToken(loggedInUser.id);
   res.cookie(COOKIE_NAME, token, COOKIE_OPTIONS);
-  res.json({
-    id: loggedInUser.id,
-    name: loggedInUser.name,
-    email: loggedInUser.email,
-    role: loggedInUser.role,
-    theme: loggedInUser.theme,
-    accentColor: loggedInUser.accentColor,
-    locale: loggedInUser.locale,
-    softwareLineId: loggedInUser.softwareLineId,
-    activeSoftwareLineId: loggedInUser.activeSoftwareLineId,
-  });
+  res.json(
+    await buildCurrentUserPayload({
+      ...loggedInUser,
+      grantedSoftwareLineIds: grants.map((g) => g.softwareLineId),
+    })
+  );
 });
 
 router.post("/logout", (_req, res) => {
@@ -63,8 +63,8 @@ router.post("/logout", (_req, res) => {
   res.status(204).send();
 });
 
-router.get("/me", requireAuth, (req, res) => {
-  res.json(req.user);
+router.get("/me", requireAuth, async (req, res) => {
+  res.json(await buildCurrentUserPayload(req.user!));
 });
 
 const updateMeSchema = z.object({
@@ -94,7 +94,7 @@ router.patch("/me", requireAuth, async (req, res) => {
       activeSoftwareLineId: true,
     },
   });
-  res.json(user);
+  res.json(await buildCurrentUserPayload({ ...user, grantedSoftwareLineIds: req.user!.grantedSoftwareLineIds }));
 });
 
 const changePasswordSchema = z.object({
@@ -123,7 +123,10 @@ const updateActiveLineSchema = z.object({
   softwareLineId: z.string().min(1),
 });
 
-router.patch("/active-line", requireAuth, requireAdmin, async (req, res) => {
+// Admins can switch into any line. Project Leads and Members can only switch into their
+// home line or one they've been explicitly granted (see AdminUsersPage). Read Only accounts
+// never get here from the UI, and would be rejected the same way a non-granted line is.
+router.patch("/active-line", requireAuth, async (req, res) => {
   const parsed = updateActiveLineSchema.safeParse(req.body);
   if (!parsed.success) {
     return res.status(400).json({ error: parsed.error.issues[0].message });
@@ -132,6 +135,14 @@ router.patch("/active-line", requireAuth, requireAdmin, async (req, res) => {
   const line = await prisma.softwareLine.findUnique({ where: { id: parsed.data.softwareLineId } });
   if (!line) {
     return res.status(404).json({ error: "Software line not found" });
+  }
+
+  if (req.user!.role !== "ADMIN") {
+    const allowed =
+      line.id === req.user!.softwareLineId || req.user!.grantedSoftwareLineIds.includes(line.id);
+    if (!allowed) {
+      return res.status(403).json({ error: "You don't have access to that software line" });
+    }
   }
 
   const user = await prisma.user.update({
@@ -149,7 +160,7 @@ router.patch("/active-line", requireAuth, requireAdmin, async (req, res) => {
       activeSoftwareLineId: true,
     },
   });
-  res.json(user);
+  res.json(await buildCurrentUserPayload({ ...user, grantedSoftwareLineIds: req.user!.grantedSoftwareLineIds }));
 });
 
 export default router;

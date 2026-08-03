@@ -12,15 +12,22 @@ export interface AuthedUser {
   locale: "EN" | "ES" | "FR_CA";
   softwareLineId: string;
   activeSoftwareLineId: string | null;
+  grantedSoftwareLineIds: string[];
   teamSupportUserId: string | null;
 }
 
-// The software line whose data this request should operate on. Only admins can ever
-// differ from their home line (via activeSoftwareLineId) — everyone else is permanently
-// scoped to softwareLineId. Always derived server-side from the authenticated user, never
-// from client input, so a non-admin can never see another line's data.
+// The software line whose data this request should operate on. Admins can switch to any
+// line via activeSoftwareLineId. Project Leads and Members can switch too, but only into
+// their home line or one they've been explicitly granted — activeSoftwareLineId is never
+// trusted blindly for them, so a stale/tampered value (e.g. a grant later revoked) falls
+// back to their home line instead of leaking another line's data. Read Only stays
+// permanently on its home line (no UI ever sets activeSoftwareLineId for that role).
 export function effectiveSoftwareLineId(user: AuthedUser): string {
-  return user.role === "ADMIN" ? user.activeSoftwareLineId ?? user.softwareLineId : user.softwareLineId;
+  if (!user.activeSoftwareLineId) return user.softwareLineId;
+  if (user.role === "ADMIN") return user.activeSoftwareLineId;
+  const allowed =
+    user.activeSoftwareLineId === user.softwareLineId || user.grantedSoftwareLineIds.includes(user.activeSoftwareLineId);
+  return allowed ? user.activeSoftwareLineId : user.softwareLineId;
 }
 
 declare global {
@@ -38,7 +45,10 @@ async function getUserFromRequest(req: Request): Promise<AuthedUser | null> {
   }
   try {
     const { userId } = verifyToken(token);
-    const user = await prisma.user.findUnique({ where: { id: userId } });
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      include: { softwareLineGrants: { select: { softwareLineId: true } } },
+    });
     if (!user || !user.active) {
       return null;
     }
@@ -52,6 +62,7 @@ async function getUserFromRequest(req: Request): Promise<AuthedUser | null> {
       locale: user.locale,
       softwareLineId: user.softwareLineId,
       activeSoftwareLineId: user.activeSoftwareLineId,
+      grantedSoftwareLineIds: user.softwareLineGrants.map((g) => g.softwareLineId),
       teamSupportUserId: user.teamSupportUserId,
     };
   } catch {

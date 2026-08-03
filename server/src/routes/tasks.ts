@@ -5,7 +5,7 @@ import { blockReadOnly, effectiveSoftwareLineId, requireAuth } from "../middlewa
 import { logActivity } from "../lib/activity";
 import { emitUpdate } from "../lib/realtime";
 import { upload } from "../lib/upload";
-import { loadTaskInScope } from "../lib/scope";
+import { loadTaskInScope, userHasLineAccess } from "../lib/scope";
 import { PS_ACTION_TYPES, syncTaskUpdateToTeamSupport } from "../lib/teamSupport";
 import { formatHours } from "../lib/format";
 
@@ -71,8 +71,11 @@ router.patch("/:id", blockReadOnly, async (req, res) => {
   }
 
   if (parsed.data.assigneeId) {
-    const assignee = await prisma.user.findUnique({ where: { id: parsed.data.assigneeId } });
-    if (!assignee || (assignee.role !== "ADMIN" && assignee.softwareLineId !== existing.project.softwareLineId)) {
+    const assignee = await prisma.user.findUnique({
+      where: { id: parsed.data.assigneeId },
+      include: { softwareLineGrants: true },
+    });
+    if (!assignee || !userHasLineAccess(assignee, existing.project.softwareLineId)) {
       return res.status(400).json({ error: "Assignee belongs to a different software line" });
     }
   }

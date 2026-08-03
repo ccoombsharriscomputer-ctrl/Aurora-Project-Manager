@@ -206,7 +206,11 @@
     "deactivated": "Desactivado",
     "confirmDeleteUser": "¿Eliminar a {{name}}? Esta acción no se puede deshacer.",
     "teamSupportUser": "Usuario de TeamSupport",
-    "notLinked": "Sin vincular"
+    "notLinked": "Sin vincular",
+    "extraLines": "Líneas adicionales",
+    "manageLines": "Gestionar líneas ({{count}})",
+    "hideLines": "Ocultar líneas",
+    "extraLinesIntro": "Los Líderes de proyecto y Miembros pueden recibir acceso a líneas de producto adicionales. Podrán cambiar entre ellas desde la barra lateral, con los mismos permisos que ya tienen según su rol."
   },
   "projectTypes": {
     "newProjectType": "Nuevo tipo de proyecto",

@@ -87,6 +87,7 @@ model SoftwareLine {
   checklistItems       ChecklistItem[]
   accessRequests       AccessRequest[]
   activities           Activity[]
+  userGrants           UserSoftwareLineGrant[]
 }
 
 model User {
@@ -120,6 +121,21 @@ model User {
   createdTaskTemplates  TaskTemplate[]
   decidedAccessRequests AccessRequest[]
   followUps             FollowUp[]
+  softwareLineGrants    UserSoftwareLineGrant[]
+}
+
+// Grants a Project Lead or Member access to an additional software line beyond their home
+// one — they switch into it the same way an admin switches lines, keeping their existing
+// role's permissions. Admins need no grants (already unrestricted); Read Only stays locked
+// to its home line (no UI ever creates a grant for that role).
+model UserSoftwareLineGrant {
+  userId         String
+  softwareLineId String
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  softwareLine   SoftwareLine @relation(fields: [softwareLineId], references: [id], onDelete: Cascade)
+  createdAt      DateTime     @default(now())
+
+  @@id([userId, softwareLineId])
 }
 
 model Project {
