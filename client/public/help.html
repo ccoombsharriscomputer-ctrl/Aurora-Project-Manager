@@ -692,7 +692,9 @@
           <li><strong>Edit project</strong> opens an inline form for the name and description; the TeamSupport ticket
             number field next to the title saves as soon as you click away from it.</li>
           <li>Set a <strong>TeamSupport ticket #</strong> and Aurora fetches that ticket's live status right
-            underneath — a status badge, its subject line, and a <em>View in TeamSupport</em> link straight to it.
+            underneath — a status badge, its subject line, and an <em>Open TeamSupport</em> link. TeamSupport's own
+            ticket pages can't be linked to directly, so this opens TeamSupport itself; the ticket number and
+            subject shown right next to it are there to search with once you're in.
             See <a href="#teamsupport">TeamSupport integration</a> for what else this unlocks.</li>
           <li><strong>Archive project</strong> hides it from the Dashboard, Calendar, and default Projects list without
             deleting anything — it still shows up in Reports and behind <em>Show archived projects</em>. Only the
@@ -805,8 +807,10 @@
         <p>
           Setting a <strong>TeamSupport ticket #</strong> on a project (see <a href="#project-detail">Inside a
           project</a>) links it to the matching support ticket. Once it's set, Aurora shows that ticket's live
-          status, subject line, and a direct link to it right underneath the ticket number field — no need to
-          leave Aurora to check where things stand.
+          status and subject line right underneath the ticket number field — no need to leave Aurora to check where
+          things stand. The <em>Open TeamSupport</em> link next to it opens TeamSupport itself rather than the
+          ticket directly — TeamSupport doesn't support linking straight to one — so search for the ticket number
+          shown right there once you're in.
         </p>
         <p>
           From there, every comment posted on any task in that project — with or without logged time attached — is

@@ -146,7 +146,7 @@
     "loadingProject": "Chargement du projet…",
     "teamSupportTicket": "N° de billet TeamSupport",
     "teamSupportLoading": "Chargement du statut du billet…",
-    "viewInTeamSupport": "Voir dans TeamSupport",
+    "viewInTeamSupport": "Ouvrir TeamSupport",
     "confirmDeleteProject": "Supprimer le projet « {{name}} »? Cette action est irréversible.",
     "deleteProject": "Supprimer le projet",
     "loadingSubProjects": "Chargement des sous-projets…",
