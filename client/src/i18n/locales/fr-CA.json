@@ -122,7 +122,12 @@
     "showArchived": "Afficher les projets archivés",
     "allProjectTypes": "Tous les types de projet",
     "noProjectsMatchFilter": "Aucun projet ne correspond à ce type de projet.",
-    "archived": "Archivé"
+    "archived": "Archivé",
+    "gridView": "Grille",
+    "listView": "Liste",
+    "type": "Type",
+    "progress": "Progression",
+    "members": "Membres"
   },
   "projectDetail": {
     "newSubProject": "Nouveau sous-projet",

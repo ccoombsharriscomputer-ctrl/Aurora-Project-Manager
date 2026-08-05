@@ -6,12 +6,25 @@ import { api } from "../api/client";
 import type { ChecklistItem, ExtractedProjectDetails, Project, ProjectType, UserSummary } from "../api/types";
 import { extractErrorMessage, useAuth } from "../context/AuthContext";
 
+type ProjectsView = "grid" | "list";
+const VIEW_STORAGE_KEY = "aurora-projects-view";
+
 export function ProjectsPage() {
   const { t } = useTranslation();
   const { user, canWrite } = useAuth();
   const queryClient = useQueryClient();
   const [showArchived, setShowArchived] = useState(false);
   const [filterProjectTypeId, setFilterProjectTypeId] = useState("");
+  // Remembered per-browser rather than per-user — it's a display preference, not data
+  // worth round-tripping to the server the way theme/locale are.
+  const [view, setView] = useState<ProjectsView>(
+    () => (localStorage.getItem(VIEW_STORAGE_KEY) === "list" ? "list" : "grid")
+  );
+
+  function changeView(next: ProjectsView) {
+    setView(next);
+    localStorage.setItem(VIEW_STORAGE_KEY, next);
+  }
   const { data: projects, isLoading } = useQuery({
     queryKey: ["projects", showArchived],
     queryFn: () => api.get<Project[]>(`/projects${showArchived ? "?includeArchived=true" : ""}`),
@@ -117,6 +130,20 @@ export function ProjectsPage() {
       <div className="page-header">
         <h1>{t("layout.projects")}</h1>
         <div className="gap-8">
+          <div className="calendar-view-toggle">
+            <button
+              className={`btn btn-sm${view === "grid" ? " btn-primary" : ""}`}
+              onClick={() => changeView("grid")}
+            >
+              {t("projects.gridView")}
+            </button>
+            <button
+              className={`btn btn-sm${view === "list" ? " btn-primary" : ""}`}
+              onClick={() => changeView("list")}
+            >
+              {t("projects.listView")}
+            </button>
+          </div>
           <select value={filterProjectTypeId} onChange={(e) => setFilterProjectTypeId(e.target.value)}>
             <option value="">{t("projects.allProjectTypes")}</option>
             {(projectTypes ?? []).map((pt) => (
@@ -270,33 +297,79 @@ export function ProjectsPage() {
         <p className="muted">{t("projects.noProjectsMatchFilter")}</p>
       )}
 
-      <div className="project-grid">
-        {filteredProjects.map((p) => {
-          const percent = p.totalTasks === 0 ? 0 : Math.round((p.doneTasks / p.totalTasks) * 100);
-          return (
-            <Link key={p.id} to={`/projects/${p.id}`} className="card project-card">
-              <div className="flex-between">
-                <h3>{p.name}</h3>
-                {p.archivedAt && <span className="badge badge-archived">{t("projects.archived")}</span>}
-              </div>
-              <p className="muted" style={{ fontSize: 12, margin: "-4px 0 8px" }}>
-                {p.projectType.name}
-              </p>
-              <p>{p.description || t("projects.noDescription")}</p>
-              <div className="progress-row-top">
-                <span className="muted">{t("dashboard.tasksCount", { done: p.doneTasks, total: p.totalTasks })}</span>
-                <span className="muted">{percent}%</span>
-              </div>
-              <div className="progress-bar-track">
-                <div className="progress-bar-fill" style={{ width: `${percent}%` }} />
-              </div>
-              <div className="muted" style={{ marginTop: 10, fontSize: 12 }}>
-                {t("projects.memberCount", { count: p.members.length })}
-              </div>
-            </Link>
-          );
-        })}
-      </div>
+      {view === "grid" ? (
+        <div className="project-grid">
+          {filteredProjects.map((p) => {
+            const percent = p.totalTasks === 0 ? 0 : Math.round((p.doneTasks / p.totalTasks) * 100);
+            return (
+              <Link key={p.id} to={`/projects/${p.id}`} className="card project-card">
+                <div className="flex-between">
+                  <h3>{p.name}</h3>
+                  {p.archivedAt && <span className="badge badge-archived">{t("projects.archived")}</span>}
+                </div>
+                <p className="muted" style={{ fontSize: 12, margin: "-4px 0 8px" }}>
+                  {p.projectType.name}
+                </p>
+                <p>{p.description || t("projects.noDescription")}</p>
+                <div className="progress-row-top">
+                  <span className="muted">{t("dashboard.tasksCount", { done: p.doneTasks, total: p.totalTasks })}</span>
+                  <span className="muted">{percent}%</span>
+                </div>
+                <div className="progress-bar-track">
+                  <div className="progress-bar-fill" style={{ width: `${percent}%` }} />
+                </div>
+                <div className="muted" style={{ marginTop: 10, fontSize: 12 }}>
+                  {t("projects.memberCount", { count: p.members.length })}
+                </div>
+              </Link>
+            );
+          })}
+        </div>
+      ) : (
+        filteredProjects.length > 0 && (
+          <div className="card" style={{ padding: 0, overflowX: "auto" }}>
+            <table className="table">
+              <thead>
+                <tr>
+                  <th>{t("common.name")}</th>
+                  <th>{t("projects.type")}</th>
+                  <th>{t("projects.progress")}</th>
+                  <th>{t("projects.members")}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredProjects.map((p) => {
+                  const percent = p.totalTasks === 0 ? 0 : Math.round((p.doneTasks / p.totalTasks) * 100);
+                  return (
+                    <tr key={p.id}>
+                      <td>
+                        <Link to={`/projects/${p.id}`}>{p.name}</Link>
+                        {p.archivedAt && (
+                          <span className="badge badge-archived" style={{ marginLeft: 8 }}>
+                            {t("projects.archived")}
+                          </span>
+                        )}
+                      </td>
+                      <td className="muted">{p.projectType.name}</td>
+                      <td style={{ minWidth: 160 }}>
+                        <div className="gap-8" style={{ alignItems: "center" }}>
+                          <div className="progress-bar-track" style={{ flex: 1 }}>
+                            <div className="progress-bar-fill" style={{ width: `${percent}%` }} />
+                          </div>
+                          <span className="muted" style={{ whiteSpace: "nowrap" }}>
+                            {t("dashboard.tasksCount", { done: p.doneTasks, total: p.totalTasks })} · {percent}%
+                          </span>
+                        </div>
+                      </td>
+                      <td className="muted">{p.members.length}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )
+      )}
     </div>
   );
 }
