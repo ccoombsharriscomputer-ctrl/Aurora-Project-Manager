@@ -565,9 +565,9 @@
           <span class="badge badge-lead"><span class="role-dot" style="background:var(--role-lead)"></span>Project Lead</span>
           differ in one specific way: Project Leads can maintain the shared Project Type and Product catalogs,
           <span class="badge badge-member"><span class="role-dot" style="background:var(--role-member)"></span>Members</span>
-          can't. Beyond that, both create and run their own projects identically — and importantly, editing,
-          archiving, or deleting a project is only ever allowed for the person who created it, or an admin,
-          regardless of whether they're a Project Lead or a Member.
+          can't. Beyond that, both create and run their own projects identically — editing or archiving a project
+          is allowed for the person who created it or an admin, regardless of whether they're a Project Lead or a
+          Member, while deleting one outright is admin-only, even for the project's own creator.
           <span class="badge badge-readonly"><span class="role-dot" style="background:var(--role-readonly)"></span>Read Only</span>
           is covered on its own further down, since it changes how every screen behaves rather than just what's
           in the sidebar.
@@ -598,8 +598,12 @@
               <td class="yes">Yes</td><td class="yes">Yes</td><td class="yes">Yes</td><td class="no">—</td>
             </tr>
             <tr>
-              <td>Edit, archive, or delete a project</td>
+              <td>Edit or archive a project</td>
               <td class="yes">Any project</td><td class="partial">Ones they created</td><td class="partial">Ones they created</td><td class="no">—</td>
+            </tr>
+            <tr>
+              <td>Delete a project outright</td>
+              <td class="yes">Any project</td><td class="no">—</td><td class="no">—</td><td class="no">—</td>
             </tr>
             <tr>
               <td>Maintain Project Types &amp; Products</td>
