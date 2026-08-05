@@ -312,7 +312,8 @@ export function ProjectDetailPage() {
     return <div className="muted">{t("projectDetail.loadingProject")}</div>;
   }
 
-  const canManage = user?.role === "ADMIN" || user?.id === project.createdBy.id;
+  const isAdmin = user?.role === "ADMIN";
+  const canManage = isAdmin || user?.id === project.createdBy.id;
 
   return (
     <div>
@@ -430,7 +431,7 @@ export function ProjectDetailPage() {
               {project.archivedAt ? t("projectDetail.unarchiveProject") : t("projectDetail.archiveProject")}
             </button>
           )}
-          {canManage && (
+          {isAdmin && (
             <button
               className="btn btn-danger"
               onClick={() => {

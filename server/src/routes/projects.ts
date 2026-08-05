@@ -315,8 +315,10 @@ router.delete("/:id", blockReadOnly, async (req, res) => {
   if (!project) {
     return res.status(404).json({ error: "Project not found" });
   }
-  if (!canManageProject(project.createdById, req)) {
-    return res.status(403).json({ error: "Only the project creator or an admin can delete this project" });
+  // Deletion is permanent and admin-only — Project Leads and Members (even the project's
+  // own creator) can only archive a project via PATCH, never delete it outright.
+  if (req.user!.role !== "ADMIN") {
+    return res.status(403).json({ error: "Only an admin can delete this project" });
   }
   await prisma.project.delete({ where: { id: req.params.id } });
   // Logged after the delete (rather than before) so a failed delete can never leave behind
