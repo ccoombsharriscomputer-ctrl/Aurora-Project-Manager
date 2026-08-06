@@ -333,6 +333,7 @@ export function ProjectsPage() {
                 <tr>
                   <th>{t("common.name")}</th>
                   <th>{t("projects.type")}</th>
+                  <th>{t("common.description")}</th>
                   <th>{t("projects.progress")}</th>
                   <th>{t("projects.members")}</th>
                 </tr>
@@ -351,6 +352,9 @@ export function ProjectsPage() {
                         )}
                       </td>
                       <td className="muted">{p.projectType.name}</td>
+                      <td className="muted" style={{ maxWidth: 320 }}>
+                        {p.description || t("projects.noDescription")}
+                      </td>
                       <td style={{ minWidth: 160 }}>
                         <div className="gap-8" style={{ alignItems: "center" }}>
                           <div className="progress-bar-track" style={{ flex: 1 }}>
