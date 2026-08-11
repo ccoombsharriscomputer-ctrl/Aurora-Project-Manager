@@ -49,7 +49,8 @@
     "reports": "Informes",
     "settings": "Configuración",
     "help": "Ayuda",
-    "logOut": "Cerrar sesión"
+    "logOut": "Cerrar sesión",
+    "closeTab": "Cerrar la pestaña {{name}}"
   },
   "login": {
     "title": "Bienvenido de nuevo",

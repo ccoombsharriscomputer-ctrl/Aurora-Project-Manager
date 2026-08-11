@@ -49,7 +49,8 @@
     "reports": "Reports",
     "settings": "Settings",
     "help": "Help",
-    "logOut": "Log out"
+    "logOut": "Log out",
+    "closeTab": "Close {{name}} tab"
   },
   "login": {
     "title": "Welcome back",

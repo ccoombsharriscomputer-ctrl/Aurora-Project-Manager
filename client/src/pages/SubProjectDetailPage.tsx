@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
@@ -6,6 +6,7 @@ import type { TFunction } from "i18next";
 import { api } from "../api/client";
 import type { SubProjectDetail, Task, TaskPriority, UserSummary } from "../api/types";
 import { extractErrorMessage, useAuth } from "../context/AuthContext";
+import { useOpenTabs } from "../context/OpenTabsContext";
 import { formatDueDate } from "../utils/format";
 
 const COLUMNS: { status: Task["status"]; labelKey: string }[] = [
@@ -133,6 +134,11 @@ export function SubProjectDetailPage() {
     queryFn: () => api.get<SubProjectDetail>(`/sub-projects/${subProjectId}`),
     enabled: !!subProjectId,
   });
+
+  const { openTab } = useOpenTabs();
+  useEffect(() => {
+    if (subProject) openTab(subProject.project.id, subProject.project.name);
+  }, [subProject, openTab]);
 
   const { data: tasks, isLoading: tasksLoading } = useQuery({
     queryKey: ["sub-project-tasks", subProjectId],

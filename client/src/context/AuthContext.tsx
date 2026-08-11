@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from "
 import { api, ApiError } from "../api/client";
 import type { CurrentUser } from "../api/types";
 import i18n, { LOCALE_TO_I18N_LANGUAGE } from "../i18n";
+import { OPEN_TABS_STORAGE_KEY } from "./OpenTabsContext";
 
 interface AuthContextValue {
   user: CurrentUser | null;
@@ -41,6 +42,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   async function logout() {
     await api.post("/auth/logout");
     setUser(null);
+    // A shared browser could hand the next login someone else's open-project tabs
+    // otherwise — clear them along with the session itself.
+    localStorage.removeItem(OPEN_TABS_STORAGE_KEY);
   }
 
   const canWrite = user?.role !== "READ_ONLY";

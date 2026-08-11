@@ -49,7 +49,8 @@
     "reports": "Rapports",
     "settings": "Paramètres",
     "help": "Aide",
-    "logOut": "Se déconnecter"
+    "logOut": "Se déconnecter",
+    "closeTab": "Fermer l'onglet {{name}}"
   },
   "login": {
     "title": "Content de vous revoir",

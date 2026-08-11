@@ -1,10 +1,11 @@
-import { useRef, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { api } from "../api/client";
 import type { Attachment, ChecklistItem, Project, SubProject, TeamSupportTicketResponse, UserSummary } from "../api/types";
 import { extractErrorMessage, useAuth } from "../context/AuthContext";
+import { useOpenTabs } from "../context/OpenTabsContext";
 
 function NewSubProjectForm({ projectId }: { projectId: string }) {
   const { t } = useTranslation();
@@ -252,6 +253,11 @@ export function ProjectDetailPage() {
     queryFn: () => api.get<Project>(`/projects/${projectId}`),
     enabled: !!projectId,
   });
+
+  const { openTab } = useOpenTabs();
+  useEffect(() => {
+    if (project) openTab(project.id, project.name);
+  }, [project, openTab]);
 
   const { data: subProjects, isLoading: subProjectsLoading } = useQuery({
     queryKey: ["project-sub-projects", projectId],

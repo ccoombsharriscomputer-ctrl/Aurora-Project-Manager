@@ -1,10 +1,11 @@
-import { useRef, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { api } from "../api/client";
 import type { Project, TaskDetail, TaskPriority, TaskStatus, TeamSupportActionType, UserSummary } from "../api/types";
 import { extractErrorMessage, useAuth } from "../context/AuthContext";
+import { useOpenTabs } from "../context/OpenTabsContext";
 import { formatDate, formatMinutes, formatRelativeTime } from "../utils/format";
 import { useActiveTimer } from "../hooks/useActiveTimer";
 
@@ -48,6 +49,11 @@ export function TaskDetailPage() {
     queryFn: () => api.get<TaskDetail>(`/tasks/${taskId}`),
     enabled: !!taskId,
   });
+
+  const { openTab } = useOpenTabs();
+  useEffect(() => {
+    if (task) openTab(task.project.id, task.project.name);
+  }, [task, openTab]);
 
   const { data: project } = useQuery({
     queryKey: ["project", task?.project.id],
