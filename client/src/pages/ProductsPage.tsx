@@ -67,12 +67,72 @@ function TaskTemplatesPanel({ checklistItemId }: { checklistItemId: string }) {
     setEditError(null);
   }
 
+  const [draggedTemplateId, setDraggedTemplateId] = useState<string | null>(null);
+
+  const reorderTemplates = useMutation({
+    mutationFn: (templateIds: string[]) =>
+      api.patch(`/checklist-items/${checklistItemId}/task-templates/reorder`, { templateIds }),
+    onMutate: async (templateIds: string[]) => {
+      await queryClient.cancelQueries({ queryKey: ["task-templates", checklistItemId] });
+      const previous = queryClient.getQueryData<TaskTemplate[]>(["task-templates", checklistItemId]);
+      if (previous) {
+        const reordered = new Map(templateIds.map((id, index) => [id, index]));
+        queryClient.setQueryData<TaskTemplate[]>(
+          ["task-templates", checklistItemId],
+          [...previous].sort((a, b) => {
+            const ai = reordered.get(a.id);
+            const bi = reordered.get(b.id);
+            if (ai === undefined || bi === undefined) return 0;
+            return ai - bi;
+          })
+        );
+      }
+      return { previous };
+    },
+    onError: (_err, _templateIds, context) => {
+      if (context?.previous) {
+        queryClient.setQueryData(["task-templates", checklistItemId], context.previous);
+      }
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ["task-templates", checklistItemId] });
+    },
+  });
+
+  function handleDrop(orderedTemplates: TaskTemplate[], targetTemplateId: string) {
+    if (!draggedTemplateId || draggedTemplateId === targetTemplateId) return;
+    const ids = orderedTemplates.map((tpl) => tpl.id);
+    const from = ids.indexOf(draggedTemplateId);
+    const to = ids.indexOf(targetTemplateId);
+    if (from === -1 || to === -1) return;
+    ids.splice(to, 0, ids.splice(from, 1)[0]);
+    reorderTemplates.mutate(ids);
+  }
+
+  // Dropping in the empty space below the list (rather than onto a specific row) moves the
+  // dragged template to the end instead of no-oping.
+  function handleDropOnPanel(orderedTemplates: TaskTemplate[]) {
+    if (!draggedTemplateId) return;
+    const ids = orderedTemplates.map((tpl) => tpl.id);
+    const from = ids.indexOf(draggedTemplateId);
+    if (from === -1 || from === ids.length - 1) return;
+    ids.push(ids.splice(from, 1)[0]);
+    reorderTemplates.mutate(ids);
+  }
+
   return (
     <div style={{ marginLeft: 20, marginTop: 6, marginBottom: 10, paddingLeft: 12, borderLeft: "2px solid var(--border)" }}>
       <p className="muted" style={{ fontSize: 12, marginBottom: 8 }}>
         {t("products.taskTemplatesIntro")}
       </p>
       {isLoading && <p className="muted">{t("common.loading")}</p>}
+      <div
+        onDragOver={(e) => e.preventDefault()}
+        onDrop={(e) => {
+          e.preventDefault();
+          handleDropOnPanel(templates ?? []);
+        }}
+      >
       {templates?.map((template) =>
         editingTemplateId === template.id ? (
           <form
@@ -115,7 +175,19 @@ function TaskTemplatesPanel({ checklistItemId }: { checklistItemId: string }) {
             </div>
           </form>
         ) : (
-          <div className="task-list-item" key={template.id}>
+          <div
+            className={`task-list-item${draggedTemplateId === template.id ? " dragging" : ""}`}
+            key={template.id}
+            draggable
+            onDragStart={() => setDraggedTemplateId(template.id)}
+            onDragEnd={() => setDraggedTemplateId(null)}
+            onDragOver={(e) => e.preventDefault()}
+            onDrop={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              handleDrop(templates ?? [], template.id);
+            }}
+          >
             <span>
               {template.title} <span className={`badge priority-${template.priority}`}>{priorityLabel(t, template.priority)}</span>
             </span>
@@ -141,6 +213,7 @@ function TaskTemplatesPanel({ checklistItemId }: { checklistItemId: string }) {
           </div>
         )
       )}
+      </div>
       {templates?.length === 0 && <p className="muted">{t("products.noTaskTemplatesYet")}</p>}
       <form
         className="gap-8"

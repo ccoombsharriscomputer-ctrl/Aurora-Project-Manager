@@ -114,6 +114,7 @@ export interface TaskTemplate {
   description: string | null;
   priority: TaskPriority;
   active: boolean;
+  order: number;
   createdAt: string;
 }
 

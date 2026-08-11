@@ -424,6 +424,14 @@ label {
   border-bottom: none;
 }
 
+.task-list-item[draggable="true"] {
+  cursor: grab;
+}
+
+.task-list-item.dragging {
+  opacity: 0.5;
+}
+
 .badge {
   display: inline-block;
   font-size: 11px;

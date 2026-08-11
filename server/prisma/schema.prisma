@@ -199,6 +199,7 @@ model TaskTemplate {
   description     String?
   priority        TaskPriority  @default(MEDIUM)
   active          Boolean       @default(true)
+  order           Int           @default(0)
   createdById     String
   createdBy       User          @relation(fields: [createdById], references: [id])
   createdAt       DateTime      @default(now())

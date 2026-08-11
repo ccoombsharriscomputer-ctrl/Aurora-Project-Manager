@@ -98,7 +98,7 @@ router.get("/:id/task-templates", async (req, res) => {
 
   const templates = await prisma.taskTemplate.findMany({
     where: { checklistItemId: req.params.id },
-    orderBy: { createdAt: "asc" },
+    orderBy: [{ order: "asc" }, { createdAt: "asc" }],
   });
   res.json(templates);
 });
@@ -120,18 +120,58 @@ router.post("/:id/task-templates", requireProjectTypeManager, async (req, res) =
     return res.status(400).json({ error: parsed.error.issues[0].message });
   }
 
+  const maxOrder = await prisma.taskTemplate.aggregate({
+    where: { checklistItemId: checklistItem.id },
+    _max: { order: true },
+  });
+
   const template = await prisma.taskTemplate.create({
     data: {
       checklistItemId: checklistItem.id,
       title: parsed.data.title,
       description: parsed.data.description,
       priority: parsed.data.priority ?? "MEDIUM",
+      order: (maxOrder._max.order ?? -10) + 10,
       createdById: req.user!.id,
     },
   });
 
   emitUpdate({ scope: "products" });
   res.status(201).json(template);
+});
+
+const reorderTaskTemplatesSchema = z.object({
+  templateIds: z.array(z.string().min(1)).min(1),
+});
+
+// Reorders a product's standard task templates — this order is also what's used when the
+// product's tasks auto-create on a project (see projects.ts), so getting it right here means
+// every future use of the product comes in correctly ordered, not just this catalog view.
+router.patch("/:id/task-templates/reorder", requireProjectTypeManager, async (req, res) => {
+  const lineId = effectiveSoftwareLineId(req.user!);
+  const checklistItem = await prisma.checklistItem.findUnique({ where: { id: req.params.id } });
+  if (!checklistItem || checklistItem.softwareLineId !== lineId) {
+    return res.status(404).json({ error: "Product not found" });
+  }
+  const parsed = reorderTaskTemplatesSchema.safeParse(req.body);
+  if (!parsed.success) {
+    return res.status(400).json({ error: parsed.error.issues[0].message });
+  }
+
+  const matching = await prisma.taskTemplate.findMany({
+    where: { id: { in: parsed.data.templateIds }, checklistItemId: checklistItem.id },
+    select: { id: true },
+  });
+  if (matching.length !== parsed.data.templateIds.length) {
+    return res.status(400).json({ error: "One or more tasks don't belong to this product" });
+  }
+
+  await prisma.$transaction(
+    parsed.data.templateIds.map((id, index) => prisma.taskTemplate.update({ where: { id }, data: { order: index * 10 } }))
+  );
+
+  emitUpdate({ scope: "products" });
+  res.status(204).send();
 });
 
 export default router;

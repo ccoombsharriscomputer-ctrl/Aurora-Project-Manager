@@ -131,6 +131,7 @@ router.post("/", blockReadOnly, async (req, res) => {
   if (checklistItems.length > 0) {
     const taskTemplates = await prisma.taskTemplate.findMany({
       where: { checklistItemId: { in: checklistItems.map((item) => item.id) }, active: true },
+      orderBy: { order: "asc" },
     });
     const templatesByChecklistItem = new Map<string, typeof taskTemplates>();
     for (const template of taskTemplates) {
@@ -147,13 +148,14 @@ router.post("/", blockReadOnly, async (req, res) => {
       const templates = templatesByChecklistItem.get(item.id) ?? [];
       if (templates.length > 0) {
         await prisma.task.createMany({
-          data: templates.map((template) => ({
+          data: templates.map((template, index) => ({
             projectId: project.id,
             subProjectId: subProject.id,
             projectTypeId: projectType.id,
             title: template.title,
             description: template.description,
             priority: template.priority,
+            order: index * 10,
             createdById: req.user!.id,
           })),
         });
@@ -544,16 +546,18 @@ router.post("/:id/sub-projects", blockReadOnly, async (req, res) => {
 
   const templates = await prisma.taskTemplate.findMany({
     where: { checklistItemId: checklistItem.id, active: true },
+    orderBy: { order: "asc" },
   });
   if (templates.length > 0) {
     await prisma.task.createMany({
-      data: templates.map((template) => ({
+      data: templates.map((template, index) => ({
         projectId: project.id,
         subProjectId: subProject.id,
         projectTypeId: project.projectTypeId,
         title: template.title,
         description: template.description,
         priority: template.priority,
+        order: index * 10,
         createdById: req.user!.id,
       })),
     });
