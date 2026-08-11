@@ -340,10 +340,12 @@ const duplicateSchema = z.object({
   name: z.string().min(1).max(200),
 });
 
-// Full-snapshot copy: same project type, description, TeamSupport ticket #, members,
-// sub-projects, and every task exactly as it stands right now (status, assignee, priority,
-// due date). Comments, attachments, and time entries are deliberately left behind — those
-// belong to the original engagement's history, not a fresh copy of it.
+// Full-snapshot copy: same project type, description, members, sub-projects, and every
+// task exactly as it stands right now (status, assignee, priority, due date). Comments,
+// attachments, and time entries are deliberately left behind — those belong to the original
+// engagement's history, not a fresh copy of it. The TeamSupport ticket # is deliberately NOT
+// copied either — it identifies one specific support ticket, and the copy is a distinct
+// engagement that hasn't been tied to a ticket yet (or needs its own).
 router.post("/:id/duplicate", blockReadOnly, async (req, res) => {
   const lineId = effectiveSoftwareLineId(req.user!);
   const parsed = duplicateSchema.safeParse(req.body);
@@ -369,7 +371,6 @@ router.post("/:id/duplicate", blockReadOnly, async (req, res) => {
     data: {
       name: parsed.data.name,
       description: source.description,
-      teamSupportTicketNumber: source.teamSupportTicketNumber,
       projectTypeId: source.projectTypeId,
       softwareLineId: source.softwareLineId,
       createdById: req.user!.id,
