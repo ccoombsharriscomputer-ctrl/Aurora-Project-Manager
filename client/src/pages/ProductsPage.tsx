@@ -17,6 +17,11 @@ function TaskTemplatesPanel({ checklistItemId }: { checklistItemId: string }) {
   const [title, setTitle] = useState("");
   const [priority, setPriority] = useState<TaskPriority>("MEDIUM");
   const [error, setError] = useState<string | null>(null);
+  const [editingTemplateId, setEditingTemplateId] = useState<string | null>(null);
+  const [editTitle, setEditTitle] = useState("");
+  const [editDescription, setEditDescription] = useState("");
+  const [editPriority, setEditPriority] = useState<TaskPriority>("MEDIUM");
+  const [editError, setEditError] = useState<string | null>(null);
 
   const { data: templates, isLoading } = useQuery({
     queryKey: ["task-templates", checklistItemId],
@@ -39,10 +44,28 @@ function TaskTemplatesPanel({ checklistItemId }: { checklistItemId: string }) {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["task-templates", checklistItemId] }),
   });
 
+  const updateTemplate = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Record<string, unknown> }) => api.patch(`/task-templates/${id}`, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["task-templates", checklistItemId] });
+      setEditingTemplateId(null);
+      setEditError(null);
+    },
+    onError: (err) => setEditError(extractErrorMessage(err)),
+  });
+
   const deleteTemplate = useMutation({
     mutationFn: (id: string) => api.delete(`/task-templates/${id}`),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["task-templates", checklistItemId] }),
   });
+
+  function startEditTemplate(template: TaskTemplate) {
+    setEditingTemplateId(template.id);
+    setEditTitle(template.title);
+    setEditDescription(template.description ?? "");
+    setEditPriority(template.priority);
+    setEditError(null);
+  }
 
   return (
     <div style={{ marginLeft: 20, marginTop: 6, marginBottom: 10, paddingLeft: 12, borderLeft: "2px solid var(--border)" }}>
@@ -50,29 +73,74 @@ function TaskTemplatesPanel({ checklistItemId }: { checklistItemId: string }) {
         {t("products.taskTemplatesIntro")}
       </p>
       {isLoading && <p className="muted">{t("common.loading")}</p>}
-      {templates?.map((template) => (
-        <div className="task-list-item" key={template.id}>
-          <span>
-            {template.title} <span className={`badge priority-${template.priority}`}>{priorityLabel(t, template.priority)}</span>
-          </span>
-          <span className="gap-8">
-            <span className="muted">{template.active ? t("common.active") : t("common.inactive")}</span>
-            <button className="btn btn-sm" onClick={() => toggleActive.mutate({ id: template.id, active: !template.active })}>
-              {template.active ? t("common.deactivate") : t("common.reactivate")}
-            </button>
-            <button
-              className="btn btn-sm btn-danger"
-              onClick={() => {
-                if (confirm(t("products.confirmDeleteTaskTemplate", { title: template.title }))) {
-                  deleteTemplate.mutate(template.id);
-                }
-              }}
-            >
-              {t("common.delete")}
-            </button>
-          </span>
-        </div>
-      ))}
+      {templates?.map((template) =>
+        editingTemplateId === template.id ? (
+          <form
+            className="card"
+            style={{ marginBottom: 8 }}
+            key={template.id}
+            onSubmit={(e: FormEvent) => {
+              e.preventDefault();
+              if (!editTitle.trim()) return;
+              updateTemplate.mutate({
+                id: template.id,
+                data: { title: editTitle, description: editDescription || null, priority: editPriority },
+              });
+            }}
+          >
+            <div className="field">
+              <label>{t("products.taskTitlePlaceholder")}</label>
+              <input type="text" required value={editTitle} onChange={(e) => setEditTitle(e.target.value)} />
+            </div>
+            <div className="field">
+              <label>{t("common.description")}</label>
+              <textarea value={editDescription} onChange={(e) => setEditDescription(e.target.value)} />
+            </div>
+            <div className="field">
+              <label>{t("subProjectDetail.priority")}</label>
+              <select value={editPriority} onChange={(e) => setEditPriority(e.target.value as TaskPriority)} style={{ width: "auto" }}>
+                <option value="LOW">{t("common.priorityLow")}</option>
+                <option value="MEDIUM">{t("common.priorityMedium")}</option>
+                <option value="HIGH">{t("common.priorityHigh")}</option>
+              </select>
+            </div>
+            {editError && <div className="error-text">{editError}</div>}
+            <div className="gap-8">
+              <button className="btn btn-sm btn-primary" type="submit" disabled={updateTemplate.isPending}>
+                {t("common.save")}
+              </button>
+              <button className="btn btn-sm" type="button" onClick={() => setEditingTemplateId(null)}>
+                {t("common.cancel")}
+              </button>
+            </div>
+          </form>
+        ) : (
+          <div className="task-list-item" key={template.id}>
+            <span>
+              {template.title} <span className={`badge priority-${template.priority}`}>{priorityLabel(t, template.priority)}</span>
+            </span>
+            <span className="gap-8">
+              <span className="muted">{template.active ? t("common.active") : t("common.inactive")}</span>
+              <button className="btn btn-sm" onClick={() => startEditTemplate(template)}>
+                {t("common.edit")}
+              </button>
+              <button className="btn btn-sm" onClick={() => toggleActive.mutate({ id: template.id, active: !template.active })}>
+                {template.active ? t("common.deactivate") : t("common.reactivate")}
+              </button>
+              <button
+                className="btn btn-sm btn-danger"
+                onClick={() => {
+                  if (confirm(t("products.confirmDeleteTaskTemplate", { title: template.title }))) {
+                    deleteTemplate.mutate(template.id);
+                  }
+                }}
+              >
+                {t("common.delete")}
+              </button>
+            </span>
+          </div>
+        )
+      )}
       {templates?.length === 0 && <p className="muted">{t("products.noTaskTemplatesYet")}</p>}
       <form
         className="gap-8"
