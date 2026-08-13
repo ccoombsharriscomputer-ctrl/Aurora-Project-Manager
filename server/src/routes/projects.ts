@@ -275,10 +275,6 @@ router.get("/:id/teamsupport-ticket", async (req, res) => {
   }
 });
 
-function canManageProject(projectCreatedById: string, req: import("express").Request) {
-  return req.user!.role === "ADMIN" || req.user!.id === projectCreatedById;
-}
-
 const updateSchema = z.object({
   name: z.string().min(1).max(200).optional(),
   description: z.string().max(2000).nullable().optional(),
@@ -286,13 +282,14 @@ const updateSchema = z.object({
   archived: z.boolean().optional(),
 });
 
+// Any Project Lead or Member can edit or archive a project, not just its creator or an
+// admin — blockReadOnly above is the only gate. Since that opens this up to anyone on the
+// line, every edit and archive/unarchive is logged to the audit trail below so there's a
+// record of who changed what, even though they were allowed to.
 router.patch("/:id", blockReadOnly, async (req, res) => {
   const project = await loadProjectInScope(req.params.id, effectiveSoftwareLineId(req.user!));
   if (!project) {
     return res.status(404).json({ error: "Project not found" });
-  }
-  if (!canManageProject(project.createdById, req)) {
-    return res.status(403).json({ error: "Only the project creator or an admin can edit this project" });
   }
 
   const parsed = updateSchema.safeParse(req.body);
@@ -307,6 +304,32 @@ router.patch("/:id", blockReadOnly, async (req, res) => {
   }
 
   const updated = await prisma.project.update({ where: { id: req.params.id }, data });
+
+  const changedFields: string[] = [];
+  if (rest.name !== undefined && rest.name !== project.name) changedFields.push("name");
+  if (rest.description !== undefined && rest.description !== project.description) changedFields.push("description");
+  if (rest.teamSupportTicketNumber !== undefined && rest.teamSupportTicketNumber !== project.teamSupportTicketNumber) {
+    changedFields.push("TeamSupport ticket #");
+  }
+  if (changedFields.length > 0) {
+    await logActivity({
+      type: "PROJECT_UPDATED",
+      message: `${req.user!.name} updated ${changedFields.join(", ")} on project "${updated.name}"`,
+      userId: req.user!.id,
+      softwareLineId: project.softwareLineId,
+      projectId: project.id,
+    });
+  }
+  if (archived !== undefined) {
+    await logActivity({
+      type: archived ? "PROJECT_ARCHIVED" : "PROJECT_UNARCHIVED",
+      message: `${req.user!.name} ${archived ? "archived" : "unarchived"} project "${updated.name}"`,
+      userId: req.user!.id,
+      softwareLineId: project.softwareLineId,
+      projectId: project.id,
+    });
+  }
+
   emitUpdate({ scope: "project", projectId: updated.id });
   emitUpdate({ scope: "projects" });
   emitUpdate({ scope: "dashboard" });

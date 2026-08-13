@@ -381,7 +381,7 @@ export function ProjectDetailPage() {
           )}
           <div className="gap-8" style={{ marginTop: 8 }}>
             <label style={{ margin: 0 }}>{t("projectDetail.teamSupportTicket")}</label>
-            {canManage ? (
+            {canWrite ? (
               <input
                 type="text"
                 placeholder="e.g. 255219"
@@ -429,7 +429,7 @@ export function ProjectDetailPage() {
               {t("projectDetail.duplicateProject")}
             </button>
           )}
-          {canManage && !editing && (
+          {canWrite && !editing && (
             <button
               className="btn"
               onClick={() => {
@@ -442,7 +442,7 @@ export function ProjectDetailPage() {
               {t("projectDetail.editProject")}
             </button>
           )}
-          {canManage && (
+          {canWrite && (
             <button
               className="btn"
               onClick={() => updateProject.mutate({ archived: !project.archivedAt })}
