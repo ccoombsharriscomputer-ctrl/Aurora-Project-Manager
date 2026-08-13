@@ -344,7 +344,9 @@ const duplicateSchema = z.object({
 });
 
 // Full-snapshot copy: same project type, description, members, sub-projects, and every
-// task exactly as it stands right now (status, assignee, priority, due date). Comments,
+// task's title/assignee/priority/due date. Task status is deliberately NOT carried over —
+// every copied task starts fresh at TODO (with completedAt/naReason cleared to match), since
+// a copy represents a new engagement that hasn't done any of that work yet. Comments,
 // attachments, and time entries are deliberately left behind — those belong to the original
 // engagement's history, not a fresh copy of it. The TeamSupport ticket # is deliberately NOT
 // copied either — it identifies one specific support ticket, and the copy is a distinct
@@ -403,12 +405,12 @@ router.post("/:id/duplicate", blockReadOnly, async (req, res) => {
         projectTypeId: project.projectTypeId,
         title: task.title,
         description: task.description,
-        status: task.status,
+        status: "TODO" as const,
         priority: task.priority,
         assigneeId: task.assigneeId,
         dueDate: task.dueDate,
-        completedAt: task.completedAt,
-        naReason: task.naReason,
+        completedAt: null,
+        naReason: null,
         createdById: req.user!.id,
       })),
     });
