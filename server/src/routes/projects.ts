@@ -6,6 +6,7 @@ import { blockReadOnly, effectiveSoftwareLineId, requireAuth } from "../middlewa
 import { logActivity } from "../lib/activity";
 import { emitUpdate } from "../lib/realtime";
 import { upload } from "../lib/upload";
+import { storage } from "../lib/storage";
 import { loadProjectInScope, userHasLineAccess } from "../lib/scope";
 import { extractProjectDetailsFromContract, extractTextFromPdf } from "../lib/contractExtraction";
 import {
@@ -590,11 +591,13 @@ router.post("/:id/attachments", blockReadOnly, upload.single("file"), async (req
     return res.status(400).json({ error: "No file uploaded" });
   }
 
+  const storedFilename = await storage.save(req.file.buffer, req.file.originalname, req.file.mimetype);
+
   const attachment = await prisma.attachment.create({
     data: {
       projectId: project.id,
       uploaderId: req.user!.id,
-      storedFilename: req.file.filename,
+      storedFilename,
       originalName: req.file.originalname,
       mimeType: req.file.mimetype,
       size: req.file.size,

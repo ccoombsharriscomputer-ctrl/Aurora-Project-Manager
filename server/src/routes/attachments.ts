@@ -1,11 +1,9 @@
 import { Router } from "express";
-import fs from "fs";
-import path from "path";
 import { prisma } from "../lib/prisma";
 import { blockReadOnly, effectiveSoftwareLineId, requireAuth } from "../middleware/auth";
 import { logActivity } from "../lib/activity";
 import { emitUpdate } from "../lib/realtime";
-import { UPLOAD_DIR } from "../lib/upload";
+import { storage } from "../lib/storage";
 import { loadAttachmentInScope } from "../lib/scope";
 
 const router = Router();
@@ -16,9 +14,15 @@ router.get("/:id", async (req, res) => {
   if (!attachment) {
     return res.status(404).json({ error: "Attachment not found" });
   }
+  let stream;
+  try {
+    stream = await storage.getStream(attachment.storedFilename);
+  } catch {
+    return res.status(404).json({ error: "File not found" });
+  }
   res.setHeader("Content-Type", attachment.mimeType);
   res.setHeader("Content-Disposition", `inline; filename="${attachment.originalName.replace(/"/g, "")}"`);
-  res.sendFile(path.join(UPLOAD_DIR, attachment.storedFilename));
+  stream.pipe(res);
 });
 
 router.get("/:id/download", async (req, res) => {
@@ -26,7 +30,15 @@ router.get("/:id/download", async (req, res) => {
   if (!attachment) {
     return res.status(404).json({ error: "Attachment not found" });
   }
-  res.download(path.join(UPLOAD_DIR, attachment.storedFilename), attachment.originalName);
+  let stream;
+  try {
+    stream = await storage.getStream(attachment.storedFilename);
+  } catch {
+    return res.status(404).json({ error: "File not found" });
+  }
+  res.setHeader("Content-Type", attachment.mimeType);
+  res.setHeader("Content-Disposition", `attachment; filename="${attachment.originalName.replace(/"/g, "")}"`);
+  stream.pipe(res);
 });
 
 router.delete("/:id", blockReadOnly, async (req, res) => {
@@ -36,7 +48,7 @@ router.delete("/:id", blockReadOnly, async (req, res) => {
   }
 
   await prisma.attachment.delete({ where: { id: attachment.id } });
-  await fs.promises.unlink(path.join(UPLOAD_DIR, attachment.storedFilename)).catch(() => null);
+  await storage.delete(attachment.storedFilename);
 
   const softwareLineId = attachment.project?.softwareLineId ?? attachment.task!.project.softwareLineId;
   const attachedTo = attachment.project ? `project "${attachment.project.name}"` : `"${attachment.task!.title}"`;

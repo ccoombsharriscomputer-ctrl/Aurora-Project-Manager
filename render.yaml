@@ -40,3 +40,10 @@ services:
       # etc. = set this to that same origin).
       - key: TEAMSUPPORT_API_BASE_URL
         sync: false
+      # Only needed to move attachment storage off local disk (which doesn't survive a
+      # redeploy here) onto Azure Blob Storage. Without it, attachments keep working exactly
+      # as before, just on local disk.
+      - key: AZURE_STORAGE_CONNECTION_STRING
+        sync: false
+      - key: AZURE_STORAGE_CONTAINER_NAME
+        sync: false

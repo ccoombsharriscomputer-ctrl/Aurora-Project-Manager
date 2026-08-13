@@ -1,16 +1,9 @@
 import multer from "multer";
-import path from "path";
-import crypto from "crypto";
 
-export const UPLOAD_DIR = path.join(__dirname, "..", "..", "uploads");
-
+// Files are held in memory only during the request — the route handler is responsible for
+// persisting them via lib/storage.ts, which is what actually decides where the bytes end up
+// (local disk or Azure Blob Storage).
 export const upload = multer({
-  storage: multer.diskStorage({
-    destination: (_req, _file, cb) => cb(null, UPLOAD_DIR),
-    filename: (_req, file, cb) => {
-      const unique = crypto.randomBytes(16).toString("hex");
-      cb(null, `${unique}${path.extname(file.originalname)}`);
-    },
-  }),
+  storage: multer.memoryStorage(),
   limits: { fileSize: 25 * 1024 * 1024 },
 });
