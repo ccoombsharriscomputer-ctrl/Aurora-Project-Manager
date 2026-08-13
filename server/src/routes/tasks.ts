@@ -7,7 +7,7 @@ import { emitUpdate } from "../lib/realtime";
 import { upload } from "../lib/upload";
 import { storage } from "../lib/storage";
 import { loadTaskInScope, userHasLineAccess } from "../lib/scope";
-import { PS_ACTION_TYPES, syncTaskUpdateToTeamSupport } from "../lib/teamSupport";
+import { PS_ACTION_TYPES, syncTaskUpdateToTeamSupport, teamSupportTaskContext } from "../lib/teamSupport";
 import { formatHours } from "../lib/format";
 
 const router = Router();
@@ -268,12 +268,18 @@ router.post("/:id/comments", blockReadOnly, async (req, res) => {
   }
 
   if (task.project.teamSupportTicketNumber) {
-    syncTaskUpdateToTeamSupport(task.project.teamSupportTicketNumber, parsed.data.body, task.project.softwareLine.name, {
-      hours: parsed.data.hours,
-      creatorId: req.user!.teamSupportUserId,
-      actionTypeId: actionType?.id,
-      isPublic: parsed.data.isPublic ?? false,
-    });
+    syncTaskUpdateToTeamSupport(
+      task.project.teamSupportTicketNumber,
+      parsed.data.body,
+      task.project.softwareLine.name,
+      teamSupportTaskContext(task),
+      {
+        hours: parsed.data.hours,
+        creatorId: req.user!.teamSupportUserId,
+        actionTypeId: actionType?.id,
+        isPublic: parsed.data.isPublic ?? false,
+      }
+    );
   }
 
   // A follow-up is a calendar reminder, not a task of its own — it never shows up as an open
@@ -474,10 +480,13 @@ router.post("/:id/time-entries", blockReadOnly, async (req, res) => {
   if (task.project.teamSupportTicketNumber) {
     const hours = parsed.data.hours;
     const body = parsed.data.note || `${formatHours(hours)}h logged`;
-    syncTaskUpdateToTeamSupport(task.project.teamSupportTicketNumber, body, task.project.softwareLine.name, {
-      hours,
-      creatorId: req.user!.teamSupportUserId,
-    });
+    syncTaskUpdateToTeamSupport(
+      task.project.teamSupportTicketNumber,
+      body,
+      task.project.softwareLine.name,
+      teamSupportTaskContext(task),
+      { hours, creatorId: req.user!.teamSupportUserId }
+    );
   }
 
   emitUpdate({ scope: "task", taskId: task.id });

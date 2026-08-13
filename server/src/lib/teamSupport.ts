@@ -185,18 +185,32 @@ function toHtmlLines(text: string): string {
   return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\n/g, "<br>");
 }
 
+// The sub-project + task line shown to TeamSupport right below the "Via <line> Project
+// Manager" header — same name fallback (the sub-project's own name, else its product's) used
+// everywhere else this app displays a sub-project.
+export function teamSupportTaskContext(task: {
+  title: string;
+  subProject: { name: string | null; checklistItem: { name: string } };
+}): string {
+  return `${task.subProject.name || task.subProject.checklistItem.name} — ${task.title}`;
+}
+
 // Fire-and-forget: a comment or time log in Aurora should never fail (or wait) on
 // TeamSupport being slow or unreachable, so this is deliberately not awaited by callers.
 // The header names the specific software line's Project Manager (e.g. "Via TRIO Project
 // Manager") rather than "Aurora" generically, since that's what actually means something to
-// whoever reads the note in TeamSupport.
+// whoever reads the note in TeamSupport — same for every software line, not just TRIO.
+// taskContext (the sub-project and task the update came from) sits right below that header,
+// before the actual comment/time-log body, so a reader in TeamSupport — who has no other way
+// to see Aurora's project structure — knows exactly where in the project this note came from.
 export function syncTaskUpdateToTeamSupport(
   ticketNumber: string,
   body: string,
   productLineName: string,
+  taskContext: string,
   options: PostTicketActionOptions = {}
 ) {
-  const description = `Via ${productLineName} Project Manager<br><br><br>${toHtmlLines(body)}`;
+  const description = `Via ${productLineName} Project Manager<br>${toHtmlLines(taskContext)}<br><br>${toHtmlLines(body)}`;
   postTicketAction(ticketNumber, description, options).catch((err) => {
     console.error(`[teamSupport] failed to sync update to ticket ${ticketNumber}: ${err instanceof Error ? err.message : err}`);
   });

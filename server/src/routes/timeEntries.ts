@@ -4,7 +4,7 @@ import { prisma } from "../lib/prisma";
 import { blockReadOnly, requireAuth } from "../middleware/auth";
 import { logActivity } from "../lib/activity";
 import { emitUpdate } from "../lib/realtime";
-import { syncTaskUpdateToTeamSupport } from "../lib/teamSupport";
+import { syncTaskUpdateToTeamSupport, teamSupportTaskContext } from "../lib/teamSupport";
 import { formatHours } from "../lib/format";
 
 const router = Router();
@@ -23,7 +23,14 @@ const stopSchema = z.object({ note: z.string().max(1000).optional() });
 router.post("/:id/stop", blockReadOnly, async (req, res) => {
   const entry = await prisma.timeEntry.findUnique({
     where: { id: req.params.id },
-    include: { task: { include: { project: { include: { softwareLine: true } } } } },
+    include: {
+      task: {
+        include: {
+          project: { include: { softwareLine: true } },
+          subProject: { include: { checklistItem: true } },
+        },
+      },
+    },
   });
   if (!entry) {
     return res.status(404).json({ error: "Time entry not found" });
@@ -57,10 +64,13 @@ router.post("/:id/stop", blockReadOnly, async (req, res) => {
   if (entry.task.project.teamSupportTicketNumber) {
     const hours = durationMinutes / 60;
     const body = updated.note || `${formatHours(hours)}h logged (timer)`;
-    syncTaskUpdateToTeamSupport(entry.task.project.teamSupportTicketNumber, body, entry.task.project.softwareLine.name, {
-      hours,
-      creatorId: req.user!.teamSupportUserId,
-    });
+    syncTaskUpdateToTeamSupport(
+      entry.task.project.teamSupportTicketNumber,
+      body,
+      entry.task.project.softwareLine.name,
+      teamSupportTaskContext(entry.task),
+      { hours, creatorId: req.user!.teamSupportUserId }
+    );
   }
 
   emitUpdate({ scope: "task", taskId: entry.task.id });
