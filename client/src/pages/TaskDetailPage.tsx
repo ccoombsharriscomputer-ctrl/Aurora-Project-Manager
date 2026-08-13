@@ -158,20 +158,14 @@ export function TaskDetailPage() {
     onSuccess: invalidateTask,
   });
 
-  const startTimer = useMutation({
-    mutationFn: () => api.post(`/tasks/${taskId}/time-entries/start`),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["active-timer"] });
-      invalidateTask();
-    },
-  });
-
   if (isLoading || !task) {
     return <div className="muted">{t("taskDetail.loadingTask")}</div>;
   }
 
+  // Starting a new timer from a task was removed — logging time now goes through the hours
+  // field on a comment, or manual time entry. isTimerRunningHere still gates the Stop button
+  // below, so a timer already running from before this change can still be stopped cleanly.
   const isTimerRunningHere = activeTimer?.taskId === task.id;
-  const isTimerRunningElsewhere = !!activeTimer && activeTimer.taskId !== task.id;
 
   // Comments and time entries are two separate tables, but a comment logged with hours
   // creates both — task.timeEntries only ever contains the bare (Start Timer/Stop) ones, so
@@ -260,21 +254,11 @@ export function TaskDetailPage() {
                     {expanded ? t("common.showLess") : t("common.showMore")}
                   </button>
                 )}
-                {canWrite &&
-                  (isTimerRunningHere ? (
-                    <button className="btn btn-sm" onClick={() => stop.mutate(activeTimer!.id)}>
-                      {t("taskDetail.stopTimer")}
-                    </button>
-                  ) : (
-                    <button
-                      className="btn btn-primary btn-sm"
-                      onClick={() => startTimer.mutate()}
-                      disabled={isTimerRunningElsewhere || startTimer.isPending}
-                      title={isTimerRunningElsewhere ? t("taskDetail.stopOtherTimerFirst") : undefined}
-                    >
-                      {t("taskDetail.startTimer")}
-                    </button>
-                  ))}
+                {canWrite && isTimerRunningHere && (
+                  <button className="btn btn-sm" onClick={() => stop.mutate(activeTimer!.id)}>
+                    {t("taskDetail.stopTimer")}
+                  </button>
+                )}
               </div>
             </div>
             {visibleFeedItems.map((item) => (
