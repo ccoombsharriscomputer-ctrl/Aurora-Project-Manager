@@ -12,7 +12,7 @@ export function ProjectTabBar() {
     <div className="project-tab-bar">
       {tabs.map((tab) => (
         <div key={tab.id} className={`project-tab${tab.id === activeId ? " active" : ""}`}>
-          <Link to={`/projects/${tab.id}`} className="project-tab-label">
+          <Link to={tab.path} className="project-tab-label" title={tab.name}>
             {tab.name}
           </Link>
           <button

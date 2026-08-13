@@ -52,7 +52,7 @@ export function TaskDetailPage() {
 
   const { openTab } = useOpenTabs();
   useEffect(() => {
-    if (task) openTab(task.project.id, task.project.name);
+    if (task) openTab(task.id, "task", `${task.title} · ${task.project.name}`, `/tasks/${task.id}`);
   }, [task, openTab]);
 
   const { data: project } = useQuery({

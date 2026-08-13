@@ -256,7 +256,7 @@ export function ProjectDetailPage() {
 
   const { openTab } = useOpenTabs();
   useEffect(() => {
-    if (project) openTab(project.id, project.name);
+    if (project) openTab(project.id, "project", project.name, `/projects/${project.id}`);
   }, [project, openTab]);
 
   const { data: subProjects, isLoading: subProjectsLoading } = useQuery({

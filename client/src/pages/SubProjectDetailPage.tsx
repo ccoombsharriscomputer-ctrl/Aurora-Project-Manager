@@ -137,7 +137,15 @@ export function SubProjectDetailPage() {
 
   const { openTab } = useOpenTabs();
   useEffect(() => {
-    if (subProject) openTab(subProject.project.id, subProject.project.name);
+    if (subProject) {
+      const displayName = subProject.name || subProject.checklistItem.name;
+      openTab(
+        subProject.id,
+        "subProject",
+        `${displayName} · ${subProject.project.name}`,
+        `/projects/${subProject.project.id}/sub-projects/${subProject.id}`
+      );
+    }
   }, [subProject, openTab]);
 
   const { data: tasks, isLoading: tasksLoading } = useQuery({
