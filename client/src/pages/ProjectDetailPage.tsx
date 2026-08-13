@@ -285,9 +285,14 @@ export function ProjectDetailPage() {
     },
   });
 
+  const [editError, setEditError] = useState<string | null>(null);
   const updateProject = useMutation({
     mutationFn: (data: Record<string, unknown>) => api.patch(`/projects/${projectId}`, data),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["project", projectId] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["project", projectId] });
+      setEditError(null);
+    },
+    onError: (err) => setEditError(extractErrorMessage(err)),
   });
 
   const [duplicateError, setDuplicateError] = useState<string | null>(null);
@@ -345,11 +350,19 @@ export function ProjectDetailPage() {
                 <label>{t("common.description")}</label>
                 <textarea value={editDescription} onChange={(e) => setEditDescription(e.target.value)} />
               </div>
+              {editError && <div className="error-text">{editError}</div>}
               <div className="gap-8">
                 <button className="btn btn-primary" type="submit" disabled={updateProject.isPending}>
                   {t("common.save")}
                 </button>
-                <button className="btn" type="button" onClick={() => setEditing(false)}>
+                <button
+                  className="btn"
+                  type="button"
+                  onClick={() => {
+                    setEditing(false);
+                    setEditError(null);
+                  }}
+                >
                   {t("common.cancel")}
                 </button>
               </div>
@@ -422,6 +435,7 @@ export function ProjectDetailPage() {
               onClick={() => {
                 setEditName(project.name);
                 setEditDescription(project.description ?? "");
+                setEditError(null);
                 setEditing(true);
               }}
             >
