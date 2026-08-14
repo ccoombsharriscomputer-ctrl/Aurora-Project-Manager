@@ -1,5 +1,12 @@
+// binaryTargets pins which platforms' query engine binaries get bundled. Without this,
+// `prisma generate` only builds for whatever OS it's currently running on ("native") — fine
+// for Render (which builds on Linux in CI) but not when a deploy package is built locally on
+// Windows and then shipped to a Linux host (Azure App Service). Both Debian OpenSSL variants
+// are listed since Azure's exact base image version isn't something we can inspect directly;
+// "native" keeps local Windows dev working as before.
 generator client {
-  provider = "prisma-client-js"
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "debian-openssl-1.1.x", "debian-openssl-3.0.x"]
 }
 
 datasource db {
