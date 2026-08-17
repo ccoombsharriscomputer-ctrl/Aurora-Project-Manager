@@ -22,7 +22,9 @@ import calendarRoutes from "./routes/calendar";
 import softwareLineRoutes from "./routes/softwareLines";
 import teamSupportUserRoutes from "./routes/teamSupportUsers";
 import teamSupportActionTypeRoutes from "./routes/teamSupportActionTypes";
+import notificationRoutes from "./routes/notifications";
 import { attachRealtime } from "./lib/realtime";
+import { startScheduler } from "./lib/scheduler";
 
 const app = express();
 const PORT = process.env.PORT ? Number(process.env.PORT) : 4000;
@@ -53,6 +55,7 @@ app.use("/api/calendar", calendarRoutes);
 app.use("/api/software-lines", softwareLineRoutes);
 app.use("/api/teamsupport-users", teamSupportUserRoutes);
 app.use("/api/teamsupport-action-types", teamSupportActionTypeRoutes);
+app.use("/api/notifications", notificationRoutes);
 
 app.get("/api/health", (_req, res) => res.json({ ok: true }));
 
@@ -75,4 +78,7 @@ attachRealtime(server);
 
 server.listen(PORT, () => {
   console.log(`Aurora Project Manager API listening on http://localhost:${PORT}`);
+  // Started after the port is bound, not before, so its startup upsert can't delay Azure's
+  // health check.
+  void startScheduler();
 });

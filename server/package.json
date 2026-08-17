@@ -25,6 +25,7 @@
     "jsonwebtoken": "^9.0.2",
     "multer": "^2.0.0",
     "pdf-parse": "^2.4.5",
+    "resend": "^6.20.0",
     "socket.io": "^4.8.1",
     "zod": "^3.24.1"
   },
