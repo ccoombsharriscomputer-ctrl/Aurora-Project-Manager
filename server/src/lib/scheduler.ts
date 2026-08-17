@@ -44,6 +44,10 @@ async function tick(): Promise<void> {
   if (!digestEnabled()) return;
   if (new Date().getUTCHours() < dailyHourUtc()) return;
 
+  await ensureJobRunSeeded().catch((err) => {
+    console.error("[scheduler] failed to seed JobRun row:", err instanceof Error ? err.message : err);
+  });
+
   const claimed = await tryClaimToday().catch((err) => {
     console.error("[scheduler] failed to claim daily-digest run:", err instanceof Error ? err.message : err);
     return false;
@@ -55,14 +59,29 @@ async function tick(): Promise<void> {
   });
 }
 
-// Called from index.ts inside the server.listen callback (not before), so this upsert can't
-// delay binding the port Azure health-checks. Seeded at epoch so the very first claim isn't a
-// no-op against a missing row.
-export async function startScheduler(): Promise<void> {
+// Idempotent — safe to call from both startup and every tick. Retrying it on every tick
+// means a transient DB hiccup on the very first boot (e.g. a connection not fully warmed up
+// yet right after a container restart) self-heals within 5 minutes instead of leaving the
+// JobRun row permanently unseeded.
+async function ensureJobRunSeeded(): Promise<void> {
   await prisma.jobRun.upsert({
     where: { name: JOB_NAME },
     create: { name: JOB_NAME, lastRunOn: new Date(0) },
     update: {},
+  });
+}
+
+// Called from index.ts inside the server.listen callback (not before), so this upsert can't
+// delay binding the port Azure health-checks. Never rejects — a scheduler seeding failure must
+// never crash the whole process (this previously happened as an unhandled promise rejection,
+// which Node treats as fatal by default; a single transient DB hiccup at boot took the entire
+// app down instead of just delaying the digest feature).
+export async function startScheduler(): Promise<void> {
+  await ensureJobRunSeeded().catch((err) => {
+    console.error(
+      "[scheduler] failed to seed JobRun row on startup (will retry on the next tick):",
+      err instanceof Error ? err.message : err
+    );
   });
 
   setTimeout(() => void tick(), INITIAL_DELAY_MS);
