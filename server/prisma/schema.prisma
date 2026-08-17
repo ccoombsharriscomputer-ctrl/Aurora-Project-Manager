@@ -110,6 +110,9 @@ model User {
   theme               ThemeMode   @default(SYSTEM)
   accentColor         AccentColor @default(BLUE)
   locale              Locale      @default(EN)
+  // No Settings-page toggle yet — this exists so a future opt-out doesn't need its own
+  // migration. Defaults on for everyone.
+  emailNotifications  Boolean     @default(true)
   softwareLineId      String
   softwareLine        SoftwareLine  @relation("UserSoftwareLine", fields: [softwareLineId], references: [id])
   activeSoftwareLineId String?
@@ -331,6 +334,22 @@ model FollowUp {
   user      User     @relation(fields: [userId], references: [id])
   dueDate   DateTime
   createdAt DateTime @default(now())
+  // Set once the "your follow-up is due" email has actually been sent — not a boolean,
+  // matching this schema's existing convention for "did this happen" columns (Task.completedAt,
+  // Project.archivedAt, AccessRequest.decidedAt). There's no resolved/status field on FollowUp
+  // at all, so without this a daily scan would match (and re-email) the same row forever.
+  remindedAt DateTime?
+}
+
+// Durable "has this scheduled job already run today" marker for the daily notifications
+// job (see lib/scheduler.ts). The app restarts on every deploy, so an in-memory flag would
+// let a deploy during the send window double-fire the digest — this row is claimed with an
+// atomic updateMany instead, which is also safe if the App Service is ever scaled to more
+// than one instance.
+model JobRun {
+  name      String   @id
+  lastRunOn DateTime
+  updatedAt DateTime @updatedAt
 }
 
 model Activity {
