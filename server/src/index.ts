@@ -79,6 +79,10 @@ attachRealtime(server);
 server.listen(PORT, () => {
   console.log(`Aurora Project Manager API listening on http://localhost:${PORT}`);
   // Started after the port is bound, not before, so its startup upsert can't delay Azure's
-  // health check.
-  void startScheduler();
+  // health check. startScheduler() shouldn't ever reject (see its own internal handling), but
+  // .catch() here is a deliberate second layer: an unhandled rejection here is fatal to the
+  // whole process by default in Node, and a scheduler problem must never take down the app.
+  startScheduler().catch((err) => {
+    console.error("[scheduler] failed to start:", err instanceof Error ? err.message : err);
+  });
 });
