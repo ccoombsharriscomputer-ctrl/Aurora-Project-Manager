@@ -17,15 +17,30 @@ const userSelect = {
   teamSupportUserId: true,
   softwareLine: { select: { id: true, name: true } },
   softwareLineGrants: { select: { softwareLine: { select: { id: true, name: true } } } },
+  accessRequestNotifyAllLines: true,
+  accessRequestLineSubscriptions: { select: { softwareLine: { select: { id: true, name: true } } } },
 } as const;
 
-// The raw join-table shape (softwareLineGrants: [{ softwareLine: {...} }]) is awkward for
-// clients to consume directly — flatten it to the same shape as softwareLine itself.
-function serializeUser<T extends { softwareLineGrants: { softwareLine: { id: string; name: string } }[] }>(
+// The raw join-table shapes (softwareLineGrants / accessRequestLineSubscriptions, each
+// [{ softwareLine: {...} }]) are awkward for clients to consume directly — flatten both to
+// plain arrays of {id, name}.
+function serializeUser<
+  T extends {
+    softwareLineGrants: { softwareLine: { id: string; name: string } }[];
+    accessRequestLineSubscriptions: { softwareLine: { id: string; name: string } }[];
+  }
+>(
   user: T
-): Omit<T, "softwareLineGrants"> & { grantedSoftwareLines: { id: string; name: string }[] } {
-  const { softwareLineGrants, ...rest } = user;
-  return { ...rest, grantedSoftwareLines: softwareLineGrants.map((g) => g.softwareLine) };
+): Omit<T, "softwareLineGrants" | "accessRequestLineSubscriptions"> & {
+  grantedSoftwareLines: { id: string; name: string }[];
+  accessRequestLines: { id: string; name: string }[];
+} {
+  const { softwareLineGrants, accessRequestLineSubscriptions, ...rest } = user;
+  return {
+    ...rest,
+    grantedSoftwareLines: softwareLineGrants.map((g) => g.softwareLine),
+    accessRequestLines: accessRequestLineSubscriptions.map((s) => s.softwareLine),
+  };
 }
 
 // Default: only users in the caller's effective line (safe for every assignee/member
@@ -138,6 +153,13 @@ const updateSchema = z.object({
   // replace-all semantics (the full desired set, not a delta). Only meaningful for those two
   // roles; anyone else keeps an empty set (see the auto-clear below).
   grantedSoftwareLineIds: z.array(z.string().min(1)).optional(),
+  // Only meaningful for role ADMIN. When true, this admin gets every access-request email
+  // regardless of line, and accessRequestLineIds is ignored by the notify path (though it
+  // can still be stored — see the PATCH handler for why it isn't cleared just because this
+  // is true). When false, accessRequestLineIds is the full desired set of lines to
+  // subscribe to — replace-all semantics, same as grantedSoftwareLineIds.
+  accessRequestNotifyAllLines: z.boolean().optional(),
+  accessRequestLineIds: z.array(z.string().min(1)).optional(),
 });
 
 router.patch("/:id", requireAuth, requireAdmin, async (req, res) => {
@@ -175,6 +197,10 @@ router.patch("/:id", requireAuth, requireAdmin, async (req, res) => {
   if (parsed.data.grantedSoftwareLineIds?.length && !canHaveGrants) {
     return res.status(400).json({ error: "Only Project Leads and Members can be granted extra software lines." });
   }
+  const canHaveAccessRequestLines = effectiveRole === "ADMIN";
+  if (parsed.data.accessRequestLineIds?.length && !canHaveAccessRequestLines) {
+    return res.status(400).json({ error: "Only admins receive access-request notifications." });
+  }
 
   const homeLineId = parsed.data.softwareLineId ?? target.softwareLineId;
   // Explicit grants are provided as the full desired set; a role change away from
@@ -193,7 +219,25 @@ router.patch("/:id", requireAuth, requireAdmin, async (req, res) => {
     }
   }
 
-  const { password, grantedSoftwareLineIds, ...rest } = parsed.data;
+  // Same full-desired-set/role-clearing shape as grants above, but no home-line exclusion —
+  // unlike a Project Lead/Member's home line, an admin has no "implicit" line here, so all
+  // five are legitimate choices when accessRequestNotifyAllLines is off. Toggling
+  // accessRequestNotifyAllLines back on deliberately does NOT clear these rows — they're
+  // just ignored while it's true, so a later toggle-off remembers the previous selection.
+  const nextAccessRequestLineIds = parsed.data.accessRequestLineIds !== undefined
+    ? Array.from(new Set(parsed.data.accessRequestLineIds))
+    : !canHaveAccessRequestLines
+      ? []
+      : undefined;
+
+  if (nextAccessRequestLineIds !== undefined && nextAccessRequestLineIds.length > 0) {
+    const validCount = await prisma.softwareLine.count({ where: { id: { in: nextAccessRequestLineIds } } });
+    if (validCount !== nextAccessRequestLineIds.length) {
+      return res.status(400).json({ error: "One or more software lines were not found." });
+    }
+  }
+
+  const { password, grantedSoftwareLineIds, accessRequestLineIds, ...rest } = parsed.data;
   const data: Record<string, unknown> = { ...rest };
   if (password) {
     data.passwordHash = await hashPassword(password);
@@ -216,10 +260,23 @@ router.patch("/:id", requireAuth, requireAdmin, async (req, res) => {
             : []),
         ]
       : []),
+    ...(nextAccessRequestLineIds !== undefined
+      ? [
+          prisma.accessRequestLineSubscription.deleteMany({ where: { userId: req.params.id } }),
+          ...(nextAccessRequestLineIds.length
+            ? [
+                prisma.accessRequestLineSubscription.createMany({
+                  data: nextAccessRequestLineIds.map((softwareLineId) => ({ userId: req.params.id, softwareLineId })),
+                }),
+              ]
+            : []),
+        ]
+      : []),
   ]);
-  // The transaction's first result reflects the user row from before the grant rows changed
-  // in this same call — re-select once more so the response's grantedSoftwareLines is current.
-  const fresh = nextGrantIds !== undefined
+  // The transaction's first result reflects the user row from before the grant/subscription
+  // rows changed in this same call — re-select once more so the response's
+  // grantedSoftwareLines/accessRequestLines are current.
+  const fresh = nextGrantIds !== undefined || nextAccessRequestLineIds !== undefined
     ? await prisma.user.findUniqueOrThrow({ where: { id: req.params.id }, select: userSelect })
     : user;
   emitUpdate({ scope: "users" });

@@ -216,7 +216,12 @@
     "extraLines": "Lignes supplémentaires",
     "manageLines": "Gérer les lignes ({{count}})",
     "hideLines": "Masquer les lignes",
-    "extraLinesIntro": "Les chefs de projet et les membres peuvent recevoir un accès à des lignes de produit supplémentaires. Ils pourront basculer entre elles depuis la barre latérale, avec les mêmes permissions déjà associées à leur rôle."
+    "extraLinesIntro": "Les chefs de projet et les membres peuvent recevoir un accès à des lignes de produit supplémentaires. Ils pourront basculer entre elles depuis la barre latérale, avec les mêmes permissions déjà associées à leur rôle.",
+    "accessRequestEmails": "Courriels de demandes d'accès",
+    "manageAccessRequestsAll": "Gérer les notifications (toutes les lignes)",
+    "manageAccessRequestsCount": "Gérer les notifications ({{count}})",
+    "accessRequestAllLines": "Aviser pour chaque ligne de produit",
+    "accessRequestScopeIntro": "Choisissez pour quelles lignes de produit cet administrateur reçoit des courriels de demandes d'accès. Désactivez « toutes les lignes » pour en choisir des précises."
   },
   "projectTypes": {
     "newProjectType": "Nouveau type de projet",

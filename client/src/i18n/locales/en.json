@@ -216,7 +216,12 @@
     "extraLines": "Extra lines",
     "manageLines": "Manage lines ({{count}})",
     "hideLines": "Hide lines",
-    "extraLinesIntro": "Project Leads and Members can be granted access to additional software lines. They'll be able to switch into them from the sidebar, with the same role-based permissions they already have."
+    "extraLinesIntro": "Project Leads and Members can be granted access to additional software lines. They'll be able to switch into them from the sidebar, with the same role-based permissions they already have.",
+    "accessRequestEmails": "Access request emails",
+    "manageAccessRequestsAll": "Manage notifications (all lines)",
+    "manageAccessRequestsCount": "Manage notifications ({{count}})",
+    "accessRequestAllLines": "Notify for every software line",
+    "accessRequestScopeIntro": "Choose which software lines' access requests this admin gets emailed about. Turn off \"every line\" to pick specific ones instead."
   },
   "projectTypes": {
     "newProjectType": "New project type",

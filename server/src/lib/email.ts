@@ -6,6 +6,7 @@ interface AccessRequestNotification {
   name: string;
   email: string;
   message: string | null;
+  softwareLineId: string;
 }
 
 export interface OutgoingEmail {
@@ -59,13 +60,22 @@ async function sendAll(emails: OutgoingEmail[]): Promise<void> {
   }
 }
 
-// notifyAdminsOfAccessRequest's exported name and signature stay exactly as-is — the call
-// site in routes/accessRequests.ts needs zero changes. Admins are grouped by locale so each
+// Recipients are every active admin whose accessRequestNotifyAllLines is true, plus any
+// admin who's explicitly subscribed to this request's specific software line — lets one
+// admin (typically whoever's setting this up) stay on every request regardless of line,
+// while others are scoped to just the lines they care about. Grouped by locale so each
 // group gets one message in their own language; replyTo is the requester's own address so an
 // admin can just hit Reply instead of copying it out of the message body.
 export async function notifyAdminsOfAccessRequest(request: AccessRequestNotification): Promise<void> {
   const admins = await prisma.user.findMany({
-    where: { role: "ADMIN", active: true },
+    where: {
+      role: "ADMIN",
+      active: true,
+      OR: [
+        { accessRequestNotifyAllLines: true },
+        { accessRequestLineSubscriptions: { some: { softwareLineId: request.softwareLineId } } },
+      ],
+    },
     select: { email: true, locale: true },
   });
 
