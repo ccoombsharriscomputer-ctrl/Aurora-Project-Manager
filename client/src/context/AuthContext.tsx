@@ -3,6 +3,7 @@ import { api, ApiError } from "../api/client";
 import type { CurrentUser } from "../api/types";
 import i18n, { LOCALE_TO_I18N_LANGUAGE } from "../i18n";
 import { OPEN_TABS_STORAGE_KEY } from "./OpenTabsContext";
+import { TASK_COMMENT_DRAFT_STORAGE_KEY } from "../utils/taskCommentDraft";
 
 interface AuthContextValue {
   user: CurrentUser | null;
@@ -42,9 +43,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   async function logout() {
     await api.post("/auth/logout");
     setUser(null);
-    // A shared browser could hand the next login someone else's open-project tabs
-    // otherwise — clear them along with the session itself.
+    // A shared browser could hand the next login someone else's open-project tabs, or an
+    // in-progress comment draft, otherwise — clear both along with the session itself.
     localStorage.removeItem(OPEN_TABS_STORAGE_KEY);
+    localStorage.removeItem(TASK_COMMENT_DRAFT_STORAGE_KEY);
   }
 
   const canWrite = user?.role !== "READ_ONLY";
