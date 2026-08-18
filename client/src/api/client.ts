@@ -26,7 +26,13 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const data = isJson ? await res.json() : undefined;
 
   if (!res.ok) {
-    throw new ApiError(res.status, (data && data.error) || res.statusText);
+    // res.statusText is always an empty string on HTTP/2 responses (no reason phrase in the
+    // protocol at all) — and if the error body also isn't JSON (a gateway-level error page
+    // rather than our own JSON response, e.g. a genuine upstream 502), both halves of this
+    // fallback chain come up empty and the thrown error's message silently becomes "". A
+    // final fallback with the status code guarantees something visible always renders,
+    // instead of an error state that displays as a blank line.
+    throw new ApiError(res.status, (data && data.error) || res.statusText || `Request failed (HTTP ${res.status})`);
   }
   return data as T;
 }
