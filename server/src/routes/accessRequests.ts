@@ -33,6 +33,7 @@ router.post("/", async (req, res) => {
     name: request.name,
     email: request.email,
     message: request.message,
+    softwareLineId: request.softwareLineId,
   }).catch((err) => console.error("Failed to notify admins of access request:", err));
 
   emitUpdate({ scope: "access-requests" });

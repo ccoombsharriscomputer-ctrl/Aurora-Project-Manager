@@ -326,6 +326,8 @@ interface UserEditData {
   name?: string;
   email?: string;
   password?: string;
+  accessRequestNotifyAllLines?: boolean;
+  accessRequestLineIds?: string[];
 }
 
 function GrantedLinesPanel({
@@ -356,6 +358,44 @@ function GrantedLinesPanel({
   );
 }
 
+function AccessRequestScopePanel({
+  user,
+  allLines,
+  onToggleAllLines,
+  onToggleLine,
+}: {
+  user: AdminUser;
+  allLines: SoftwareLine[];
+  onToggleAllLines: (allLines: boolean) => void;
+  onToggleLine: (lineId: string) => void;
+}) {
+  const { t } = useTranslation();
+  const subscribedIds = new Set(user.accessRequestLines.map((l) => l.id));
+
+  return (
+    <div style={{ marginLeft: 20, marginTop: 6, marginBottom: 10, paddingLeft: 12, borderLeft: "2px solid var(--border)" }}>
+      <p className="muted" style={{ fontSize: 12, marginBottom: 8 }}>
+        {t("adminUsers.accessRequestScopeIntro")}
+      </p>
+      <label style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+        <input
+          type="checkbox"
+          checked={user.accessRequestNotifyAllLines}
+          onChange={(e) => onToggleAllLines(e.target.checked)}
+        />
+        {t("adminUsers.accessRequestAllLines")}
+      </label>
+      {!user.accessRequestNotifyAllLines &&
+        allLines.map((line) => (
+          <label key={line.id} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4, marginLeft: 20 }}>
+            <input type="checkbox" checked={subscribedIds.has(line.id)} onChange={() => onToggleLine(line.id)} />
+            {line.name}
+          </label>
+        ))}
+    </div>
+  );
+}
+
 export function AdminUsersPage() {
   const { t } = useTranslation();
   const { user: me } = useAuth();
@@ -364,6 +404,7 @@ export function AdminUsersPage() {
   const [prefill, setPrefill] = useState<CreateUserPrefill | null>(null);
   const [editingUserId, setEditingUserId] = useState<string | null>(null);
   const [expandedGrantsUserId, setExpandedGrantsUserId] = useState<string | null>(null);
+  const [expandedAccessRequestUserId, setExpandedAccessRequestUserId] = useState<string | null>(null);
   const [editName, setEditName] = useState("");
   const [editEmail, setEditEmail] = useState("");
   const [editPassword, setEditPassword] = useState("");
@@ -396,6 +437,16 @@ export function AdminUsersPage() {
     const current = u.grantedSoftwareLines.map((l) => l.id);
     const next = current.includes(lineId) ? current.filter((id) => id !== lineId) : [...current, lineId];
     updateUser.mutate({ id: u.id, data: { grantedSoftwareLineIds: next } });
+  }
+
+  function toggleAccessRequestAllLines(u: AdminUser, allLines: boolean) {
+    updateUser.mutate({ id: u.id, data: { accessRequestNotifyAllLines: allLines } });
+  }
+
+  function toggleAccessRequestLine(u: AdminUser, lineId: string) {
+    const current = u.accessRequestLines.map((l) => l.id);
+    const next = current.includes(lineId) ? current.filter((id) => id !== lineId) : [...current, lineId];
+    updateUser.mutate({ id: u.id, data: { accessRequestLineIds: next } });
   }
 
   const saveEdit = useMutation({
@@ -449,6 +500,7 @@ export function AdminUsersPage() {
               <th>{t("common.role")}</th>
               <th>{t("common.softwareLine")}</th>
               <th>{t("adminUsers.extraLines")}</th>
+              <th>{t("adminUsers.accessRequestEmails")}</th>
               <th>{t("adminUsers.teamSupportUser")}</th>
               <th>{t("common.status")}</th>
               <th>{t("adminUsers.joined")}</th>
@@ -459,7 +511,7 @@ export function AdminUsersPage() {
             {users.map((u) =>
               editingUserId === u.id ? (
                 <tr key={u.id}>
-                  <td colSpan={9}>
+                  <td colSpan={10}>
                     <form
                       className="card"
                       style={{ margin: "8px 0" }}
@@ -552,6 +604,24 @@ export function AdminUsersPage() {
                       )}
                     </td>
                     <td>
+                      {u.role === "ADMIN" ? (
+                        <button
+                          className="btn btn-sm"
+                          onClick={() =>
+                            setExpandedAccessRequestUserId(expandedAccessRequestUserId === u.id ? null : u.id)
+                          }
+                        >
+                          {expandedAccessRequestUserId === u.id
+                            ? t("adminUsers.hideLines")
+                            : u.accessRequestNotifyAllLines
+                              ? t("adminUsers.manageAccessRequestsAll")
+                              : t("adminUsers.manageAccessRequestsCount", { count: u.accessRequestLines.length })}
+                        </button>
+                      ) : (
+                        <span className="muted">—</span>
+                      )}
+                    </td>
+                    <td>
                       <TeamSupportUserPicker
                         value={u.teamSupportUserId}
                         users={teamSupportUsers ?? []}
@@ -587,7 +657,7 @@ export function AdminUsersPage() {
                   </tr>
                   {expandedGrantsUserId === u.id && (u.role === "PROJECT_LEAD" || u.role === "MEMBER") && (
                     <tr>
-                      <td colSpan={9}>
+                      <td colSpan={10}>
                         <GrantedLinesPanel
                           user={u}
                           allLines={softwareLines ?? []}
@@ -596,9 +666,21 @@ export function AdminUsersPage() {
                       </td>
                     </tr>
                   )}
+                  {expandedAccessRequestUserId === u.id && u.role === "ADMIN" && (
+                    <tr>
+                      <td colSpan={10}>
+                        <AccessRequestScopePanel
+                          user={u}
+                          allLines={softwareLines ?? []}
+                          onToggleAllLines={(allLines) => toggleAccessRequestAllLines(u, allLines)}
+                          onToggleLine={(lineId) => toggleAccessRequestLine(u, lineId)}
+                        />
+                      </td>
+                    </tr>
+                  )}
                   {deleteErrors[u.id] && (
                     <tr>
-                      <td colSpan={9}>
+                      <td colSpan={10}>
                         <div className="error-text">{deleteErrors[u.id]}</div>
                       </td>
                     </tr>

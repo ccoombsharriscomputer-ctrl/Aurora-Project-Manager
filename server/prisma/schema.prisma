@@ -98,6 +98,7 @@ model SoftwareLine {
   accessRequests       AccessRequest[]
   activities           Activity[]
   userGrants           UserSoftwareLineGrant[]
+  accessRequestSubscribers AccessRequestLineSubscription[]
 }
 
 model User {
@@ -113,6 +114,11 @@ model User {
   // No Settings-page toggle yet — this exists so a future opt-out doesn't need its own
   // migration. Defaults on for everyone.
   emailNotifications  Boolean     @default(true)
+  // Only meaningful for role ADMIN. If true (the default, so every existing admin keeps
+  // today's behavior until someone explicitly narrows it), this admin is emailed for every
+  // new access request regardless of software line. If false, only for lines they're
+  // explicitly subscribed to via accessRequestLineSubscriptions.
+  accessRequestNotifyAllLines Boolean @default(true)
   softwareLineId      String
   softwareLine        SoftwareLine  @relation("UserSoftwareLine", fields: [softwareLineId], references: [id])
   activeSoftwareLineId String?
@@ -135,6 +141,20 @@ model User {
   decidedAccessRequests AccessRequest[]
   followUps             FollowUp[]
   softwareLineGrants    UserSoftwareLineGrant[]
+  accessRequestLineSubscriptions AccessRequestLineSubscription[]
+}
+
+// Scopes which software lines' access-request emails an admin receives, when their
+// accessRequestNotifyAllLines is false. Meaningless — and never populated — for non-admins;
+// ignored entirely for an admin whose accessRequestNotifyAllLines is true.
+model AccessRequestLineSubscription {
+  userId         String
+  softwareLineId String
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  softwareLine   SoftwareLine @relation(fields: [softwareLineId], references: [id], onDelete: Cascade)
+  createdAt      DateTime     @default(now())
+
+  @@id([userId, softwareLineId])
 }
 
 // Grants a Project Lead or Member access to an additional software line beyond their home

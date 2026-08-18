@@ -58,6 +58,10 @@ export interface AdminUser extends UserSummary {
   // non-empty for PROJECT_LEAD/MEMBER roles.
   grantedSoftwareLines: SoftwareLine[];
   teamSupportUserId: string | null;
+  // Only meaningful for role ADMIN. If true, this admin gets emailed for every access
+  // request regardless of software line; if false, only for lines in accessRequestLines.
+  accessRequestNotifyAllLines: boolean;
+  accessRequestLines: SoftwareLine[];
 }
 
 export interface TeamSupportUser {
