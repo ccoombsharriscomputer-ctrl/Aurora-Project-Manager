@@ -8,6 +8,7 @@ import { extractErrorMessage, useAuth } from "../context/AuthContext";
 import { useOpenTabs } from "../context/OpenTabsContext";
 import { formatDate, formatMinutes, formatRelativeTime } from "../utils/format";
 import { useActiveTimer } from "../hooks/useActiveTimer";
+import { clearTaskCommentDraft, loadTaskCommentDraft, saveTaskCommentDraft } from "../utils/taskCommentDraft";
 
 const COLLAPSED_COUNT = 3;
 
@@ -69,14 +70,39 @@ export function TaskDetailPage() {
 
   const { activeTimer, stop } = useActiveTimer();
 
-  const [commentBody, setCommentBody] = useState("");
+  // Restored from a per-task draft if one exists — see utils/taskCommentDraft.ts for why:
+  // switching to a different open tab and back unmounts this page entirely, which would
+  // otherwise silently lose anything typed here but not yet posted.
+  const [commentBody, setCommentBody] = useState(() => (taskId && loadTaskCommentDraft(taskId)?.body) || "");
   const [commentError, setCommentError] = useState<string | null>(null);
-  const [commentDate, setCommentDate] = useState(() => new Date().toISOString().slice(0, 10));
-  const [commentHours, setCommentHours] = useState("");
-  const [actionTypeId, setActionTypeId] = useState("");
-  const [isPublic, setIsPublic] = useState(false);
-  const [followUpDate, setFollowUpDate] = useState("");
+  const [commentDate, setCommentDate] = useState(
+    () => (taskId && loadTaskCommentDraft(taskId)?.date) || new Date().toISOString().slice(0, 10)
+  );
+  const [commentHours, setCommentHours] = useState(() => (taskId && loadTaskCommentDraft(taskId)?.hours) || "");
+  const [actionTypeId, setActionTypeId] = useState(
+    () => (taskId && loadTaskCommentDraft(taskId)?.actionTypeId) || ""
+  );
+  const [isPublic, setIsPublic] = useState(() => (taskId && loadTaskCommentDraft(taskId)?.isPublic) || false);
+  const [followUpDate, setFollowUpDate] = useState(
+    () => (taskId && loadTaskCommentDraft(taskId)?.followUpDate) || ""
+  );
   const [expanded, setExpanded] = useState(false);
+
+  // Keeps the draft current as the user types/toggles anything in the form — cheap enough to
+  // run on every keystroke, and naturally clears itself back out once every field is reset to
+  // its default (see isBlank in taskCommentDraft.ts), which happens both here and explicitly
+  // in addComment's onSuccess below.
+  useEffect(() => {
+    if (!taskId) return;
+    saveTaskCommentDraft(taskId, {
+      body: commentBody,
+      date: commentDate,
+      hours: commentHours,
+      actionTypeId,
+      isPublic,
+      followUpDate,
+    });
+  }, [taskId, commentBody, commentDate, commentHours, actionTypeId, isPublic, followUpDate]);
 
   function invalidateTask() {
     queryClient.invalidateQueries({ queryKey: ["task", taskId] });
@@ -134,6 +160,7 @@ export function TaskDetailPage() {
         queryClient.invalidateQueries({ queryKey: ["calendar"] });
       }
       setFollowUpDate("");
+      if (taskId) clearTaskCommentDraft(taskId);
       invalidateTask();
     },
     onError: (err) => setCommentError(extractErrorMessage(err)),
