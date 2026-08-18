@@ -270,6 +270,15 @@ export function ProjectDetailPage() {
     queryFn: () => api.get<TeamSupportTicketResponse>(`/projects/${projectId}/teamsupport-ticket`),
     enabled: !!project?.teamSupportTicketNumber,
     retry: false,
+    // This just displays a status badge and subject line — nothing here needs to be
+    // second-fresh, and TeamSupport's own API has a daily request quota shared across every
+    // project and every viewer. Without this, react-query's default staleTime of 0 means
+    // every single visit to this page re-hits TeamSupport, which at any real scale of
+    // projects/users adds up fast (this is what actually exhausted the daily quota once).
+    // gcTime matches staleTime so navigating away and back within the window reuses the
+    // cached result instead of refetching the moment the component remounts.
+    staleTime: 10 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
   });
 
   const { data: allUsers } = useQuery({
