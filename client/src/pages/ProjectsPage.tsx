@@ -1,4 +1,4 @@
-import { useRef, useState, type FormEvent } from "react";
+import { useMemo, useRef, useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
@@ -9,12 +9,43 @@ import { extractErrorMessage, useAuth } from "../context/AuthContext";
 type ProjectsView = "grid" | "list";
 const VIEW_STORAGE_KEY = "aurora-projects-view";
 
+// Same shape as the sortable header on the Dashboard's "Completed this week" drill-down
+// (DashboardDrilldowns.tsx) — kept local rather than shared since that's the existing
+// convention in this codebase (TimeEntriesThisWeekPage doesn't reuse it either).
+type ProjectSortKey = "name" | "type" | "description" | "progress" | "members";
+type ProjectSortState = { key: ProjectSortKey; direction: "asc" | "desc" };
+
+function projectPercent(p: Project): number {
+  return p.totalTasks === 0 ? 0 : Math.round((p.doneTasks / p.totalTasks) * 100);
+}
+
+function SortableHeader({
+  label,
+  sortKey,
+  sort,
+  onSort,
+}: {
+  label: string;
+  sortKey: ProjectSortKey;
+  sort: ProjectSortState | null;
+  onSort: (key: ProjectSortKey) => void;
+}) {
+  const active = sort?.key === sortKey;
+  return (
+    <th onClick={() => onSort(sortKey)} style={{ cursor: "pointer", userSelect: "none", whiteSpace: "nowrap" }}>
+      {label}
+      {active && <span style={{ marginLeft: 4 }}>{sort!.direction === "asc" ? "▲" : "▼"}</span>}
+    </th>
+  );
+}
+
 export function ProjectsPage() {
   const { t } = useTranslation();
   const { user, canWrite } = useAuth();
   const queryClient = useQueryClient();
   const [showArchived, setShowArchived] = useState(false);
   const [filterProjectTypeId, setFilterProjectTypeId] = useState("");
+  const [sort, setSort] = useState<ProjectSortState | null>(null);
   // Remembered per-browser rather than per-user — it's a display preference, not data
   // worth round-tripping to the server the way theme/locale are.
   const [view, setView] = useState<ProjectsView>(
@@ -63,6 +94,42 @@ export function ProjectsPage() {
   const filteredProjects = (projects ?? []).filter(
     (p) => !filterProjectTypeId || p.projectType.id === filterProjectTypeId
   );
+
+  function handleSort(key: ProjectSortKey) {
+    setSort((prev) => {
+      if (prev?.key !== key) return { key, direction: "asc" };
+      return { key, direction: prev.direction === "asc" ? "desc" : "asc" };
+    });
+  }
+
+  // List view only — the grid view has no headers to sort by, so it keeps using
+  // filteredProjects directly.
+  const sortedProjects = useMemo(() => {
+    if (!sort) return filteredProjects;
+    const dir = sort.direction === "asc" ? 1 : -1;
+
+    function value(p: Project): string | number {
+      switch (sort!.key) {
+        case "name":
+          return p.name.toLowerCase();
+        case "type":
+          return p.projectType.name.toLowerCase();
+        case "description":
+          return (p.description ?? "").toLowerCase();
+        case "progress":
+          return projectPercent(p);
+        case "members":
+          return p.members.length;
+      }
+    }
+
+    return [...filteredProjects].sort((a, b) => {
+      const av = value(a);
+      const bv = value(b);
+      if (av === bv) return 0;
+      return av < bv ? -1 * dir : 1 * dir;
+    });
+  }, [filteredProjects, sort]);
 
   function toggleProduct(id: string) {
     setChecklistItemIds((prev) => (prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]));
@@ -331,16 +398,21 @@ export function ProjectsPage() {
             <table className="table">
               <thead>
                 <tr>
-                  <th>{t("common.name")}</th>
-                  <th>{t("projects.type")}</th>
-                  <th>{t("common.description")}</th>
-                  <th>{t("projects.progress")}</th>
-                  <th>{t("projects.members")}</th>
+                  <SortableHeader label={t("common.name")} sortKey="name" sort={sort} onSort={handleSort} />
+                  <SortableHeader label={t("projects.type")} sortKey="type" sort={sort} onSort={handleSort} />
+                  <SortableHeader
+                    label={t("common.description")}
+                    sortKey="description"
+                    sort={sort}
+                    onSort={handleSort}
+                  />
+                  <SortableHeader label={t("projects.progress")} sortKey="progress" sort={sort} onSort={handleSort} />
+                  <SortableHeader label={t("projects.members")} sortKey="members" sort={sort} onSort={handleSort} />
                 </tr>
               </thead>
               <tbody>
-                {filteredProjects.map((p) => {
-                  const percent = p.totalTasks === 0 ? 0 : Math.round((p.doneTasks / p.totalTasks) * 100);
+                {sortedProjects.map((p) => {
+                  const percent = projectPercent(p);
                   return (
                     <tr key={p.id}>
                       <td>
