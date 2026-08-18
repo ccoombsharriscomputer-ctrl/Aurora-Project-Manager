@@ -426,6 +426,10 @@ export function AdminUsersPage() {
     queryKey: ["teamsupport-users"],
     queryFn: () => api.get<TeamSupportUser[]>("/teamsupport-users"),
     retry: false,
+    // TeamSupport's user list barely changes and this counts against the same daily API
+    // quota as everything else — no reason to re-fetch it every time this page is opened.
+    staleTime: 10 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
   });
 
   const updateUser = useMutation({
