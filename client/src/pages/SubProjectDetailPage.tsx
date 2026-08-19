@@ -74,6 +74,10 @@ function NewTaskForm({ subProjectId, members }: { subProjectId: string; members:
       style={{ marginBottom: 16 }}
       onSubmit={(e: FormEvent) => {
         e.preventDefault();
+        if (assigneeId && !dueDate) {
+          setError(t("subProjectDetail.dueDateRequiredForAssignee"));
+          return;
+        }
         createTask.mutate();
       }}
     >
@@ -96,7 +100,13 @@ function NewTaskForm({ subProjectId, members }: { subProjectId: string; members:
         </div>
         <div className="field">
           <label>{t("subProjectDetail.assignee")}</label>
-          <select value={assigneeId} onChange={(e) => setAssigneeId(e.target.value)}>
+          <select
+            value={assigneeId}
+            onChange={(e) => {
+              setAssigneeId(e.target.value);
+              setError(null);
+            }}
+          >
             <option value="">{t("subProjectDetail.unassigned")}</option>
             {members.map((m) => (
               <option key={m.id} value={m.id}>
@@ -106,8 +116,19 @@ function NewTaskForm({ subProjectId, members }: { subProjectId: string; members:
           </select>
         </div>
         <div className="field">
-          <label>{t("subProjectDetail.dueDate")}</label>
-          <input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
+          <label>
+            {t("subProjectDetail.dueDate")}
+            {assigneeId && <span className="required-marker"> {t("taskDetail.requiredMarker")}</span>}
+          </label>
+          <input
+            type="date"
+            required={!!assigneeId}
+            value={dueDate}
+            onChange={(e) => {
+              setDueDate(e.target.value);
+              setError(null);
+            }}
+          />
         </div>
       </div>
       {error && <div className="error-text">{error}</div>}

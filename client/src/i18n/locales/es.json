@@ -167,6 +167,7 @@
     "assignee": "Asignado a",
     "unassigned": "Sin asignar",
     "dueDate": "Fecha límite",
+    "dueDateRequiredForAssignee": "Se requiere una fecha límite cuando la tarea está asignada a alguien.",
     "createTask": "Crear tarea",
     "loadingSubProject": "Cargando subproyecto…",
     "loadingTasks": "Cargando tareas…",

@@ -218,3 +218,50 @@ export function renderDigestEmail(payload: DigestPayload): RenderedEmail {
 
   return { subject, html, text };
 }
+
+export interface TaskAssignedContent {
+  taskTitle: string;
+  projectName: string;
+  subProjectName: string;
+  dueDate: Date;
+  url: string;
+}
+
+const TASK_ASSIGNED_STRINGS: Record<Locale, { subject: string; heading: string; project: string; due: string }> = {
+  EN: {
+    subject: "You've been assigned a task — Aurora Project Manager",
+    heading: "You've been assigned a task",
+    project: "Project",
+    due: "Due",
+  },
+  ES: {
+    subject: "Se le ha asignado una tarea — Aurora Project Manager",
+    heading: "Se le ha asignado una tarea",
+    project: "Proyecto",
+    due: "Vence",
+  },
+  FR_CA: {
+    subject: "Une tâche vous a été assignée — Aurora Project Manager",
+    heading: "Une tâche vous a été assignée",
+    project: "Projet",
+    due: "Échéance",
+  },
+};
+
+export function renderTaskAssignedEmail(locale: Locale, content: TaskAssignedContent): RenderedEmail {
+  const s = TASK_ASSIGNED_STRINGS[locale];
+  const html = wrapHtml(`
+    <h2 style="margin:0 0 16px;font-size:20px;">${escapeHtml(s.heading)}</h2>
+    <p style="margin:0 0 8px;"><a href="${content.url}" style="color:#3457d5;font-weight:600;">${escapeHtml(content.taskTitle)}</a></p>
+    <p style="margin:0 0 4px;color:#5b6670;">${s.project}: ${escapeHtml(content.projectName)} / ${escapeHtml(content.subProjectName)}</p>
+    <p style="margin:0;color:#5b6670;">${s.due}: ${formatDueDate(content.dueDate, locale)}</p>
+  `);
+  const text = [
+    s.heading,
+    content.taskTitle,
+    `${s.project}: ${content.projectName} / ${content.subProjectName}`,
+    `${s.due}: ${formatDueDate(content.dueDate, locale)}`,
+    content.url,
+  ].join("\n");
+  return { subject: s.subject, html, text };
+}

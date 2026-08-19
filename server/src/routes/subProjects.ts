@@ -5,6 +5,7 @@ import { blockReadOnly, effectiveSoftwareLineId, requireAuth } from "../middlewa
 import { logActivity } from "../lib/activity";
 import { emitUpdate } from "../lib/realtime";
 import { loadSubProjectInScope, userHasLineAccess } from "../lib/scope";
+import { notifyTaskAssigned } from "../lib/email";
 
 const router = Router();
 router.use(requireAuth);
@@ -142,6 +143,12 @@ router.post("/:id/tasks", blockReadOnly, async (req, res) => {
     }
   }
 
+  // Same rule as editing a task later (routes/tasks.ts) — a task with a real assignee
+  // always needs a due date, whether it ends up that way at creation or via a later edit.
+  if (parsed.data.assigneeId && !parsed.data.dueDate) {
+    return res.status(400).json({ error: "A due date is required when a task is assigned to someone" });
+  }
+
   const maxOrder = await prisma.task.aggregate({
     where: { subProjectId: subProject.id },
     _max: { order: true },
@@ -171,6 +178,30 @@ router.post("/:id/tasks", blockReadOnly, async (req, res) => {
     projectId: subProject.projectId,
     taskId: task.id,
   });
+
+  // Same notification as assigning someone on an already-existing task (routes/tasks.ts) —
+  // being assigned at creation time is no different from being assigned via a later edit.
+  if (task.assignee && task.dueDate) {
+    const [assignee, checklistItem] = await Promise.all([
+      prisma.user.findUnique({
+        where: { id: task.assignee.id },
+        select: { email: true, locale: true, active: true, emailNotifications: true },
+      }),
+      subProject.name ? null : prisma.checklistItem.findUnique({ where: { id: subProject.checklistItemId }, select: { name: true } }),
+    ]);
+    if (assignee?.active && assignee.emailNotifications) {
+      notifyTaskAssigned({
+        to: assignee.email,
+        locale: assignee.locale,
+        taskTitle: task.title,
+        projectName: subProject.project.name,
+        subProjectName: subProject.name || checklistItem!.name,
+        dueDate: task.dueDate,
+        taskId: task.id,
+      }).catch((err) => console.error(`Failed to notify ${assignee.email} of task assignment:`, err));
+    }
+  }
+
   emitUpdate({ scope: "sub-project", subProjectId: subProject.id });
   emitUpdate({ scope: "project", projectId: subProject.projectId });
   emitUpdate({ scope: "dashboard" });
