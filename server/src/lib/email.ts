@@ -1,12 +1,26 @@
 import { Resend } from "resend";
 import { prisma } from "./prisma";
-import { renderAccessRequestEmail, renderDigestEmail, type DigestPayload } from "./emailTemplates";
+import type { Locale } from "@prisma/client";
+import { renderAccessRequestEmail, renderDigestEmail, renderTaskAssignedEmail, type DigestPayload } from "./emailTemplates";
 
 interface AccessRequestNotification {
   name: string;
   email: string;
   message: string | null;
   softwareLineId: string;
+}
+
+// Cannot reuse CLIENT_ORIGIN — it's unset in production, where the app serves client and API
+// from a single origin. APP_BASE_URL must be set explicitly there (e.g.
+// "https://apm.aurora-works.net"); falling back to CLIENT_ORIGIN just keeps local dev links
+// working without extra config. Shared by the digest (lib/notifications.ts) and the
+// task-assignment notification below, so both link back to the same place the same way.
+export function appBaseUrl(): string {
+  return (process.env.APP_BASE_URL || process.env.CLIENT_ORIGIN || "").replace(/\/$/, "");
+}
+
+export function taskUrl(taskId: string): string {
+  return `${appBaseUrl()}/tasks/${taskId}`;
 }
 
 export interface OutgoingEmail {
@@ -103,6 +117,29 @@ export async function sendDigestEmails(payloads: ({ to: string } & DigestPayload
     ...renderDigestEmail(payload),
   }));
   await sendAll(emails);
+}
+
+// Fired once, at the moment a task is actually saved with a new assignee (never on every
+// keystroke while editing — see routes/tasks.ts and routes/subProjects.ts for the callers,
+// both of which only call this after their own due-date-required-when-assigned validation
+// already passed, so dueDate here is always real).
+export async function notifyTaskAssigned(params: {
+  to: string;
+  locale: Locale;
+  taskTitle: string;
+  projectName: string;
+  subProjectName: string;
+  dueDate: Date;
+  taskId: string;
+}): Promise<void> {
+  const rendered = renderTaskAssignedEmail(params.locale, {
+    taskTitle: params.taskTitle,
+    projectName: params.projectName,
+    subProjectName: params.subProjectName,
+    dueDate: params.dueDate,
+    url: taskUrl(params.taskId),
+  });
+  await sendAll([{ to: params.to, ...rendered }]);
 }
 
 // Used by the admin "send me a test email" route — bypasses the digest-building logic

@@ -9,6 +9,7 @@ import { storage } from "../lib/storage";
 import { loadTaskInScope, userHasLineAccess } from "../lib/scope";
 import { PS_ACTION_TYPES, syncTaskUpdateToTeamSupport, teamSupportTaskContext } from "../lib/teamSupport";
 import { formatHours } from "../lib/format";
+import { notifyTaskAssigned } from "../lib/email";
 
 const router = Router();
 router.use(requireAuth);
@@ -81,6 +82,17 @@ router.patch("/:id", blockReadOnly, async (req, res) => {
     }
   }
 
+  // Only checked when this request actually touches one of these two fields — a task that
+  // predates this rule and is already assigned with no due date must stay editable for
+  // everything else (status, priority, comments...), not get locked out entirely.
+  if (parsed.data.assigneeId !== undefined || parsed.data.dueDate !== undefined) {
+    const effectiveAssigneeId = parsed.data.assigneeId !== undefined ? parsed.data.assigneeId : existing.assigneeId;
+    const effectiveHasDueDate = parsed.data.dueDate !== undefined ? !!parsed.data.dueDate : !!existing.dueDate;
+    if (effectiveAssigneeId && !effectiveHasDueDate) {
+      return res.status(400).json({ error: "A due date is required when a task is assigned to someone" });
+    }
+  }
+
   const { naReason, ...rest } = parsed.data;
   const data: Record<string, unknown> = { ...rest };
   if (parsed.data.dueDate !== undefined) {
@@ -122,6 +134,27 @@ router.patch("/:id", blockReadOnly, async (req, res) => {
       projectId: task.projectId,
       taskId: task.id,
     });
+
+    // Fired once, at the moment of this save — never on every keystroke while editing. The
+    // due-date-required check above guarantees task.dueDate is set whenever assigneeId is,
+    // so there's always a real date to report.
+    if (task.assignee && task.dueDate) {
+      const assignee = await prisma.user.findUnique({
+        where: { id: task.assignee.id },
+        select: { email: true, locale: true, active: true, emailNotifications: true },
+      });
+      if (assignee?.active && assignee.emailNotifications) {
+        notifyTaskAssigned({
+          to: assignee.email,
+          locale: assignee.locale,
+          taskTitle: task.title,
+          projectName: existing.project.name,
+          subProjectName: existing.subProject.name || existing.subProject.checklistItem.name,
+          dueDate: task.dueDate,
+          taskId: task.id,
+        }).catch((err) => console.error(`Failed to notify ${assignee.email} of task assignment:`, err));
+      }
+    }
   }
 
   emitUpdate({ scope: "task", taskId: task.id });

@@ -167,6 +167,7 @@
     "assignee": "Assignee",
     "unassigned": "Unassigned",
     "dueDate": "Due date",
+    "dueDateRequiredForAssignee": "A due date is required when a task is assigned to someone.",
     "createTask": "Create task",
     "loadingSubProject": "Loading sub-project…",
     "loadingTasks": "Loading tasks…",

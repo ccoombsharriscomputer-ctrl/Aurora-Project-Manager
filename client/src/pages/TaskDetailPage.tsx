@@ -104,6 +104,37 @@ export function TaskDetailPage() {
     });
   }, [taskId, commentBody, commentDate, commentHours, actionTypeId, isPublic, followUpDate]);
 
+  // Assignee and due date are edited together and only committed on an explicit Save —
+  // unlike Status/Priority, which still save the instant you change them. Local state starts
+  // empty and is populated by the sync effect below once the task loads (can't read `task`
+  // directly in useState's initializer: this hook runs on the very first render, before the
+  // query has resolved).
+  const [editAssigneeId, setEditAssigneeId] = useState("");
+  const [editDueDate, setEditDueDate] = useState("");
+  const [assignmentError, setAssignmentError] = useState<string | null>(null);
+  const prevTaskIdForAssignmentRef = useRef<string | undefined>(undefined);
+
+  const assignmentDirty = task
+    ? editAssigneeId !== (task.assignee?.id ?? "") || editDueDate !== (task.dueDate ? task.dueDate.slice(0, 10) : "")
+    : false;
+
+  // Resyncs from the server whenever the underlying task data changes (initial load, a
+  // realtime update from someone else, or after this save itself succeeds) -- except while
+  // there's an unsaved edit in progress on the SAME task, which must never be silently
+  // clobbered. Switching to a genuinely different task (the open-tabs bar can do this without
+  // unmounting this page) always resyncs regardless -- carrying an unsaved edit from one
+  // task's fields over onto a different task would be wrong, not a courtesy.
+  useEffect(() => {
+    if (!task) return;
+    const taskChanged = prevTaskIdForAssignmentRef.current !== task.id;
+    prevTaskIdForAssignmentRef.current = task.id;
+    if (assignmentDirty && !taskChanged) return;
+    setEditAssigneeId(task.assignee?.id ?? "");
+    setEditDueDate(task.dueDate ? task.dueDate.slice(0, 10) : "");
+    setAssignmentError(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [task?.id, task?.assignee?.id, task?.dueDate]);
+
   function invalidateTask() {
     queryClient.invalidateQueries({ queryKey: ["task", taskId] });
     if (task) {
@@ -187,6 +218,24 @@ export function TaskDetailPage() {
 
   if (isLoading || !task) {
     return <div className="muted">{t("taskDetail.loadingTask")}</div>;
+  }
+
+  function saveAssignment() {
+    if (editAssigneeId && !editDueDate) {
+      setAssignmentError(t("subProjectDetail.dueDateRequiredForAssignee"));
+      return;
+    }
+    setAssignmentError(null);
+    updateTask.mutate(
+      { assigneeId: editAssigneeId || null, dueDate: editDueDate ? new Date(editDueDate).toISOString() : null },
+      { onError: (err) => setAssignmentError(extractErrorMessage(err)) }
+    );
+  }
+
+  function cancelAssignment() {
+    setEditAssigneeId(task!.assignee?.id ?? "");
+    setEditDueDate(task!.dueDate ? task!.dueDate.slice(0, 10) : "");
+    setAssignmentError(null);
   }
 
   // Starting a new timer from a task was removed — logging time now goes through the hours
@@ -480,10 +529,7 @@ export function TaskDetailPage() {
           <div className="field">
             <label>{t("subProjectDetail.assignee")}</label>
             {canWrite ? (
-              <select
-                value={task.assignee?.id ?? ""}
-                onChange={(e) => updateTask.mutate({ assigneeId: e.target.value || null })}
-              >
+              <select value={editAssigneeId} onChange={(e) => setEditAssigneeId(e.target.value)}>
                 <option value="">{t("subProjectDetail.unassigned")}</option>
                 {project?.members.map((m: UserSummary) => (
                   <option key={m.id} value={m.id}>
@@ -496,19 +542,32 @@ export function TaskDetailPage() {
             )}
           </div>
           <div className="field">
-            <label>{t("subProjectDetail.dueDate")}</label>
+            <label>
+              {t("subProjectDetail.dueDate")}
+              {canWrite && editAssigneeId && <span className="required-marker"> {t("taskDetail.requiredMarker")}</span>}
+            </label>
             {canWrite ? (
               <input
                 type="date"
-                defaultValue={task.dueDate ? task.dueDate.slice(0, 10) : ""}
-                onChange={(e) =>
-                  updateTask.mutate({ dueDate: e.target.value ? new Date(e.target.value).toISOString() : null })
-                }
+                required={!!editAssigneeId}
+                value={editDueDate}
+                onChange={(e) => setEditDueDate(e.target.value)}
               />
             ) : (
               <span>{formatDate(task.dueDate)}</span>
             )}
           </div>
+          {assignmentError && <div className="error-text">{assignmentError}</div>}
+          {canWrite && assignmentDirty && (
+            <div className="gap-8" style={{ marginTop: 4, marginBottom: 12 }}>
+              <button className="btn btn-sm btn-primary" onClick={saveAssignment} disabled={updateTask.isPending}>
+                {t("common.save")}
+              </button>
+              <button className="btn btn-sm" onClick={cancelAssignment}>
+                {t("common.cancel")}
+              </button>
+            </div>
+          )}
           <div className="muted" style={{ fontSize: 12, marginTop: 12 }}>
             {t("taskDetail.createdBy", { name: task.createdBy.name })} · {formatDate(task.createdAt)}
           </div>

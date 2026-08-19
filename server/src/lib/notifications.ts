@@ -1,21 +1,9 @@
 import { prisma } from "./prisma";
-import { sendDigestEmails } from "./email";
+import { sendDigestEmails, taskUrl } from "./email";
 import type { DigestFollowUpItem, DigestPayload, DigestTaskItem } from "./emailTemplates";
 
 // This runs as a background job with no req.user, so effectiveSoftwareLineId doesn't apply —
 // every query here is deliberately global (all lines), scoped only by correctness filters.
-
-// Cannot reuse CLIENT_ORIGIN — it's unset in production, where the app serves client and API
-// from a single origin. APP_BASE_URL must be set explicitly there (e.g.
-// "https://apm.aurora-works.net"); falling back to CLIENT_ORIGIN just keeps local dev links
-// working without extra config.
-function appBaseUrl(): string {
-  return (process.env.APP_BASE_URL || process.env.CLIENT_ORIGIN || "").replace(/\/$/, "");
-}
-
-function taskUrl(taskId: string): string {
-  return `${appBaseUrl()}/tasks/${taskId}`;
-}
 
 // A follow-up scan with no floor would, after any long outage, resurface every historical
 // follow-up ever created the moment the job resumes. 14 days is generous slack for a missed

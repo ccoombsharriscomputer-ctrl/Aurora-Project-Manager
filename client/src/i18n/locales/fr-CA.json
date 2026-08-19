@@ -167,6 +167,7 @@
     "assignee": "Assigné à",
     "unassigned": "Non assigné",
     "dueDate": "Date d'échéance",
+    "dueDateRequiredForAssignee": "Une date d'échéance est requise lorsque la tâche est assignée à quelqu'un.",
     "createTask": "Créer la tâche",
     "loadingSubProject": "Chargement du sous-projet…",
     "loadingTasks": "Chargement des tâches…",
