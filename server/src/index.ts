@@ -23,6 +23,7 @@ import softwareLineRoutes from "./routes/softwareLines";
 import teamSupportUserRoutes from "./routes/teamSupportUsers";
 import teamSupportActionTypeRoutes from "./routes/teamSupportActionTypes";
 import notificationRoutes from "./routes/notifications";
+import followUpRoutes from "./routes/followUps";
 import { attachRealtime } from "./lib/realtime";
 import { startScheduler } from "./lib/scheduler";
 
@@ -56,6 +57,7 @@ app.use("/api/software-lines", softwareLineRoutes);
 app.use("/api/teamsupport-users", teamSupportUserRoutes);
 app.use("/api/teamsupport-action-types", teamSupportActionTypeRoutes);
 app.use("/api/notifications", notificationRoutes);
+app.use("/api/follow-ups", followUpRoutes);
 
 app.get("/api/health", (_req, res) => res.json({ ok: true }));
 

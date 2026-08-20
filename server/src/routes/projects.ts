@@ -643,4 +643,58 @@ router.post("/:id/attachments", blockReadOnly, upload.single("file"), async (req
   res.status(201).json(attachment);
 });
 
+// --- Follow-ups ---
+// A project-level follow-up (not tied to any specific task) — the other way to schedule one
+// is from a task's own comment form (routes/tasks.ts). Both land in the same FollowUp table
+// and show up together on the Dashboard calendar.
+
+router.get("/:id/follow-ups", async (req, res) => {
+  const project = await loadProjectInScope(req.params.id, effectiveSoftwareLineId(req.user!));
+  if (!project) {
+    return res.status(404).json({ error: "Project not found" });
+  }
+  const followUps = await prisma.followUp.findMany({
+    where: { projectId: project.id },
+    orderBy: { dueDate: "asc" },
+    include: { user: { select: { id: true, name: true } } },
+  });
+  res.json(followUps);
+});
+
+const createFollowUpSchema = z.object({
+  dueDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Due date must be in YYYY-MM-DD format"),
+});
+
+router.post("/:id/follow-ups", blockReadOnly, async (req, res) => {
+  const project = await loadProjectInScope(req.params.id, effectiveSoftwareLineId(req.user!));
+  if (!project) {
+    return res.status(404).json({ error: "Project not found" });
+  }
+  const parsed = createFollowUpSchema.safeParse(req.body);
+  if (!parsed.success) {
+    return res.status(400).json({ error: parsed.error.issues[0].message });
+  }
+
+  const followUp = await prisma.followUp.create({
+    data: {
+      projectId: project.id,
+      userId: req.user!.id,
+      dueDate: new Date(parsed.data.dueDate),
+    },
+    include: { user: { select: { id: true, name: true } } },
+  });
+
+  await logActivity({
+    type: "FOLLOW_UP_SCHEDULED",
+    message: `${req.user!.name} scheduled a follow-up on project "${project.name}" for ${parsed.data.dueDate}`,
+    userId: req.user!.id,
+    softwareLineId: project.softwareLineId,
+    projectId: project.id,
+  });
+  emitUpdate({ scope: "project", projectId: project.id });
+  emitUpdate({ scope: "dashboard" });
+
+  res.status(201).json(followUp);
+});
+
 export default router;

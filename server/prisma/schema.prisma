@@ -190,6 +190,7 @@ model Project {
   subProjects SubProject[]
   activities Activity[]
   attachments Attachment[]
+  followUps  FollowUp[]
 }
 
 model ProjectType {
@@ -343,22 +344,30 @@ model TimeEntry {
   createdAt       DateTime  @default(now())
 }
 
-// A calendar reminder to check back on a task — deliberately not a Task itself, so it never
-// shows up as an open task in reports, dashboard counts, or a sub-project's board. The
-// calendar just shows "Follow up" and links back to `task`.
+// A calendar reminder to check back on a task, or on a project as a whole — deliberately not
+// a Task itself, so it never shows up as an open task in reports, dashboard counts, or a
+// sub-project's board. Exactly one of taskId/projectId is set, never both and never neither —
+// enforced at the application level (routes/tasks.ts's comment form for task-linked ones,
+// routes/projects.ts's own follow-up route for project-level ones), matching how Attachment
+// already does the same optional-either-parent pattern in this schema.
 model FollowUp {
-  id        String   @id @default(cuid())
-  taskId    String
-  task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  id        String    @id @default(cuid())
+  taskId    String?
+  task      Task?     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  projectId String?
+  project   Project?  @relation(fields: [projectId], references: [id], onDelete: Cascade)
   userId    String
-  user      User     @relation(fields: [userId], references: [id])
+  user      User      @relation(fields: [userId], references: [id])
   dueDate   DateTime
-  createdAt DateTime @default(now())
+  createdAt DateTime  @default(now())
   // Set once the "your follow-up is due" email has actually been sent — not a boolean,
   // matching this schema's existing convention for "did this happen" columns (Task.completedAt,
-  // Project.archivedAt, AccessRequest.decidedAt). There's no resolved/status field on FollowUp
-  // at all, so without this a daily scan would match (and re-email) the same row forever.
+  // Project.archivedAt, AccessRequest.decidedAt).
   remindedAt DateTime?
+  // Set when whoever scheduled it (or an admin) marks it done — shows crossed out on the
+  // calendar from then on, and stops the daily digest from ever mentioning it, but the row
+  // itself is kept rather than deleted so the calendar still shows it happened.
+  completedAt DateTime?
 }
 
 // Durable "has this scheduled job already run today" marker for the daily notifications

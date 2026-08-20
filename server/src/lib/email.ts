@@ -23,6 +23,10 @@ export function taskUrl(taskId: string): string {
   return `${appBaseUrl()}/tasks/${taskId}`;
 }
 
+export function projectUrl(projectId: string): string {
+  return `${appBaseUrl()}/projects/${projectId}`;
+}
+
 export interface OutgoingEmail {
   to: string;
   replyTo?: string;

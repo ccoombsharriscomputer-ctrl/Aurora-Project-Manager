@@ -1,10 +1,11 @@
 import { useMemo } from "react";
 import { Link } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import i18n from "../i18n";
 import { api } from "../api/client";
 import type { CalendarResponse, FollowUpItem, Task } from "../api/types";
+import { useAuth } from "../context/AuthContext";
 import { buildMonthGridDays, buildWeekDays, startOfDay, toDateKey, type ViewMode } from "../utils/calendarPeriod";
 
 const VISIBLE_TASKS_PER_DAY = 4;
@@ -43,14 +44,23 @@ function pillClassName(task: Task): string {
   return `calendar-task-pill priority-${task.priority}`;
 }
 
+// A follow-up points at whichever context it actually has — its task if it was scheduled
+// from a comment, otherwise the project it was scheduled on directly.
+function followUpLink(entry: FollowUpItem): string {
+  if (entry.taskId) return `/tasks/${entry.taskId}`;
+  if (entry.project) return `/projects/${entry.project.id}`;
+  return "#";
+}
+
 function EntryPill({ entry }: { entry: CalendarEntry }) {
   const { t } = useTranslation();
   if (entry.kind === "followUp") {
+    const label = entry.taskTitle ?? entry.project?.name ?? t("calendar.followUp");
     return (
       <Link
-        to={`/tasks/${entry.taskId}`}
-        className="calendar-task-pill follow-up"
-        title={entry.project?.name ? `${entry.project.name} — ${entry.taskTitle}` : entry.taskTitle}
+        to={followUpLink(entry)}
+        className={`calendar-task-pill follow-up${entry.completedAt ? " completed" : ""}`}
+        title={entry.project?.name && entry.taskTitle ? `${entry.project.name} — ${entry.taskTitle}` : label}
       >
         {t("calendar.followUp")}
       </Link>
@@ -79,6 +89,8 @@ export function DeadlinesCalendar({
   onCursorChange: (cursor: Date) => void;
 }) {
   const { t } = useTranslation();
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
 
   const days = useMemo(() => {
     if (view === "month") return buildMonthGridDays(cursor);
@@ -92,6 +104,12 @@ export function DeadlinesCalendar({
   const { data, isLoading } = useQuery({
     queryKey: ["calendar", startKey, endKey],
     queryFn: () => api.get<CalendarResponse>(`/calendar?start=${startKey}&end=${endKey}`),
+  });
+
+  const setFollowUpCompleted = useMutation({
+    mutationFn: ({ id, completed }: { id: string; completed: boolean }) =>
+      api.patch(`/follow-ups/${id}`, { completed }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["calendar"] }),
   });
 
   const entriesByDay = useMemo(() => {
@@ -181,8 +199,19 @@ export function DeadlinesCalendar({
             entry.kind === "followUp" ? (
               <div className="calendar-day-list-item" key={`followup-${entry.id}`}>
                 <span className="badge badge-admin">{t("calendar.followUp")}</span>
-                <Link to={`/tasks/${entry.taskId}`}>{entry.taskTitle}</Link>
-                {entry.project?.name && <span className="muted">{entry.project.name}</span>}
+                <Link to={followUpLink(entry)} className={entry.completedAt ? "calendar-resolved-text" : undefined}>
+                  {entry.taskTitle ?? entry.project?.name ?? t("calendar.followUp")}
+                </Link>
+                {entry.taskTitle && entry.project?.name && <span className="muted">{entry.project.name}</span>}
+                {(user?.id === entry.user.id || user?.role === "ADMIN") && (
+                  <button
+                    className="btn btn-sm"
+                    onClick={() => setFollowUpCompleted.mutate({ id: entry.id, completed: !entry.completedAt })}
+                    disabled={setFollowUpCompleted.isPending}
+                  >
+                    {entry.completedAt ? t("calendar.reopen") : t("calendar.markComplete")}
+                  </button>
+                )}
               </div>
             ) : (
               <div className="calendar-day-list-item" key={entry.id}>

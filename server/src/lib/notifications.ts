@@ -1,5 +1,5 @@
 import { prisma } from "./prisma";
-import { sendDigestEmails, taskUrl } from "./email";
+import { sendDigestEmails, taskUrl, projectUrl } from "./email";
 import type { DigestFollowUpItem, DigestPayload, DigestTaskItem } from "./emailTemplates";
 
 // This runs as a background job with no req.user, so effectiveSoftwareLineId doesn't apply —
@@ -71,32 +71,46 @@ export async function queryDigestData(now: Date): Promise<DigestQueryResult> {
   // Follow-ups — not excluding those on already-DONE tasks: excluding them would leave those
   // rows permanently unmarked (remindedAt never set) and stuck in the scan set forever.
   // Instead they're included with the task's status shown, which is legitimately useful
-  // ("check back on this — already Done") rather than noise.
+  // ("check back on this — already Done") rather than noise. Completed follow-ups (the
+  // person handled it themselves, from the project page or the calendar) are excluded
+  // outright — there's nothing left to remind anyone about.
   const followUps = await prisma.followUp.findMany({
     where: {
       remindedAt: null,
+      completedAt: null,
       dueDate: { gte: lookbackFloor, lt: startOfTomorrow },
       user: { active: true, emailNotifications: true },
-      task: { project: { archivedAt: null } },
+      OR: [{ task: { project: { archivedAt: null } } }, { project: { archivedAt: null } }],
     },
     select: {
       id: true,
       dueDate: true,
       userId: true,
       task: { select: { id: true, title: true, status: true, project: { select: { name: true } } } },
+      project: { select: { id: true, name: true } },
     },
   });
 
   const followUpIdsToMark: string[] = [];
   for (const followUp of followUps) {
     followUpIdsToMark.push(followUp.id);
-    pushTo(followUpsByUser, followUp.userId, {
-      taskTitle: followUp.task.title,
-      projectName: followUp.task.project.name,
-      taskStatus: followUp.task.status,
-      dueDate: followUp.dueDate,
-      url: taskUrl(followUp.task.id),
-    });
+    if (followUp.task) {
+      pushTo(followUpsByUser, followUp.userId, {
+        title: followUp.task.title,
+        projectName: followUp.task.project.name,
+        taskStatus: followUp.task.status,
+        dueDate: followUp.dueDate,
+        url: taskUrl(followUp.task.id),
+      });
+    } else if (followUp.project) {
+      pushTo(followUpsByUser, followUp.userId, {
+        title: null,
+        projectName: followUp.project.name,
+        taskStatus: null,
+        dueDate: followUp.dueDate,
+        url: projectUrl(followUp.project.id),
+      });
+    }
   }
 
   return { overdueByUser, dueTodayByUser, followUpsByUser, followUpIdsToMark };
