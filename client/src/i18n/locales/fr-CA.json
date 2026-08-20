@@ -158,7 +158,11 @@
     "noSubProjectsYet": "Aucun sous-projet pour l'instant — ajoutez-en un pour commencer à créer des tâches.",
     "removeSubProject": "Retirer",
     "confirmRemoveSubProject": "Retirer le sous-projet « {{name}} »? Cela supprime aussi ses tâches et cette action est irréversible.",
-    "confirmDeleteAttachment": "Supprimer la pièce jointe « {{name}} »? Cette action est irréversible."
+    "confirmDeleteAttachment": "Supprimer la pièce jointe « {{name}} »? Cette action est irréversible.",
+    "followUps": "Suivis",
+    "noFollowUpsYet": "Aucun suivi programmé pour le moment.",
+    "scheduleFollowUp": "Programmer un suivi",
+    "completed": "Terminé"
   },
   "subProjectDetail": {
     "newTask": "Nouvelle tâche",
@@ -309,7 +313,9 @@
     "loadingCalendar": "Chargement du calendrier…",
     "moreCount": "+{{count}} de plus",
     "noDeadlines": "Rien de prévu ce jour-là.",
-    "followUp": "Suivi"
+    "followUp": "Suivi",
+    "markComplete": "Marquer comme terminé",
+    "reopen": "Rouvrir"
   },
   "settings": {
     "title": "Paramètres",

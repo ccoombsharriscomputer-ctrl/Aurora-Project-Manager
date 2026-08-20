@@ -27,9 +27,11 @@ export interface DigestTaskItem {
 }
 
 export interface DigestFollowUpItem {
-  taskTitle: string;
+  // Null for a project-level follow-up (no task at all) — the template falls back to a
+  // generic label in that case. taskStatus is null for the same reason: no task, no status.
+  title: string | null;
   projectName: string;
-  taskStatus: string;
+  taskStatus: string | null;
   dueDate: Date;
   url: string;
 }
@@ -129,6 +131,7 @@ const DIGEST_STRINGS: Record<
     project: string;
     due: string;
     status: string;
+    followUpGenericLabel: string;
   }
 > = {
   EN: {
@@ -141,6 +144,7 @@ const DIGEST_STRINGS: Record<
     project: "Project",
     due: "Due",
     status: "Status",
+    followUpGenericLabel: "This project",
   },
   ES: {
     subjectOne: "1 elemento requiere su atención — Aurora Project Manager",
@@ -152,6 +156,7 @@ const DIGEST_STRINGS: Record<
     project: "Proyecto",
     due: "Vence",
     status: "Estado",
+    followUpGenericLabel: "Este proyecto",
   },
   FR_CA: {
     subjectOne: "1 élément nécessite votre attention — Aurora Project Manager",
@@ -163,6 +168,7 @@ const DIGEST_STRINGS: Record<
     project: "Projet",
     due: "Échéance",
     status: "Statut",
+    followUpGenericLabel: "Ce projet",
   },
 };
 
@@ -179,12 +185,13 @@ function taskRowsHtml(tasks: DigestTaskItem[], locale: Locale): string {
 
 function followUpRowsHtml(followUps: DigestFollowUpItem[], locale: Locale, s: (typeof DIGEST_STRINGS)["EN"]): string {
   return followUps
-    .map(
-      (f) =>
-        `<li style="margin:0 0 8px;"><a href="${f.url}" style="color:#3457d5;">${escapeHtml(f.taskTitle)}</a> — ${escapeHtml(
-          f.projectName
-        )} (${formatDueDate(f.dueDate, locale)}) — ${s.status}: ${escapeHtml(f.taskStatus)}</li>`
-    )
+    .map((f) => {
+      const label = f.title ?? s.followUpGenericLabel;
+      const statusSuffix = f.taskStatus ? ` — ${s.status}: ${escapeHtml(f.taskStatus)}` : "";
+      return `<li style="margin:0 0 8px;"><a href="${f.url}" style="color:#3457d5;">${escapeHtml(label)}</a> — ${escapeHtml(
+        f.projectName
+      )} (${formatDueDate(f.dueDate, locale)})${statusSuffix}</li>`;
+    })
     .join("");
 }
 
@@ -207,7 +214,15 @@ export function renderDigestEmail(payload: DigestPayload): RenderedEmail {
   }
   if (followUps.length > 0) {
     sections.push(`<h3 style="margin:24px 0 8px;font-size:15px;color:#2c5aa0;">${s.followUps}</h3><ul style="margin:0;padding-left:20px;">${followUpRowsHtml(followUps, locale, s)}</ul>`);
-    textSections.push(`${s.followUps}:\n${followUps.map((f) => `- ${f.taskTitle} (${f.projectName}, ${formatDueDate(f.dueDate, locale)}, ${s.status}: ${f.taskStatus}) ${f.url}`).join("\n")}`);
+    textSections.push(
+      `${s.followUps}:\n${followUps
+        .map((f) => {
+          const label = f.title ?? s.followUpGenericLabel;
+          const statusSuffix = f.taskStatus ? `, ${s.status}: ${f.taskStatus}` : "";
+          return `- ${label} (${f.projectName}, ${formatDueDate(f.dueDate, locale)}${statusSuffix}) ${f.url}`;
+        })
+        .join("\n")}`
+    );
   }
 
   const html = wrapHtml(`

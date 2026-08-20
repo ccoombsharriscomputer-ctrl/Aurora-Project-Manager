@@ -173,9 +173,12 @@ export interface Task {
 
 export interface FollowUpItem {
   id: string;
-  taskId: string;
-  taskTitle: string;
+  // Null for a project-level follow-up — scheduled directly on a project rather than from a
+  // task's comment form. Exactly one of task/project context is ever present.
+  taskId: string | null;
+  taskTitle: string | null;
   dueDate: string;
+  completedAt: string | null;
   user: UserSummary;
   project: { id: string; name: string } | null;
 }
@@ -183,6 +186,16 @@ export interface FollowUpItem {
 export interface CalendarResponse {
   tasks: Task[];
   followUps: FollowUpItem[];
+}
+
+// A project's own follow-ups list (Inside a project page) — same underlying row as
+// FollowUpItem, just without the task/project context fields since they're implied by
+// whichever project's list you're looking at.
+export interface ProjectFollowUp {
+  id: string;
+  dueDate: string;
+  completedAt: string | null;
+  user: UserSummary;
 }
 
 export interface Comment {

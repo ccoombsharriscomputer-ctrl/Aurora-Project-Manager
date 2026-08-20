@@ -158,7 +158,11 @@
     "noSubProjectsYet": "Aún no hay subproyectos — añade uno para empezar a crear tareas.",
     "removeSubProject": "Quitar",
     "confirmRemoveSubProject": "¿Quitar el subproyecto \"{{name}}\"? Esto también elimina sus tareas y no se puede deshacer.",
-    "confirmDeleteAttachment": "¿Eliminar el archivo adjunto \"{{name}}\"? Esta acción no se puede deshacer."
+    "confirmDeleteAttachment": "¿Eliminar el archivo adjunto \"{{name}}\"? Esta acción no se puede deshacer.",
+    "followUps": "Seguimientos",
+    "noFollowUpsYet": "Aún no hay seguimientos programados.",
+    "scheduleFollowUp": "Programar seguimiento",
+    "completed": "Completado"
   },
   "subProjectDetail": {
     "newTask": "Nueva tarea",
@@ -309,7 +313,9 @@
     "loadingCalendar": "Cargando calendario…",
     "moreCount": "+{{count}} más",
     "noDeadlines": "Nada programado para este día.",
-    "followUp": "Seguimiento"
+    "followUp": "Seguimiento",
+    "markComplete": "Marcar como completado",
+    "reopen": "Reabrir"
   },
   "settings": {
     "title": "Configuración",

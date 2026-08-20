@@ -39,24 +39,30 @@ router.get("/", async (req, res) => {
     },
   });
 
+  // Either a task-linked follow-up (scheduled from a comment) whose task's project is in
+  // scope, or a project-level one (scheduled directly on the project) whose own project is in
+  // scope — see the FollowUp model's comment for why exactly one of task/project is ever set.
+  const lineFilter = { softwareLineId: effectiveSoftwareLineId(req.user!), archivedAt: null };
   const followUpRows = await prisma.followUp.findMany({
     where: {
       dueDate: { gte: new Date(start), lte: endOfDay },
-      task: { project: { softwareLineId: effectiveSoftwareLineId(req.user!), archivedAt: null } },
+      OR: [{ task: { project: lineFilter } }, { project: lineFilter }],
     },
     orderBy: { dueDate: "asc" },
     include: {
       task: { select: { id: true, title: true, project: { select: { id: true, name: true } } } },
+      project: { select: { id: true, name: true } },
       user: { select: { id: true, name: true, email: true } },
     },
   });
   const followUps = followUpRows.map((f) => ({
     id: f.id,
-    taskId: f.task.id,
-    taskTitle: f.task.title,
+    taskId: f.task?.id ?? null,
+    taskTitle: f.task?.title ?? null,
     dueDate: f.dueDate,
+    completedAt: f.completedAt,
     user: f.user,
-    project: f.task.project,
+    project: f.task?.project ?? f.project ?? null,
   }));
 
   res.json({ tasks, followUps });

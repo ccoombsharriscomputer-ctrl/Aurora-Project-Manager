@@ -845,6 +845,12 @@ label {
   font-weight: 600;
 }
 
+.calendar-task-pill.follow-up.completed {
+  color: var(--muted);
+  text-decoration: line-through;
+  font-weight: 400;
+}
+
 .calendar-resolved-text {
   color: var(--muted);
   text-decoration: line-through;

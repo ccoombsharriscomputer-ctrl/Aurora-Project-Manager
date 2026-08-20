@@ -3,9 +3,10 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { api } from "../api/client";
-import type { Attachment, ChecklistItem, Project, SubProject, TeamSupportTicketResponse, UserSummary } from "../api/types";
+import type { Attachment, ChecklistItem, Project, ProjectFollowUp, SubProject, TeamSupportTicketResponse, UserSummary } from "../api/types";
 import { extractErrorMessage, useAuth } from "../context/AuthContext";
 import { useOpenTabs } from "../context/OpenTabsContext";
+import { formatDueDate } from "../utils/format";
 
 function NewSubProjectForm({ projectId }: { projectId: string }) {
   const { t } = useTranslation();
@@ -237,6 +238,94 @@ function AttachmentsPanel({ projectId }: { projectId: string }) {
           </span>
         </div>
       ))}
+    </div>
+  );
+}
+
+// Scheduling a follow-up here works the same way as from a task's comment form — same
+// FollowUp row, same calendar entry — except this one isn't tied to any specific task, so
+// it's a natural fit for "check in on the whole engagement" reminders. Completing one (or
+// reopening it) is restricted to whoever scheduled it, or an admin — see routes/followUps.ts.
+function FollowUpsPanel({ projectId }: { projectId: string }) {
+  const { t } = useTranslation();
+  const { user, canWrite } = useAuth();
+  const queryClient = useQueryClient();
+  const [dueDate, setDueDate] = useState("");
+  const [error, setError] = useState<string | null>(null);
+
+  const { data: followUps } = useQuery({
+    queryKey: ["project-follow-ups", projectId],
+    queryFn: () => api.get<ProjectFollowUp[]>(`/projects/${projectId}/follow-ups`),
+  });
+
+  function invalidateFollowUps() {
+    queryClient.invalidateQueries({ queryKey: ["project-follow-ups", projectId] });
+    queryClient.invalidateQueries({ queryKey: ["calendar"] });
+  }
+
+  const scheduleFollowUp = useMutation({
+    mutationFn: () => api.post<ProjectFollowUp>(`/projects/${projectId}/follow-ups`, { dueDate }),
+    onSuccess: () => {
+      invalidateFollowUps();
+      setDueDate("");
+      setError(null);
+    },
+    onError: (err) => setError(extractErrorMessage(err)),
+  });
+
+  const setCompleted = useMutation({
+    mutationFn: ({ id, completed }: { id: string; completed: boolean }) =>
+      api.patch(`/follow-ups/${id}`, { completed }),
+    onSuccess: invalidateFollowUps,
+  });
+
+  return (
+    <div className="card">
+      <div className="section-title">{t("projectDetail.followUps")}</div>
+      {followUps?.length === 0 && (
+        <p className="muted" style={{ marginTop: 12 }}>
+          {t("projectDetail.noFollowUpsYet")}
+        </p>
+      )}
+      {followUps?.map((f) => {
+        const canComplete = user?.id === f.user.id || user?.role === "ADMIN";
+        return (
+          <div className="task-list-item" key={f.id}>
+            <span className={f.completedAt ? "calendar-resolved-text" : undefined}>{formatDueDate(f.dueDate)}</span>
+            <span className="gap-8">
+              <span className="muted">{f.user.name}</span>
+              {canComplete ? (
+                <button
+                  className="btn btn-sm"
+                  onClick={() => setCompleted.mutate({ id: f.id, completed: !f.completedAt })}
+                  disabled={setCompleted.isPending}
+                >
+                  {f.completedAt ? t("calendar.reopen") : t("calendar.markComplete")}
+                </button>
+              ) : (
+                f.completedAt && <span className="muted">{t("projectDetail.completed")}</span>
+              )}
+            </span>
+          </div>
+        );
+      })}
+      {canWrite && (
+        <form
+          className="gap-8"
+          style={{ marginTop: 12, alignItems: "center" }}
+          onSubmit={(e: FormEvent) => {
+            e.preventDefault();
+            if (!dueDate) return;
+            scheduleFollowUp.mutate();
+          }}
+        >
+          <input type="date" required value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
+          <button className="btn btn-sm btn-primary" type="submit" disabled={scheduleFollowUp.isPending}>
+            {t("projectDetail.scheduleFollowUp")}
+          </button>
+        </form>
+      )}
+      {error && <div className="error-text">{error}</div>}
     </div>
   );
 }
@@ -521,6 +610,9 @@ export function ProjectDetailPage() {
           <MembersPanel project={project} allUsers={allUsers ?? []} />
           <div style={{ marginTop: 16 }}>
             <AttachmentsPanel projectId={project.id} />
+          </div>
+          <div style={{ marginTop: 16 }}>
+            <FollowUpsPanel projectId={project.id} />
           </div>
         </div>
       </div>

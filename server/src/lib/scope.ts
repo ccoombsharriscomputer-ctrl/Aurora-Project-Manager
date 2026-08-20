@@ -52,3 +52,14 @@ export async function loadAttachmentInScope(attachmentId: string, lineId: string
   if (attachmentLineId !== lineId) return null;
   return attachment;
 }
+
+export async function loadFollowUpInScope(followUpId: string, lineId: string) {
+  const followUp = await prisma.followUp.findUnique({
+    where: { id: followUpId },
+    include: { project: true, task: { include: { project: true } } },
+  });
+  if (!followUp) return null;
+  const followUpLineId = followUp.project?.softwareLineId ?? followUp.task?.project.softwareLineId;
+  if (followUpLineId !== lineId) return null;
+  return followUp;
+}
