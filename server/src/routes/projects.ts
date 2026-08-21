@@ -389,10 +389,12 @@ router.post("/:id/duplicate", blockReadOnly, async (req, res) => {
     return res.status(404).json({ error: "Project not found" });
   }
 
-  // Carry over every member's role from the source, but the person doing the copy always
-  // becomes (or stays) OWNER of the new project, since they're the one who just created it.
+  // Every member carries over as a MEMBER regardless of their role on the source project —
+  // the person doing the copy is always the new project's sole OWNER, since they're the one
+  // who just created it. (Carrying the source's OWNER role over verbatim would leave two
+  // owners on the copy whenever the copier isn't the original owner.)
   const memberRoles = new Map<string, "OWNER" | "MEMBER">();
-  for (const m of source.members) memberRoles.set(m.userId, m.role);
+  for (const m of source.members) memberRoles.set(m.userId, "MEMBER");
   memberRoles.set(req.user!.id, "OWNER");
 
   const project = await prisma.project.create({
