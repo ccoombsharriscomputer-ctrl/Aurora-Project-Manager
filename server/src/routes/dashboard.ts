@@ -5,8 +5,17 @@ import { effectiveSoftwareLineId, requireAuth } from "../middleware/auth";
 const router = Router();
 router.use(requireAuth);
 
+// Sunday-through-Saturday, anchored at UTC midnight like every other day boundary in this
+// app (see calendar.ts) — matches the calendar's own week-view convention (see the client's
+// calendarPeriod.ts startOfWeek) instead of a rolling 7-day lookback.
+function startOfWeekUTC(now: Date): Date {
+  const start = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+  start.setUTCDate(start.getUTCDate() - start.getUTCDay());
+  return start;
+}
+
 router.get("/summary", async (req, res) => {
-  const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+  const weekStart = startOfWeekUTC(new Date());
   const lineId = effectiveSoftwareLineId(req.user!);
   // Archived projects drop out of every "what's active right now" view.
   const inLine = { project: { softwareLineId: lineId, archivedAt: null } };
@@ -19,7 +28,7 @@ router.get("/summary", async (req, res) => {
     recentActivity,
   ] = await Promise.all([
     prisma.project.count({ where: { softwareLineId: lineId, archivedAt: null } }),
-    prisma.task.count({ where: { status: "DONE", updatedAt: { gte: weekAgo }, ...inLine } }),
+    prisma.task.count({ where: { status: "DONE", updatedAt: { gte: weekStart }, ...inLine } }),
     prisma.project.findMany({ where: { softwareLineId: lineId, archivedAt: null }, select: { id: true, name: true } }),
     prisma.task.findMany({
       where: { assigneeId: req.user!.id, status: { notIn: ["DONE", "NA"] }, ...inLine },
@@ -101,12 +110,12 @@ router.get("/hours-logged", async (req, res) => {
 // Drill-down lists behind the dashboard's clickable stat tiles — each mirrors the exact
 // filter used to compute that tile's number in /summary, so the list always matches the count.
 router.get("/completed-this-week", async (req, res) => {
-  const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+  const weekStart = startOfWeekUTC(new Date());
   const lineId = effectiveSoftwareLineId(req.user!);
   const inLine = { project: { softwareLineId: lineId, archivedAt: null } };
 
   const tasks = await prisma.task.findMany({
-    where: { status: "DONE", updatedAt: { gte: weekAgo }, ...inLine },
+    where: { status: "DONE", updatedAt: { gte: weekStart }, ...inLine },
     orderBy: { updatedAt: "desc" },
     include: {
       project: { select: { id: true, name: true } },
