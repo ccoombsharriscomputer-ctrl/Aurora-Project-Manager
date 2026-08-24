@@ -28,7 +28,10 @@ router.get("/summary", async (req, res) => {
     recentActivity,
   ] = await Promise.all([
     prisma.project.count({ where: { softwareLineId: lineId, archivedAt: null } }),
-    prisma.task.count({ where: { status: "DONE", updatedAt: { gte: weekStart }, ...inLine } }),
+    // completedAt, not updatedAt — updatedAt bumps on any edit (a comment, a reassignment, a
+    // priority change), not just completion, which was silently inflating this count with
+    // tasks finished earlier but touched again this week.
+    prisma.task.count({ where: { status: "DONE", completedAt: { gte: weekStart }, ...inLine } }),
     prisma.project.findMany({ where: { softwareLineId: lineId, archivedAt: null }, select: { id: true, name: true } }),
     prisma.task.findMany({
       where: { assigneeId: req.user!.id, status: { notIn: ["DONE", "NA"] }, ...inLine },
@@ -115,8 +118,8 @@ router.get("/completed-this-week", async (req, res) => {
   const inLine = { project: { softwareLineId: lineId, archivedAt: null } };
 
   const tasks = await prisma.task.findMany({
-    where: { status: "DONE", updatedAt: { gte: weekStart }, ...inLine },
-    orderBy: { updatedAt: "desc" },
+    where: { status: "DONE", completedAt: { gte: weekStart }, ...inLine },
+    orderBy: { completedAt: "desc" },
     include: {
       project: { select: { id: true, name: true } },
       assignee: { select: { id: true, name: true } },
