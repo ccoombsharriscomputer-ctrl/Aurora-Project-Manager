@@ -1,7 +1,9 @@
 import { Request, Router } from "express";
+import { z } from "zod";
 import { prisma } from "../lib/prisma";
 import { effectiveSoftwareLineId, requireAdmin, requireAuth } from "../middleware/auth";
 import { computeTaskStats, sumHours, type DateRange } from "../lib/reportStats";
+import { runTaskReport, TASK_REPORT_COLUMNS, type TaskReportColumnKey, type TaskReportFilters } from "../lib/reportBuilder";
 
 const router = Router();
 router.use(requireAuth);
@@ -261,6 +263,133 @@ router.get("/activity", async (req, res) => {
     activities: activities.slice(0, ACTIVITY_LIMIT),
     truncated: activities.length > ACTIVITY_LIMIT,
   });
+});
+
+// --- Report builder ---
+
+const columnSchema = z.enum(TASK_REPORT_COLUMNS);
+
+const filtersSchema = z.object({
+  statuses: z.array(z.enum(["TODO", "IN_PROGRESS", "DONE", "NA"])).optional(),
+  priorities: z.array(z.enum(["LOW", "MEDIUM", "HIGH"])).optional(),
+  assigneeIds: z.array(z.string()).optional(),
+  projectIds: z.array(z.string()).optional(),
+  projectTypeIds: z.array(z.string()).optional(),
+  dueFrom: z.string().optional(),
+  dueTo: z.string().optional(),
+  completedFrom: z.string().optional(),
+  completedTo: z.string().optional(),
+  overdueOnly: z.boolean().optional(),
+}) satisfies z.ZodType<TaskReportFilters>;
+
+const runSchema = z.object({
+  filters: filtersSchema,
+  sortBy: columnSchema.optional(),
+  sortDir: z.enum(["asc", "desc"]).optional(),
+});
+
+// Runs a report ad hoc, without saving it — how the builder's live preview works. `columns`
+// isn't part of this request at all: which columns to display is a client-side rendering
+// choice over the same always-complete row shape (see reportBuilder.ts).
+router.post("/builder/run", async (req, res) => {
+  const parsed = runSchema.safeParse(req.body);
+  if (!parsed.success) {
+    return res.status(400).json({ error: parsed.error.issues[0].message });
+  }
+  const lineId = effectiveSoftwareLineId(req.user!);
+  const result = await runTaskReport(lineId, parsed.data.filters, parsed.data.sortBy, parsed.data.sortDir);
+  res.json(result);
+});
+
+const savedReportSchema = z.object({
+  name: z.string().min(1).max(120),
+  columns: z.array(columnSchema).min(1),
+  filters: filtersSchema,
+  sortBy: columnSchema.optional(),
+  sortDir: z.enum(["asc", "desc"]).optional(),
+});
+
+// Any admin in this line can see, run, edit, or delete any report saved in it — Reports is
+// already admin-only, so this is a shared catalog the same way Project Types and Products are,
+// not a personal list scoped to whoever created each one.
+router.get("/saved", async (req, res) => {
+  const lineId = effectiveSoftwareLineId(req.user!);
+  const reports = await prisma.savedReport.findMany({
+    where: { softwareLineId: lineId },
+    orderBy: { name: "asc" },
+    include: { createdBy: { select: { id: true, name: true } } },
+  });
+  res.json(reports);
+});
+
+router.post("/saved", async (req, res) => {
+  const parsed = savedReportSchema.safeParse(req.body);
+  if (!parsed.success) {
+    return res.status(400).json({ error: parsed.error.issues[0].message });
+  }
+  const lineId = effectiveSoftwareLineId(req.user!);
+  const report = await prisma.savedReport.create({
+    data: {
+      name: parsed.data.name,
+      columns: parsed.data.columns,
+      filters: parsed.data.filters,
+      sortBy: parsed.data.sortBy,
+      sortDir: parsed.data.sortDir,
+      softwareLineId: lineId,
+      createdById: req.user!.id,
+    },
+    include: { createdBy: { select: { id: true, name: true } } },
+  });
+  res.status(201).json(report);
+});
+
+router.patch("/saved/:id", async (req, res) => {
+  const parsed = savedReportSchema.safeParse(req.body);
+  if (!parsed.success) {
+    return res.status(400).json({ error: parsed.error.issues[0].message });
+  }
+  const lineId = effectiveSoftwareLineId(req.user!);
+  const existing = await prisma.savedReport.findUnique({ where: { id: req.params.id } });
+  if (!existing || existing.softwareLineId !== lineId) {
+    return res.status(404).json({ error: "Report not found" });
+  }
+  const report = await prisma.savedReport.update({
+    where: { id: req.params.id },
+    data: {
+      name: parsed.data.name,
+      columns: parsed.data.columns,
+      filters: parsed.data.filters,
+      sortBy: parsed.data.sortBy,
+      sortDir: parsed.data.sortDir,
+    },
+    include: { createdBy: { select: { id: true, name: true } } },
+  });
+  res.json(report);
+});
+
+router.delete("/saved/:id", async (req, res) => {
+  const lineId = effectiveSoftwareLineId(req.user!);
+  const existing = await prisma.savedReport.findUnique({ where: { id: req.params.id } });
+  if (!existing || existing.softwareLineId !== lineId) {
+    return res.status(404).json({ error: "Report not found" });
+  }
+  await prisma.savedReport.delete({ where: { id: req.params.id } });
+  res.status(204).send();
+});
+
+router.get("/saved/:id/run", async (req, res) => {
+  const lineId = effectiveSoftwareLineId(req.user!);
+  const existing = await prisma.savedReport.findUnique({ where: { id: req.params.id } });
+  if (!existing || existing.softwareLineId !== lineId) {
+    return res.status(404).json({ error: "Report not found" });
+  }
+  const result = await runTaskReport(
+    lineId,
+    existing.filters as TaskReportFilters,
+    existing.sortBy as TaskReportColumnKey | undefined,
+    existing.sortDir as "asc" | "desc" | undefined
+  );
+  res.json(result);
 });
 
 export default router;

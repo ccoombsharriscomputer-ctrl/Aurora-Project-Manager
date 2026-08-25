@@ -318,6 +318,75 @@ export interface ActivityReport {
   truncated: boolean;
 }
 
+// Which columns to show, and in what order, is a purely client-side rendering choice — the
+// query itself always computes every column (see server's reportBuilder.ts), so toggling a
+// column on/off never needs a re-fetch.
+export type TaskReportColumnKey =
+  | "title"
+  | "project"
+  | "projectType"
+  | "subProject"
+  | "assignee"
+  | "status"
+  | "priority"
+  | "dueDate"
+  | "completedAt"
+  | "daysLate"
+  | "naReason"
+  | "createdBy"
+  | "createdAt"
+  | "hoursLogged";
+
+export const UNASSIGNED_SENTINEL = "UNASSIGNED";
+
+export interface TaskReportFilters {
+  statuses?: TaskStatus[];
+  priorities?: TaskPriority[];
+  assigneeIds?: string[];
+  projectIds?: string[];
+  projectTypeIds?: string[];
+  dueFrom?: string;
+  dueTo?: string;
+  completedFrom?: string;
+  completedTo?: string;
+  overdueOnly?: boolean;
+}
+
+export interface TaskReportRow {
+  id: string;
+  title: string;
+  project: { id: string; name: string };
+  projectType: { id: string; name: string };
+  subProject: { id: string; name: string };
+  assignee: { id: string; name: string } | null;
+  status: TaskStatus;
+  priority: TaskPriority;
+  dueDate: string | null;
+  completedAt: string | null;
+  daysLate: number | null;
+  naReason: string | null;
+  createdBy: { id: string; name: string };
+  createdAt: string;
+  hoursLogged: number;
+}
+
+export interface TaskReportResult {
+  rows: TaskReportRow[];
+  truncated: boolean;
+}
+
+export interface SavedReport {
+  id: string;
+  name: string;
+  columns: TaskReportColumnKey[];
+  filters: TaskReportFilters;
+  sortBy: TaskReportColumnKey | null;
+  sortDir: "asc" | "desc" | null;
+  createdBy: UserSummary;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface ExtractedProjectDetails {
   name: string | null;
   description: string | null;
