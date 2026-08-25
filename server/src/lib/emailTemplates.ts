@@ -41,6 +41,9 @@ export interface DigestPayload {
   userName: string;
   overdueTasks: DigestTaskItem[];
   dueTodayTasks: DigestTaskItem[];
+  // Due on the next business day — i.e. today is the business day immediately before the
+  // due date, skipping weekends, so a Monday-due task lands here on the preceding Friday.
+  dueNextBusinessDayTasks: DigestTaskItem[];
   followUps: DigestFollowUpItem[];
 }
 
@@ -127,6 +130,7 @@ const DIGEST_STRINGS: Record<
     greeting: (name: string) => string;
     overdue: string;
     dueToday: string;
+    dueNextBusinessDay: string;
     followUps: string;
     project: string;
     due: string;
@@ -140,6 +144,7 @@ const DIGEST_STRINGS: Record<
     greeting: (name) => `Hi ${name},`,
     overdue: "Overdue tasks",
     dueToday: "Due today",
+    dueNextBusinessDay: "Due next business day",
     followUps: "Follow-ups due",
     project: "Project",
     due: "Due",
@@ -152,6 +157,7 @@ const DIGEST_STRINGS: Record<
     greeting: (name) => `Hola ${name},`,
     overdue: "Tareas atrasadas",
     dueToday: "Vencen hoy",
+    dueNextBusinessDay: "Vencen el próximo día hábil",
     followUps: "Seguimientos pendientes",
     project: "Proyecto",
     due: "Vence",
@@ -164,6 +170,7 @@ const DIGEST_STRINGS: Record<
     greeting: (name) => `Bonjour ${name},`,
     overdue: "Tâches en retard",
     dueToday: "À échéance aujourd'hui",
+    dueNextBusinessDay: "À échéance le prochain jour ouvrable",
     followUps: "Suivis à effectuer",
     project: "Projet",
     due: "Échéance",
@@ -196,9 +203,9 @@ function followUpRowsHtml(followUps: DigestFollowUpItem[], locale: Locale, s: (t
 }
 
 export function renderDigestEmail(payload: DigestPayload): RenderedEmail {
-  const { locale, userName, overdueTasks, dueTodayTasks, followUps } = payload;
+  const { locale, userName, overdueTasks, dueTodayTasks, dueNextBusinessDayTasks, followUps } = payload;
   const s = DIGEST_STRINGS[locale];
-  const total = overdueTasks.length + dueTodayTasks.length + followUps.length;
+  const total = overdueTasks.length + dueTodayTasks.length + dueNextBusinessDayTasks.length + followUps.length;
   const subject = total === 1 ? s.subjectOne : `${total} ${s.subjectMany}`;
 
   const sections: string[] = [];
@@ -211,6 +218,10 @@ export function renderDigestEmail(payload: DigestPayload): RenderedEmail {
   if (dueTodayTasks.length > 0) {
     sections.push(`<h3 style="margin:24px 0 8px;font-size:15px;color:#b8860b;">${s.dueToday}</h3><ul style="margin:0;padding-left:20px;">${taskRowsHtml(dueTodayTasks, locale)}</ul>`);
     textSections.push(`${s.dueToday}:\n${dueTodayTasks.map((t) => `- ${t.title} (${t.projectName} / ${t.subProjectName}, ${formatDueDate(t.dueDate, locale)}) ${t.url}`).join("\n")}`);
+  }
+  if (dueNextBusinessDayTasks.length > 0) {
+    sections.push(`<h3 style="margin:24px 0 8px;font-size:15px;color:#4a7a3d;">${s.dueNextBusinessDay}</h3><ul style="margin:0;padding-left:20px;">${taskRowsHtml(dueNextBusinessDayTasks, locale)}</ul>`);
+    textSections.push(`${s.dueNextBusinessDay}:\n${dueNextBusinessDayTasks.map((t) => `- ${t.title} (${t.projectName} / ${t.subProjectName}, ${formatDueDate(t.dueDate, locale)}) ${t.url}`).join("\n")}`);
   }
   if (followUps.length > 0) {
     sections.push(`<h3 style="margin:24px 0 8px;font-size:15px;color:#2c5aa0;">${s.followUps}</h3><ul style="margin:0;padding-left:20px;">${followUpRowsHtml(followUps, locale, s)}</ul>`);
