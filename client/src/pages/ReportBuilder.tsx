@@ -430,7 +430,7 @@ export function ReportBuilderForm({
           </select>
         </div>
         <button className="btn btn-sm" onClick={() => previewMutation.mutate()} disabled={previewMutation.isPending}>
-          {t("reports.preview")}
+          {t("reports.runReport")}
         </button>
       </div>
 
@@ -456,7 +456,32 @@ export function ReportBuilderForm({
         </button>
       </div>
 
-      {preview && <ResultsTable columns={state.columns} result={preview} isLoading={previewMutation.isPending} />}
+      {preview && (
+        <div>
+          <div className="flex-between" style={{ marginBottom: 8 }}>
+            <div className="section-title" style={{ marginBottom: 0, fontSize: 14 }}>
+              {t("reports.results")}
+            </div>
+            <button
+              className="btn btn-sm"
+              disabled={preview.rows.length === 0}
+              onClick={() =>
+                downloadCsv(
+                  `${name.trim() || "report"}.csv`,
+                  preview.rows,
+                  REPORT_COLUMN_ORDER.filter((c) => state.columns.includes(c)).map((c) => ({
+                    header: columnLabel(t, c),
+                    value: (r: TaskReportRow) => csvValue(t, r, c),
+                  }))
+                )
+              }
+            >
+              {t("reports.exportCsv")}
+            </button>
+          </div>
+          <ResultsTable columns={state.columns} result={preview} isLoading={previewMutation.isPending} />
+        </div>
+      )}
     </div>
   );
 }
