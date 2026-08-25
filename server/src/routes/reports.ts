@@ -303,15 +303,17 @@ router.post("/builder/run", async (req, res) => {
 
 const savedReportSchema = z.object({
   name: z.string().min(1).max(120),
+  description: z.string().max(500).optional(),
   columns: z.array(columnSchema).min(1),
   filters: filtersSchema,
   sortBy: columnSchema.optional(),
   sortDir: z.enum(["asc", "desc"]).optional(),
 });
 
-// Any admin in this line can see, run, edit, or delete any report saved in it — Reports is
-// already admin-only, so this is a shared catalog the same way Project Types and Products are,
-// not a personal list scoped to whoever created each one.
+// Every admin in this line can see and run any report saved in it, listed together in the
+// Saved reports section — Reports is already admin-only, so this list is a shared catalog the
+// same way Project Types and Products are. Editing or deleting one, below, is narrower: only
+// whoever created it can do that.
 router.get("/saved", async (req, res) => {
   const lineId = effectiveSoftwareLineId(req.user!);
   const reports = await prisma.savedReport.findMany({
@@ -331,6 +333,7 @@ router.post("/saved", async (req, res) => {
   const report = await prisma.savedReport.create({
     data: {
       name: parsed.data.name,
+      description: parsed.data.description || null,
       columns: parsed.data.columns,
       filters: parsed.data.filters,
       sortBy: parsed.data.sortBy,
@@ -353,10 +356,14 @@ router.patch("/saved/:id", async (req, res) => {
   if (!existing || existing.softwareLineId !== lineId) {
     return res.status(404).json({ error: "Report not found" });
   }
+  if (existing.createdById !== req.user!.id) {
+    return res.status(403).json({ error: "Only the person who created this report can edit it" });
+  }
   const report = await prisma.savedReport.update({
     where: { id: req.params.id },
     data: {
       name: parsed.data.name,
+      description: parsed.data.description || null,
       columns: parsed.data.columns,
       filters: parsed.data.filters,
       sortBy: parsed.data.sortBy,
@@ -372,6 +379,9 @@ router.delete("/saved/:id", async (req, res) => {
   const existing = await prisma.savedReport.findUnique({ where: { id: req.params.id } });
   if (!existing || existing.softwareLineId !== lineId) {
     return res.status(404).json({ error: "Report not found" });
+  }
+  if (existing.createdById !== req.user!.id) {
+    return res.status(403).json({ error: "Only the person who created this report can delete it" });
   }
   await prisma.savedReport.delete({ where: { id: req.params.id } });
   res.status(204).send();
