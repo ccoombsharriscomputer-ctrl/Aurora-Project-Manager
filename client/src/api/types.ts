@@ -378,6 +378,7 @@ export interface TaskReportResult {
 export interface SavedReport {
   id: string;
   name: string;
+  description: string | null;
   columns: TaskReportColumnKey[];
   filters: TaskReportFilters;
   sortBy: TaskReportColumnKey | null;

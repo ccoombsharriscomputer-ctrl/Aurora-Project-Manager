@@ -18,7 +18,7 @@ import type {
 import { UNASSIGNED_SENTINEL } from "../api/types";
 import { downloadCsv } from "../utils/csv";
 import { formatDate, formatDueDate } from "../utils/format";
-import { extractErrorMessage } from "../context/AuthContext";
+import { extractErrorMessage, useAuth } from "../context/AuthContext";
 
 // Canonical display order — a saved/in-progress report's `columns` is a Set, this is what
 // turns it back into a stable, predictable column order regardless of check/uncheck order.
@@ -224,8 +224,14 @@ export function ReportBuilderForm({
   onCancel: () => void;
 }) {
   const { t } = useTranslation();
+  const { user } = useAuth();
   const queryClient = useQueryClient();
+  // Entry into edit mode is already gated to the creator at the list/view level — this is
+  // just defense in depth in case that ever changes, so the form itself never lets someone
+  // else's report be silently saved over or deleted.
+  const canEdit = !editing || editing.createdBy.id === user?.id;
   const [name, setName] = useState(editing?.name ?? "");
+  const [description, setDescription] = useState(editing?.description ?? "");
   const [state, setState] = useState<BuilderState>(editing ? toBuilderState(editing) : DEFAULT_STATE);
   const [preview, setPreview] = useState<TaskReportResult | undefined>(undefined);
   const [error, setError] = useState<string | null>(null);
@@ -250,7 +256,14 @@ export function ReportBuilderForm({
 
   const saveMutation = useMutation({
     mutationFn: () => {
-      const body = { name: name.trim(), columns: state.columns, filters: state.filters, sortBy: state.sortBy, sortDir: state.sortDir };
+      const body = {
+        name: name.trim(),
+        description: description.trim() || undefined,
+        columns: state.columns,
+        filters: state.filters,
+        sortBy: state.sortBy,
+        sortDir: state.sortDir,
+      };
       return editing
         ? api.patch<SavedReport>(`/reports/saved/${editing.id}`, body)
         : api.post<SavedReport>("/reports/saved", body);
@@ -291,7 +304,7 @@ export function ReportBuilderForm({
     });
   }
 
-  const canSave = name.trim().length > 0 && state.columns.length > 0;
+  const canSave = name.trim().length > 0 && state.columns.length > 0 && canEdit;
 
   return (
     <div className="card">
@@ -300,6 +313,15 @@ export function ReportBuilderForm({
       <div className="field" style={{ maxWidth: 360, marginBottom: 16 }}>
         <label>{t("reports.reportName")}</label>
         <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder={t("reports.reportNamePlaceholder")} />
+      </div>
+
+      <div className="field" style={{ maxWidth: 480, marginBottom: 16 }}>
+        <label>{t("common.description")}</label>
+        <textarea
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          placeholder={t("reports.reportDescriptionPlaceholder")}
+        />
       </div>
 
       <div className="field" style={{ marginBottom: 16 }}>
@@ -418,7 +440,7 @@ export function ReportBuilderForm({
         <button className="btn btn-sm btn-primary" disabled={!canSave || saveMutation.isPending} onClick={() => saveMutation.mutate()}>
           {editing ? t("common.save") : t("reports.saveReport")}
         </button>
-        {editing && (
+        {editing && canEdit && (
           <button
             className="btn btn-sm btn-danger"
             disabled={deleteMutation.isPending}
@@ -439,7 +461,17 @@ export function ReportBuilderForm({
   );
 }
 
-export function SavedReportView({ report, onEdit }: { report: SavedReport; onEdit: () => void }) {
+export function SavedReportView({
+  report,
+  canEdit,
+  onEdit,
+  onBack,
+}: {
+  report: SavedReport;
+  canEdit: boolean;
+  onEdit: () => void;
+  onBack: () => void;
+}) {
   const { t } = useTranslation();
   const { data: result, isLoading } = useQuery({
     queryKey: ["reports", "saved", report.id, "run"],
@@ -448,11 +480,19 @@ export function SavedReportView({ report, onEdit }: { report: SavedReport; onEdi
 
   return (
     <div className="card">
+      <button className="btn btn-sm" style={{ marginBottom: 12 }} onClick={onBack}>
+        {t("reports.backToSavedReports")}
+      </button>
       <div className="flex-between" style={{ marginBottom: 12 }}>
         <div>
           <div className="section-title" style={{ marginBottom: 2 }}>
             {report.name}
           </div>
+          {report.description && (
+            <p className="muted" style={{ fontSize: 13, margin: "4px 0" }}>
+              {report.description}
+            </p>
+          )}
           <p className="muted" style={{ fontSize: 12, margin: 0 }}>
             {t("reports.createdBy", { name: report.createdBy.name })}
           </p>
@@ -475,12 +515,127 @@ export function SavedReportView({ report, onEdit }: { report: SavedReport; onEdi
           >
             {t("reports.exportCsv")}
           </button>
-          <button className="btn btn-sm" onClick={onEdit}>
-            {t("common.edit")}
-          </button>
+          {canEdit && (
+            <button className="btn btn-sm" onClick={onEdit}>
+              {t("common.edit")}
+            </button>
+          )}
         </div>
       </div>
       <ResultsTable columns={report.columns} result={result} isLoading={isLoading} />
+    </div>
+  );
+}
+
+// The "Saved reports" tab itself — a management list (name, description, who made it, and
+// View/Edit/Delete) that swaps in the builder form or the results view in place of the list,
+// rather than each report getting its own top-level tab.
+type SavedReportsView = { mode: "list" } | { mode: "new" } | { mode: "view" | "edit"; id: string };
+
+export function SavedReportsTab() {
+  const { t } = useTranslation();
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+  const { data: reports, isLoading } = useSavedReports();
+  const [view, setView] = useState<SavedReportsView>({ mode: "list" });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => api.delete(`/reports/saved/${id}`),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["reports", "saved"] }),
+  });
+
+  if (view.mode === "new") {
+    return <ReportBuilderForm onSaved={(report) => setView({ mode: "view", id: report.id })} onCancel={() => setView({ mode: "list" })} />;
+  }
+
+  if (view.mode === "view" || view.mode === "edit") {
+    const report = reports?.find((r) => r.id === view.id);
+    if (!report) return <p className="muted">{t("common.loading")}</p>;
+    const canEdit = report.createdBy.id === user?.id;
+    if (view.mode === "edit" && canEdit) {
+      return (
+        <ReportBuilderForm
+          editing={report}
+          onSaved={() => setView({ mode: "view", id: report.id })}
+          onDeleted={() => setView({ mode: "list" })}
+          onCancel={() => setView({ mode: "view", id: report.id })}
+        />
+      );
+    }
+    return (
+      <SavedReportView
+        report={report}
+        canEdit={canEdit}
+        onEdit={() => setView({ mode: "edit", id: report.id })}
+        onBack={() => setView({ mode: "list" })}
+      />
+    );
+  }
+
+  return (
+    <div className="card">
+      <div className="flex-between" style={{ marginBottom: 12 }}>
+        <div className="section-title" style={{ marginBottom: 0 }}>
+          {t("reports.savedReports")}
+        </div>
+        <button className="btn btn-sm btn-primary" onClick={() => setView({ mode: "new" })}>
+          + {t("reports.newReport")}
+        </button>
+      </div>
+      {isLoading && <p className="muted">{t("common.loading")}</p>}
+      {reports && (
+        <div style={{ overflowX: "auto" }}>
+          <table className="table">
+            <thead>
+              <tr>
+                <th>{t("common.name")}</th>
+                <th>{t("common.description")}</th>
+                <th>{t("reports.createdByColumn")}</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              {reports.map((r) => (
+                <tr key={r.id}>
+                  <td>{r.name}</td>
+                  <td>{r.description || "—"}</td>
+                  <td>{r.createdBy.name}</td>
+                  <td>
+                    <div className="gap-8">
+                      <button className="btn btn-sm" onClick={() => setView({ mode: "view", id: r.id })}>
+                        {t("reports.viewReport")}
+                      </button>
+                      {r.createdBy.id === user?.id && (
+                        <>
+                          <button className="btn btn-sm" onClick={() => setView({ mode: "edit", id: r.id })}>
+                            {t("common.edit")}
+                          </button>
+                          <button
+                            className="btn btn-sm btn-danger"
+                            disabled={deleteMutation.isPending}
+                            onClick={() => {
+                              if (confirm(t("reports.confirmDeleteReport", { name: r.name }))) deleteMutation.mutate(r.id);
+                            }}
+                          >
+                            {t("common.delete")}
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              ))}
+              {reports.length === 0 && (
+                <tr>
+                  <td colSpan={4} className="muted">
+                    {t("reports.noSavedReportsYet")}
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 }

@@ -373,15 +373,17 @@ model FollowUp {
 }
 
 // A named, reusable task report — the columns to show, the filters and sort to run it with.
-// Scoped to a software line rather than to its creator: Reports is already admin-only, so any
-// admin viewing this line can see, run, edit, or delete any report saved in it, the same way
-// Project Types and Products are a shared catalog rather than personal to whoever made them.
-// columns/filters are stored as JSON rather than individual nullable columns — the report
-// builder's column and filter set is expected to grow, and a JSON blob means adding one never
-// needs its own migration; lib/reportBuilder.ts is the single place that knows their shape.
+// Scoped to a software line: every admin in the line can see and run any report saved in it
+// (listed together in a shared "Saved reports" section, like Project Types and Products are a
+// shared catalog), but editing or deleting one is restricted to whoever created it — enforced
+// in routes/reports.ts, not here. columns/filters are stored as JSON rather than individual
+// nullable columns — the report builder's column and filter set is expected to grow, and a
+// JSON blob means adding one never needs its own migration; lib/reportBuilder.ts is the single
+// place that knows their shape.
 model SavedReport {
   id             String   @id @default(cuid())
   name           String
+  description    String?
   softwareLineId String
   softwareLine   SoftwareLine @relation(fields: [softwareLineId], references: [id], onDelete: Cascade)
   createdById    String

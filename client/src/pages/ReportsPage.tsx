@@ -16,7 +16,7 @@ import type {
 } from "../api/types";
 import { downloadCsv } from "../utils/csv";
 import { formatDate, formatDateTime, formatDueDate } from "../utils/format";
-import { ReportBuilderForm, SavedReportView, useSavedReports } from "./ReportBuilder";
+import { SavedReportsTab } from "./ReportBuilder";
 
 interface Filters {
   userId: string;
@@ -597,33 +597,17 @@ function AuditTrailTab({ filters }: { filters: Filters }) {
   );
 }
 
-const FIXED_TABS = ["user", "project", "overdue", "activity"] as const;
-type FixedTab = (typeof FIXED_TABS)[number];
-// Anything not one of the four fixed tabs is either "new" (the builder, in create mode) or a
-// saved report's id (the builder's whole point — one tab per report someone has built).
-type Tab = FixedTab | "new" | string;
+type Tab = "user" | "project" | "overdue" | "activity" | "reports";
 
 export function ReportsPage() {
   const { t } = useTranslation();
-  const [tab, setTabState] = useState<Tab>("user");
-  const [editingReportId, setEditingReportId] = useState<string | null>(null);
+  const [tab, setTab] = useState<Tab>("user");
   const [filters, setFilters] = useState<Filters>({ userId: "", from: "", to: "", activityType: "" });
 
   const { data: users } = useQuery({
     queryKey: ["users"],
     queryFn: () => api.get<UserSummary[]>("/users"),
   });
-  const { data: savedReports } = useSavedReports();
-
-  // Leaving a tab always drops any in-progress edit on it — reopening a report tab should
-  // never silently land back in edit mode from an unrelated earlier visit.
-  function setTab(next: Tab) {
-    setEditingReportId(null);
-    setTabState(next);
-  }
-
-  const isFixedTab = (FIXED_TABS as readonly string[]).includes(tab);
-  const activeReport = savedReports?.find((r) => r.id === tab);
 
   return (
     <div>
@@ -651,17 +635,12 @@ export function ReportsPage() {
           >
             {t("reports.activity")}
           </button>
-          {savedReports?.map((r) => (
-            <button key={r.id} className={`btn btn-sm${tab === r.id ? " btn-primary" : ""}`} onClick={() => setTab(r.id)}>
-              {r.name}
-            </button>
-          ))}
-          <button className={`btn btn-sm${tab === "new" ? " btn-primary" : ""}`} onClick={() => setTab("new")}>
-            + {t("reports.newReport")}
+          <button className={`btn btn-sm${tab === "reports" ? " btn-primary" : ""}`} onClick={() => setTab("reports")}>
+            {t("reports.savedReports")}
           </button>
         </div>
       </div>
-      {isFixedTab && (
+      {tab !== "reports" && (
         <>
           <FilterBar filters={filters} setFilters={setFilters} users={users ?? []} showActivityTypeFilter={tab === "activity"} />
           {tab === "user" && <ByUserTab filters={filters} />}
@@ -670,21 +649,7 @@ export function ReportsPage() {
           {tab === "activity" && <AuditTrailTab filters={filters} />}
         </>
       )}
-      {tab === "new" && (
-        <ReportBuilderForm onSaved={(report) => setTab(report.id)} onCancel={() => setTab("user")} />
-      )}
-      {!isFixedTab && tab !== "new" && activeReport && (
-        editingReportId === tab ? (
-          <ReportBuilderForm
-            editing={activeReport}
-            onSaved={() => setEditingReportId(null)}
-            onDeleted={() => setTab("user")}
-            onCancel={() => setEditingReportId(null)}
-          />
-        ) : (
-          <SavedReportView report={activeReport} onEdit={() => setEditingReportId(activeReport.id)} />
-        )
-      )}
+      {tab === "reports" && <SavedReportsTab />}
     </div>
   );
 }
