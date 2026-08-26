@@ -41,6 +41,33 @@ export interface CurrentUser {
   // Lines this user can switch into: every line for an admin, or home + granted for
   // everyone else. Length 1 means there's nothing to switch between.
   accessibleSoftwareLines: SoftwareLine[];
+  // Already resolved server-side to what actually renders — default-filled if this user has
+  // never customized, and filtered to widgets their role can see either way. See
+  // dashboardWidgets.ts for the widget catalog and per-role availability.
+  dashboardLayout: DashboardWidgetKey[];
+}
+
+// The Dashboard's customizable sections — kept in sync by hand with the server's
+// lib/dashboardWidgets.ts, matching how ActivityType is already duplicated between client and
+// server in this codebase rather than shared through a package.
+export const DASHBOARD_WIDGET_KEYS = ["statTiles", "deadlines", "projectProgress", "recentActivity", "myTasks"] as const;
+export type DashboardWidgetKey = (typeof DASHBOARD_WIDGET_KEYS)[number];
+
+// Every widget is open to every role today — the Dashboard has never had an admin-only
+// section — but this is a real per-widget rule, not a placeholder: a future widget needing
+// narrower data declares a narrower list here, and the customize panel and the render filter
+// both pick it up automatically.
+const ALL_ROLES: UserRole[] = ["ADMIN", "PROJECT_LEAD", "MEMBER", "READ_ONLY"];
+export const DASHBOARD_WIDGET_ROLES: Record<DashboardWidgetKey, UserRole[]> = {
+  statTiles: ALL_ROLES,
+  deadlines: ALL_ROLES,
+  projectProgress: ALL_ROLES,
+  recentActivity: ALL_ROLES,
+  myTasks: ALL_ROLES,
+};
+
+export function widgetsAllowedForRole(role: UserRole): DashboardWidgetKey[] {
+  return DASHBOARD_WIDGET_KEYS.filter((key) => DASHBOARD_WIDGET_ROLES[key].includes(role));
 }
 
 export interface UserSummary {

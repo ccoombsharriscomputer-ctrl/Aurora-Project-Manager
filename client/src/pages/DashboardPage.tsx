@@ -1,12 +1,14 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { api } from "../api/client";
-import type { Activity, DashboardSummary, HoursLoggedResponse } from "../api/types";
+import type { Activity, DashboardSummary, DashboardWidgetKey, HoursLoggedResponse } from "../api/types";
 import { formatDueDate, formatElapsed, formatRelativeTime } from "../utils/format";
 import { useActiveTimer } from "../hooks/useActiveTimer";
+import { useAuth } from "../context/AuthContext";
 import { DeadlinesCalendar } from "../components/DeadlinesCalendar";
+import { CustomizeDashboardPanel } from "../components/CustomizeDashboardPanel";
 import { HOURS_LOGGED_TITLE_KEY, periodRange, startOfDay, type ViewMode } from "../utils/calendarPeriod";
 
 function TimerBanner() {
@@ -76,7 +78,7 @@ function ProjectProgress({ projects }: { projects: DashboardSummary["projectProg
   const visible = expanded ? projects : projects.slice(0, COLLAPSED_COUNT);
 
   return (
-    <div className="card" style={{ marginBottom: 20 }}>
+    <div className="card">
       <div className="flex-between">
         <div className="section-title" style={{ marginBottom: 0 }}>
           {t("dashboard.projectProgress")}
@@ -105,8 +107,28 @@ function ProjectProgress({ projects }: { projects: DashboardSummary["projectProg
   );
 }
 
+function MyTasks({ tasks }: { tasks: DashboardSummary["myTasks"] }) {
+  const { t } = useTranslation();
+  return (
+    <div className="card">
+      <div className="section-title">{t("dashboard.myTasks")}</div>
+      {tasks.length === 0 && <p className="muted">{t("dashboard.nothingAssigned")}</p>}
+      {tasks.map((task) => (
+        <div className="task-list-item" key={task.id}>
+          <Link to={`/tasks/${task.id}`}>
+            {task.project?.name} - {task.subProject?.name || task.subProject?.checklistItem.name} - {task.title}
+          </Link>
+          <span className="muted">{formatDueDate(task.dueDate)}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export function DashboardPage() {
   const { t } = useTranslation();
+  const { user } = useAuth();
+  const [customizing, setCustomizing] = useState(false);
   const { data, isLoading } = useQuery({
     queryKey: ["dashboard"],
     queryFn: () => api.get<DashboardSummary>("/dashboard/summary"),
@@ -131,15 +153,12 @@ export function DashboardPage() {
     return <div className="muted">{t("dashboard.loadingDashboard")}</div>;
   }
 
-  return (
-    <div>
-      <div className="page-header">
-        <h1>{t("layout.dashboard")}</h1>
-      </div>
-
-      <TimerBanner />
-
-      <div className="stat-grid">
+  // One entry per customizable section — the user's own dashboardLayout (already resolved
+  // server-side to default-filled + role-filtered, see lib/dashboardWidgets.ts) picks which
+  // of these render, and in what order.
+  const widgets: Record<DashboardWidgetKey, ReactNode> = {
+    statTiles: (
+      <div className="stat-grid" style={{ marginBottom: 0 }}>
         <Link to="/projects" className="stat-tile">
           <div className="value">{data.totalProjects}</div>
           <div className="label">{t("dashboard.totalProjects")}</div>
@@ -156,32 +175,37 @@ export function DashboardPage() {
           <div className="label">{t(HOURS_LOGGED_TITLE_KEY[calendarView])}</div>
         </Link>
       </div>
-
+    ),
+    deadlines: (
       <DeadlinesCalendar
         view={calendarView}
         cursor={calendarCursor}
         onViewChange={setCalendarView}
         onCursorChange={setCalendarCursor}
       />
+    ),
+    projectProgress: <ProjectProgress projects={data.projectProgress} />,
+    recentActivity: <RecentActivity activities={data.recentActivity} />,
+    myTasks: <MyTasks tasks={data.myTasks} />,
+  };
 
-      <div className="dashboard-grid" style={{ marginTop: 20 }}>
-        <div>
-          <ProjectProgress projects={data.projectProgress} />
-          <RecentActivity activities={data.recentActivity} />
-        </div>
+  return (
+    <div>
+      <div className="page-header">
+        <h1>{t("layout.dashboard")}</h1>
+        <button className="btn btn-sm" onClick={() => setCustomizing((v) => !v)}>
+          {t("dashboard.customize")}
+        </button>
+      </div>
 
-        <div className="card">
-          <div className="section-title">{t("dashboard.myTasks")}</div>
-          {data.myTasks.length === 0 && <p className="muted">{t("dashboard.nothingAssigned")}</p>}
-          {data.myTasks.map((t) => (
-            <div className="task-list-item" key={t.id}>
-              <Link to={`/tasks/${t.id}`}>
-                {t.project?.name} - {t.subProject?.name || t.subProject?.checklistItem.name} - {t.title}
-              </Link>
-              <span className="muted">{formatDueDate(t.dueDate)}</span>
-            </div>
-          ))}
-        </div>
+      <TimerBanner />
+
+      {customizing && <CustomizeDashboardPanel onClose={() => setCustomizing(false)} />}
+
+      <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+        {user!.dashboardLayout.map((key) => (
+          <div key={key}>{widgets[key]}</div>
+        ))}
       </div>
     </div>
   );

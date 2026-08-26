@@ -1,5 +1,6 @@
 import { prisma } from "./prisma";
 import type { AuthedUser } from "../middleware/auth";
+import { effectiveDashboardLayout } from "./dashboardWidgets";
 
 // The lines a user can switch into: admins get every line (already unrestricted); everyone
 // else gets their home line plus whatever they've been explicitly granted. Shared by every
@@ -32,6 +33,9 @@ export async function buildCurrentUserPayload(user: {
   softwareLineId: string;
   activeSoftwareLineId: string | null;
   grantedSoftwareLineIds: string[];
+  // Raw column value (or already-resolved AuthedUser["dashboardLayout"], both accepted) —
+  // resolved to what actually renders below regardless of which shape the caller has on hand.
+  dashboardLayout?: unknown;
 }) {
   const accessibleSoftwareLines = await accessibleSoftwareLinesFor(user);
   return {
@@ -45,5 +49,6 @@ export async function buildCurrentUserPayload(user: {
     softwareLineId: user.softwareLineId,
     activeSoftwareLineId: user.activeSoftwareLineId,
     accessibleSoftwareLines,
+    dashboardLayout: effectiveDashboardLayout(user.dashboardLayout, user.role),
   };
 }
