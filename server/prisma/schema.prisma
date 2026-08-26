@@ -126,6 +126,13 @@ model User {
   activeSoftwareLine   SoftwareLine? @relation("UserActiveSoftwareLine", fields: [activeSoftwareLineId], references: [id])
   teamSupportUserId   String?
   createdAt           DateTime    @default(now())
+  // Self-service "forgot password" — set together when a reset is requested, cleared
+  // together the moment it's used (or overwritten by a fresh request, which invalidates
+  // whatever was pending before). Only the SHA-256 hash of the token is stored, matching
+  // passwordHash's own never-store-the-real-thing convention — the raw token exists only in
+  // the emailed link and is never persisted anywhere.
+  passwordResetTokenHash String?
+  passwordResetExpiresAt DateTime?
 
   createdProjects   Project[]       @relation("ProjectCreatedBy")
   projectMemberships ProjectMember[]

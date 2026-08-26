@@ -14,8 +14,9 @@ const createSchema = z.object({
   softwareLineId: z.string().min(1),
 });
 
-// Public — the only unauthenticated write endpoint in the app. Never creates an
-// account or a session; just records the request for an admin to act on.
+// Public — one of a small handful of unauthenticated write endpoints in the app (see also
+// routes/passwordReset.ts). Never creates an account or a session; just records the request
+// for an admin to act on.
 router.post("/", async (req, res) => {
   const parsed = createSchema.safeParse(req.body);
   if (!parsed.success) {

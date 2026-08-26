@@ -58,7 +58,26 @@
     "logIn": "Se connecter",
     "loggingIn": "Connexion en cours…",
     "needAccess": "Besoin d'accès?",
-    "requestAnAccount": "Demander un compte"
+    "requestAnAccount": "Demander un compte",
+    "forgotPassword": "Mot de passe oublié?"
+  },
+  "forgotPassword": {
+    "title": "Mot de passe oublié?",
+    "subtitle": "Entrez votre courriel et nous vous enverrons un lien pour le réinitialiser.",
+    "sendResetLink": "Envoyer le lien",
+    "sending": "Envoi en cours…",
+    "receivedTitle": "Consultez votre courriel",
+    "receivedSubtitle": "Si ce courriel correspond à un compte, nous avons envoyé un lien pour réinitialiser le mot de passe. Il expire dans 1 heure."
+  },
+  "resetPassword": {
+    "title": "Réinitialisez votre mot de passe",
+    "subtitle": "Choisissez un nouveau mot de passe pour votre compte.",
+    "resetPassword": "Réinitialiser le mot de passe",
+    "resetting": "Réinitialisation…",
+    "done": "Mot de passe réinitialisé. Connectez-vous avec votre nouveau mot de passe.",
+    "invalidLinkTitle": "Lien non valide",
+    "invalidLinkSubtitle": "Il manque le jeton à ce lien — copiez le lien complet à partir du courriel, ou demandez-en un nouveau.",
+    "requestNewLink": "Demander un nouveau lien"
   },
   "requestAccess": {
     "title": "Demander l'accès",

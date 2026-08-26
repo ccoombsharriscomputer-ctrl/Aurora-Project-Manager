@@ -58,7 +58,26 @@
     "logIn": "Log in",
     "loggingIn": "Logging in…",
     "needAccess": "Need access?",
-    "requestAnAccount": "Request an account"
+    "requestAnAccount": "Request an account",
+    "forgotPassword": "Forgot password?"
+  },
+  "forgotPassword": {
+    "title": "Forgot your password?",
+    "subtitle": "Enter your email and we'll send you a link to reset it.",
+    "sendResetLink": "Send reset link",
+    "sending": "Sending…",
+    "receivedTitle": "Check your email",
+    "receivedSubtitle": "If that email has an account, we've sent a link to reset the password. It expires in 1 hour."
+  },
+  "resetPassword": {
+    "title": "Reset your password",
+    "subtitle": "Choose a new password for your account.",
+    "resetPassword": "Reset password",
+    "resetting": "Resetting…",
+    "done": "Password reset. Log in with your new password.",
+    "invalidLinkTitle": "Invalid reset link",
+    "invalidLinkSubtitle": "This link is missing its token — copy the full link from the email, or request a new one.",
+    "requestNewLink": "Request a new reset link"
   },
   "requestAccess": {
     "title": "Request access",
