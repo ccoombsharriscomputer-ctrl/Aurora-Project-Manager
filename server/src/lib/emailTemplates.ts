@@ -291,3 +291,52 @@ export function renderTaskAssignedEmail(locale: Locale, content: TaskAssignedCon
   ].join("\n");
   return { subject: s.subject, html, text };
 }
+
+export interface PasswordResetContent {
+  userName: string;
+  url: string;
+  // Shown as a plain number of hours so the copy doesn't need its own pluralization table —
+  // matches how long the token is actually valid for (see routes/passwordReset.ts).
+  expiresInHours: number;
+}
+
+const PASSWORD_RESET_STRINGS: Record<
+  Locale,
+  { subject: string; heading: (name: string) => string; body: (hours: number) => string; button: string; ignore: string }
+> = {
+  EN: {
+    subject: "Reset your password — Aurora Project Manager",
+    heading: (name) => `Hi ${name},`,
+    body: (hours) => `We received a request to reset your Aurora Project Manager password. This link expires in ${hours} hour${hours === 1 ? "" : "s"}:`,
+    button: "Reset password",
+    ignore: "If you didn't request this, you can safely ignore this email — your password hasn't been changed.",
+  },
+  ES: {
+    subject: "Restablezca su contraseña — Aurora Project Manager",
+    heading: (name) => `Hola ${name},`,
+    body: (hours) => `Recibimos una solicitud para restablecer su contraseña de Aurora Project Manager. Este enlace vence en ${hours} hora${hours === 1 ? "" : "s"}:`,
+    button: "Restablecer contraseña",
+    ignore: "Si no solicitó esto, puede ignorar este correo con tranquilidad — su contraseña no ha cambiado.",
+  },
+  FR_CA: {
+    subject: "Réinitialisez votre mot de passe — Aurora Project Manager",
+    heading: (name) => `Bonjour ${name},`,
+    body: (hours) => `Nous avons reçu une demande de réinitialisation de votre mot de passe Aurora Project Manager. Ce lien expire dans ${hours} heure${hours === 1 ? "" : "s"} :`,
+    button: "Réinitialiser le mot de passe",
+    ignore: "Si vous n'êtes pas à l'origine de cette demande, vous pouvez ignorer ce courriel en toute sécurité — votre mot de passe n'a pas été modifié.",
+  },
+};
+
+export function renderPasswordResetEmail(locale: Locale, content: PasswordResetContent): RenderedEmail {
+  const s = PASSWORD_RESET_STRINGS[locale];
+  const html = wrapHtml(`
+    <p style="margin:0 0 16px;">${escapeHtml(s.heading(content.userName))}</p>
+    <p style="margin:0 0 20px;">${escapeHtml(s.body(content.expiresInHours))}</p>
+    <p style="margin:0 0 24px;">
+      <a href="${content.url}" style="display:inline-block;background:#3457d5;color:#ffffff;text-decoration:none;font-weight:600;padding:10px 20px;border-radius:6px;">${s.button}</a>
+    </p>
+    <p style="margin:0;color:#8a8f98;font-size:13px;">${s.ignore}</p>
+  `);
+  const text = [s.heading(content.userName), s.body(content.expiresInHours), content.url, "", s.ignore].join("\n");
+  return { subject: s.subject, html, text };
+}

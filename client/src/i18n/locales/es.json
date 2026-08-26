@@ -58,7 +58,26 @@
     "logIn": "Iniciar sesión",
     "loggingIn": "Iniciando sesión…",
     "needAccess": "¿Necesitas acceso?",
-    "requestAnAccount": "Solicitar una cuenta"
+    "requestAnAccount": "Solicitar una cuenta",
+    "forgotPassword": "¿Olvidó su contraseña?"
+  },
+  "forgotPassword": {
+    "title": "¿Olvidó su contraseña?",
+    "subtitle": "Ingrese su correo electrónico y le enviaremos un enlace para restablecerla.",
+    "sendResetLink": "Enviar enlace",
+    "sending": "Enviando…",
+    "receivedTitle": "Revise su correo",
+    "receivedSubtitle": "Si ese correo tiene una cuenta, le hemos enviado un enlace para restablecer la contraseña. Vence en 1 hora."
+  },
+  "resetPassword": {
+    "title": "Restablezca su contraseña",
+    "subtitle": "Elija una nueva contraseña para su cuenta.",
+    "resetPassword": "Restablecer contraseña",
+    "resetting": "Restableciendo…",
+    "done": "Contraseña restablecida. Inicie sesión con su nueva contraseña.",
+    "invalidLinkTitle": "Enlace no válido",
+    "invalidLinkSubtitle": "A este enlace le falta el token — copie el enlace completo del correo, o solicite uno nuevo.",
+    "requestNewLink": "Solicitar un nuevo enlace"
   },
   "requestAccess": {
     "title": "Solicitar acceso",

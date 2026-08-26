@@ -374,6 +374,12 @@ label {
   margin: 6px 0;
 }
 
+.success-text {
+  color: var(--success);
+  font-size: 13px;
+  margin: 6px 0;
+}
+
 .stat-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));

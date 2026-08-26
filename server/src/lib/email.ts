@@ -1,7 +1,13 @@
 import { Resend } from "resend";
 import { prisma } from "./prisma";
 import type { Locale } from "@prisma/client";
-import { renderAccessRequestEmail, renderDigestEmail, renderTaskAssignedEmail, type DigestPayload } from "./emailTemplates";
+import {
+  renderAccessRequestEmail,
+  renderDigestEmail,
+  renderPasswordResetEmail,
+  renderTaskAssignedEmail,
+  type DigestPayload,
+} from "./emailTemplates";
 
 interface AccessRequestNotification {
   name: string;
@@ -25,6 +31,10 @@ export function taskUrl(taskId: string): string {
 
 export function projectUrl(projectId: string): string {
   return `${appBaseUrl()}/projects/${projectId}`;
+}
+
+export function passwordResetUrl(token: string): string {
+  return `${appBaseUrl()}/reset-password?token=${token}`;
 }
 
 export interface OutgoingEmail {
@@ -142,6 +152,24 @@ export async function notifyTaskAssigned(params: {
     subProjectName: params.subProjectName,
     dueDate: params.dueDate,
     url: taskUrl(params.taskId),
+  });
+  await sendAll([{ to: params.to, ...rendered }]);
+}
+
+// expiresInHours is passed in rather than duplicated as a constant here — routes/passwordReset.ts
+// is the single place that decides (and enforces) how long a token is actually valid for, and
+// this just relays that number into the email copy.
+export async function sendPasswordResetEmail(params: {
+  to: string;
+  locale: Locale;
+  userName: string;
+  token: string;
+  expiresInHours: number;
+}): Promise<void> {
+  const rendered = renderPasswordResetEmail(params.locale, {
+    userName: params.userName,
+    url: passwordResetUrl(params.token),
+    expiresInHours: params.expiresInHours,
   });
   await sendAll([{ to: params.to, ...rendered }]);
 }

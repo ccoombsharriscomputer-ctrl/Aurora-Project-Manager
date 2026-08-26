@@ -3,6 +3,8 @@ import { Layout } from "./components/Layout";
 import { ProtectedRoute, AdminRoute, ProjectLeadRoute } from "./components/ProtectedRoute";
 import { LoginPage } from "./pages/LoginPage";
 import { RequestAccessPage } from "./pages/RequestAccessPage";
+import { ForgotPasswordPage } from "./pages/ForgotPasswordPage";
+import { ResetPasswordPage } from "./pages/ResetPasswordPage";
 import { DashboardPage } from "./pages/DashboardPage";
 import { CompletedThisWeekPage, TimeEntriesThisWeekPage } from "./pages/DashboardDrilldowns";
 import { ProjectsPage } from "./pages/ProjectsPage";
@@ -27,6 +29,8 @@ function App() {
     <Routes>
       <Route path="/login" element={<LoginPage />} />
       <Route path="/request-access" element={<RequestAccessPage />} />
+      <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+      <Route path="/reset-password" element={<ResetPasswordPage />} />
 
       <Route element={<ProtectedRoute />}>
         <Route element={<Layout />}>
