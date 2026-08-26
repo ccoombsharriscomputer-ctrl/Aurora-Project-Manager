@@ -58,5 +58,7 @@ export function sumHours(entries: TimeEntryLite[], range: DateRange): number {
   const hasRange = Boolean(range.from || range.to);
   const filtered = hasRange ? entries.filter((e) => inRange(e.startedAt, range)) : entries;
   const totalMinutes = filtered.reduce((sum, e) => sum + (e.durationMinutes ?? 0), 0);
-  return Math.round((totalMinutes / 60) * 10) / 10;
+  // Rounded to 2 decimals, not 1 — a quarter hour (0.25) or three-quarter hour (0.75) logged
+  // entry was getting rounded up to 0.3/0.8 at 1-decimal precision, which reads as wrong.
+  return Math.round((totalMinutes / 60) * 100) / 100;
 }

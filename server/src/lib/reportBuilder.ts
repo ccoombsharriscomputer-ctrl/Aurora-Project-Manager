@@ -168,8 +168,10 @@ export async function runTaskReport(
         : completedLate && t.completedAt && t.dueDate
           ? Math.round((t.completedAt.getTime() - t.dueDate.getTime()) / 86_400_000)
           : null;
+    // 2 decimals, not 1 — matching reportStats.ts's sumHours, so a quarter/three-quarter
+    // hour entry (0.25h / 0.75h) doesn't get rounded up to 0.3h / 0.8h.
     const hoursLogged =
-      Math.round((t.timeEntries.reduce((sum, e) => sum + (e.durationMinutes ?? 0), 0) / 60) * 10) / 10;
+      Math.round((t.timeEntries.reduce((sum, e) => sum + (e.durationMinutes ?? 0), 0) / 60) * 100) / 100;
 
     return {
       id: t.id,
