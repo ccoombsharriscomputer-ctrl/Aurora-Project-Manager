@@ -69,13 +69,19 @@ router.get("/me", requireAuth, async (req, res) => {
   res.json(await buildCurrentUserPayload(req.user!));
 });
 
+// Accepts both the current { key, size } shape and the older plain-string shape (from before
+// widgets had a size) — sanitizeDashboardLayout is the real validator either way, dropping
+// anything that isn't a recognized key/size or that this role can't see; this schema just
+// keeps obviously-wrong request bodies (wrong types entirely) out.
+const dashboardWidgetEntrySchema = z.union([z.string(), z.object({ key: z.string(), size: z.string().optional() })]);
+
 const updateMeSchema = z.object({
   theme: z.enum(["LIGHT", "DARK", "SYSTEM"]).optional(),
   accentColor: z.enum(["BLUE", "GREEN", "PURPLE", "ORANGE", "RED", "TEAL"]).optional(),
   locale: z.enum(["EN", "ES", "FR_CA"]).optional(),
   // null resets to the app default (every widget this role can see, default order); an
   // explicit [] is a deliberate "hide everything", distinct from that reset.
-  dashboardLayout: z.array(z.string()).max(20).nullable().optional(),
+  dashboardLayout: z.array(dashboardWidgetEntrySchema).max(20).nullable().optional(),
 });
 
 router.patch("/me", requireAuth, async (req, res) => {
@@ -94,7 +100,9 @@ router.patch("/me", requireAuth, async (req, res) => {
       // only ever offers allowed widgets to begin with.
       ...(dashboardLayout !== undefined && {
         dashboardLayout:
-          dashboardLayout === null ? Prisma.JsonNull : sanitizeDashboardLayout(dashboardLayout, req.user!.role),
+          dashboardLayout === null
+            ? Prisma.JsonNull
+            : (sanitizeDashboardLayout(dashboardLayout, req.user!.role) as unknown as Prisma.InputJsonValue),
       }),
     },
     select: {

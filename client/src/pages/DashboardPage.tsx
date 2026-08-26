@@ -3,7 +3,8 @@ import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { api } from "../api/client";
-import type { Activity, DashboardSummary, DashboardWidgetKey, HoursLoggedResponse } from "../api/types";
+import type { Activity, DashboardSummary, DashboardWidgetKey, DashboardWidgetSize, HoursLoggedResponse } from "../api/types";
+import { DASHBOARD_COLLAPSED_COUNT_BY_SIZE } from "../api/types";
 import { formatDueDate, formatElapsed, formatRelativeTime } from "../utils/format";
 import { useActiveTimer } from "../hooks/useActiveTimer";
 import { useAuth } from "../context/AuthContext";
@@ -40,12 +41,20 @@ function TimerBanner() {
   );
 }
 
-const COLLAPSED_COUNT = 2;
+function StatTile({ to, value, label, size }: { to: string; value: ReactNode; label: string; size: DashboardWidgetSize }) {
+  return (
+    <Link to={to} className={`stat-tile${size !== "M" ? ` stat-tile-${size}` : ""}`}>
+      <div className="value">{value}</div>
+      <div className="label">{label}</div>
+    </Link>
+  );
+}
 
-function RecentActivity({ activities }: { activities: Activity[] }) {
+function RecentActivity({ activities, size }: { activities: Activity[]; size: DashboardWidgetSize }) {
   const { t } = useTranslation();
   const [expanded, setExpanded] = useState(false);
-  const visible = expanded ? activities : activities.slice(0, COLLAPSED_COUNT);
+  const collapsedCount = DASHBOARD_COLLAPSED_COUNT_BY_SIZE[size];
+  const visible = expanded ? activities : activities.slice(0, collapsedCount);
 
   return (
     <div className="card">
@@ -53,7 +62,7 @@ function RecentActivity({ activities }: { activities: Activity[] }) {
         <div className="section-title" style={{ marginBottom: 0 }}>
           {t("dashboard.recentActivity")}
         </div>
-        {activities.length > COLLAPSED_COUNT && (
+        {activities.length > collapsedCount && (
           <button className="btn btn-sm" onClick={() => setExpanded((v) => !v)}>
             {expanded ? t("dashboard.showLess") : t("dashboard.showMore")}
           </button>
@@ -72,10 +81,11 @@ function RecentActivity({ activities }: { activities: Activity[] }) {
   );
 }
 
-function ProjectProgress({ projects }: { projects: DashboardSummary["projectProgress"] }) {
+function ProjectProgress({ projects, size }: { projects: DashboardSummary["projectProgress"]; size: DashboardWidgetSize }) {
   const { t } = useTranslation();
   const [expanded, setExpanded] = useState(false);
-  const visible = expanded ? projects : projects.slice(0, COLLAPSED_COUNT);
+  const collapsedCount = DASHBOARD_COLLAPSED_COUNT_BY_SIZE[size];
+  const visible = expanded ? projects : projects.slice(0, collapsedCount);
 
   return (
     <div className="card">
@@ -83,7 +93,7 @@ function ProjectProgress({ projects }: { projects: DashboardSummary["projectProg
         <div className="section-title" style={{ marginBottom: 0 }}>
           {t("dashboard.projectProgress")}
         </div>
-        {projects.length > COLLAPSED_COUNT && (
+        {projects.length > collapsedCount && (
           <button className="btn btn-sm" onClick={() => setExpanded((v) => !v)}>
             {expanded ? t("dashboard.showLess") : t("dashboard.showMore")}
           </button>
@@ -107,13 +117,26 @@ function ProjectProgress({ projects }: { projects: DashboardSummary["projectProg
   );
 }
 
-function MyTasks({ tasks }: { tasks: DashboardSummary["myTasks"] }) {
+function MyTasks({ tasks, size }: { tasks: DashboardSummary["myTasks"]; size: DashboardWidgetSize }) {
   const { t } = useTranslation();
+  const [expanded, setExpanded] = useState(false);
+  const collapsedCount = DASHBOARD_COLLAPSED_COUNT_BY_SIZE[size];
+  const visible = expanded ? tasks : tasks.slice(0, collapsedCount);
+
   return (
     <div className="card">
-      <div className="section-title">{t("dashboard.myTasks")}</div>
+      <div className="flex-between">
+        <div className="section-title" style={{ marginBottom: 0 }}>
+          {t("dashboard.myTasks")}
+        </div>
+        {tasks.length > collapsedCount && (
+          <button className="btn btn-sm" onClick={() => setExpanded((v) => !v)}>
+            {expanded ? t("dashboard.showLess") : t("dashboard.showMore")}
+          </button>
+        )}
+      </div>
       {tasks.length === 0 && <p className="muted">{t("dashboard.nothingAssigned")}</p>}
-      {tasks.map((task) => (
+      {visible.map((task) => (
         <div className="task-list-item" key={task.id}>
           <Link to={`/tasks/${task.id}`}>
             {task.project?.name} - {task.subProject?.name || task.subProject?.checklistItem.name} - {task.title}
@@ -153,41 +176,53 @@ export function DashboardPage() {
     return <div className="muted">{t("dashboard.loadingDashboard")}</div>;
   }
 
-  // One entry per customizable section — the user's own dashboardLayout (already resolved
-  // server-side to default-filled + role-filtered, see lib/dashboardWidgets.ts) picks which
-  // of these render, and in what order.
-  const widgets: Record<DashboardWidgetKey, ReactNode> = {
-    statTiles: (
-      <div className="stat-grid" style={{ marginBottom: 0 }}>
-        <Link to="/projects" className="stat-tile">
-          <div className="value">{data.totalProjects}</div>
-          <div className="label">{t("dashboard.totalProjects")}</div>
-        </Link>
-        <Link to="/dashboard/completed-this-week" className="stat-tile">
-          <div className="value">{data.tasksCompletedThisWeek}</div>
-          <div className="label">{t("dashboard.completedThisWeek")}</div>
-        </Link>
-        <Link
-          to={`/dashboard/time-entries-this-week?start=${encodeURIComponent(start.toISOString())}&end=${encodeURIComponent(end.toISOString())}&view=${calendarView}`}
-          className="stat-tile"
-        >
-          <div className="value">{hoursLogged?.hours ?? 0}h</div>
-          <div className="label">{t(HOURS_LOGGED_TITLE_KEY[calendarView])}</div>
-        </Link>
-      </div>
-    ),
-    deadlines: (
-      <DeadlinesCalendar
-        view={calendarView}
-        cursor={calendarCursor}
-        onViewChange={setCalendarView}
-        onCursorChange={setCalendarCursor}
-      />
-    ),
-    projectProgress: <ProjectProgress projects={data.projectProgress} />,
-    recentActivity: <RecentActivity activities={data.recentActivity} />,
-    myTasks: <MyTasks tasks={data.myTasks} />,
-  };
+  // The user's own dashboardLayout (already resolved server-side to default-filled +
+  // role-filtered, see lib/dashboardWidgets.ts) picks which widgets render, in what order,
+  // and — via the wrapping grid item's size class below — how wide. Each entry's own size is
+  // also threaded into the widget itself where it matters (a stat tile's font, a list
+  // widget's collapsed count), so this renders one widget per entry rather than building all
+  // 7 up front for every entry.
+  function renderWidget(key: DashboardWidgetKey, size: DashboardWidgetSize): ReactNode {
+    switch (key) {
+      case "totalProjects":
+        return <StatTile to="/projects" value={data!.totalProjects} label={t("dashboard.totalProjects")} size={size} />;
+      case "completedThisWeek":
+        return (
+          <StatTile
+            to="/dashboard/completed-this-week"
+            value={data!.tasksCompletedThisWeek}
+            label={t("dashboard.completedThisWeek")}
+            size={size}
+          />
+        );
+      case "hoursLogged":
+        return (
+          <StatTile
+            to={`/dashboard/time-entries-this-week?start=${encodeURIComponent(start.toISOString())}&end=${encodeURIComponent(end.toISOString())}&view=${calendarView}`}
+            value={`${hoursLogged?.hours ?? 0}h`}
+            label={t(HOURS_LOGGED_TITLE_KEY[calendarView])}
+            size={size}
+          />
+        );
+      case "deadlines":
+        return (
+          <DeadlinesCalendar
+            view={calendarView}
+            cursor={calendarCursor}
+            onViewChange={setCalendarView}
+            onCursorChange={setCalendarCursor}
+          />
+        );
+      case "projectProgress":
+        return <ProjectProgress projects={data!.projectProgress} size={size} />;
+      case "recentActivity":
+        return <RecentActivity activities={data!.recentActivity} size={size} />;
+      case "myTasks":
+        return <MyTasks tasks={data!.myTasks} size={size} />;
+      default:
+        return null;
+    }
+  }
 
   return (
     <div>
@@ -202,9 +237,11 @@ export function DashboardPage() {
 
       {customizing && <CustomizeDashboardPanel onClose={() => setCustomizing(false)} />}
 
-      <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-        {user!.dashboardLayout.map((key) => (
-          <div key={key}>{widgets[key]}</div>
+      <div className="dashboard-widget-grid">
+        {user!.dashboardLayout.map((entry) => (
+          <div className={`dashboard-widget-${entry.size}`} key={entry.key}>
+            {renderWidget(entry.key, entry.size)}
+          </div>
         ))}
       </div>
     </div>

@@ -412,6 +412,63 @@ label {
   margin-top: 2px;
 }
 
+/* Small/large variants of a stat tile, used when a stat tile widget's size is set to S or L
+   in Customize dashboard (the default, M, is the plain .stat-tile styling above). */
+.stat-tile-S .value {
+  font-size: 20px;
+}
+
+.stat-tile-S {
+  padding: 12px;
+}
+
+.stat-tile-L .value {
+  font-size: 38px;
+}
+
+.stat-tile-L {
+  padding: 22px;
+}
+
+/* The Dashboard's customizable widgets — a 6-column span grid so each widget's chosen size
+   (see dashboardWidgets.ts) becomes a fraction of a row instead of always stacking full width.
+   Items wrap to the next row automatically; a span wider than the grid's own column count (as
+   happens once the breakpoints below narrow it) is simply clamped to the full row by the
+   browser, so no extra override is needed for that case. */
+.dashboard-widget-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 20px;
+}
+
+.dashboard-widget-grid > * {
+  min-width: 0;
+}
+
+.dashboard-widget-S {
+  grid-column: span 2;
+}
+
+.dashboard-widget-M {
+  grid-column: span 3;
+}
+
+.dashboard-widget-L {
+  grid-column: span 6;
+}
+
+@media (max-width: 900px) {
+  .dashboard-widget-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 560px) {
+  .dashboard-widget-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 .dashboard-grid {
   display: grid;
   grid-template-columns: 2fr 1fr;
