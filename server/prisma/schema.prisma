@@ -133,6 +133,13 @@ model User {
   // the emailed link and is never persisted anywhere.
   passwordResetTokenHash String?
   passwordResetExpiresAt DateTime?
+  // Which Dashboard widgets this user has chosen to show, and in what order — see
+  // lib/dashboardWidgets.ts for the widget catalog and which roles can use each one. Null
+  // means "no customization yet": show every widget this role is allowed, in the app's
+  // default order. An empty array is a deliberate choice to hide everything, distinct from
+  // null. Stored as JSON rather than a join table since it's just an ordered list of short
+  // string keys — a table would only ever be queried and written one row (one user) at a time.
+  dashboardLayout Json?
 
   createdProjects   Project[]       @relation("ProjectCreatedBy")
   projectMemberships ProjectMember[]

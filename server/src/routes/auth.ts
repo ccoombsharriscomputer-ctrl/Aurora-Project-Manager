@@ -1,9 +1,11 @@
 import { Router } from "express";
 import { z } from "zod";
+import { Prisma } from "@prisma/client";
 import { prisma } from "../lib/prisma";
 import { COOKIE_NAME, comparePassword, hashPassword, signToken } from "../lib/auth";
 import { requireAuth } from "../middleware/auth";
 import { buildCurrentUserPayload } from "../lib/currentUser";
+import { sanitizeDashboardLayout } from "../lib/dashboardWidgets";
 
 const router = Router();
 
@@ -71,6 +73,9 @@ const updateMeSchema = z.object({
   theme: z.enum(["LIGHT", "DARK", "SYSTEM"]).optional(),
   accentColor: z.enum(["BLUE", "GREEN", "PURPLE", "ORANGE", "RED", "TEAL"]).optional(),
   locale: z.enum(["EN", "ES", "FR_CA"]).optional(),
+  // null resets to the app default (every widget this role can see, default order); an
+  // explicit [] is a deliberate "hide everything", distinct from that reset.
+  dashboardLayout: z.array(z.string()).max(20).nullable().optional(),
 });
 
 router.patch("/me", requireAuth, async (req, res) => {
@@ -78,10 +83,20 @@ router.patch("/me", requireAuth, async (req, res) => {
   if (!parsed.success) {
     return res.status(400).json({ error: parsed.error.issues[0].message });
   }
+  const { dashboardLayout, ...rest } = parsed.data;
 
   const user = await prisma.user.update({
     where: { id: req.user!.id },
-    data: parsed.data,
+    data: {
+      ...rest,
+      // Re-sanitized here rather than trusted from the request — drops anything that isn't a
+      // real widget key or that this user's role isn't allowed to see, even though the client
+      // only ever offers allowed widgets to begin with.
+      ...(dashboardLayout !== undefined && {
+        dashboardLayout:
+          dashboardLayout === null ? Prisma.JsonNull : sanitizeDashboardLayout(dashboardLayout, req.user!.role),
+      }),
+    },
     select: {
       id: true,
       name: true,
@@ -92,6 +107,7 @@ router.patch("/me", requireAuth, async (req, res) => {
       locale: true,
       softwareLineId: true,
       activeSoftwareLineId: true,
+      dashboardLayout: true,
     },
   });
   res.json(await buildCurrentUserPayload({ ...user, grantedSoftwareLineIds: req.user!.grantedSoftwareLineIds }));
@@ -158,6 +174,7 @@ router.patch("/active-line", requireAuth, async (req, res) => {
       locale: true,
       softwareLineId: true,
       activeSoftwareLineId: true,
+      dashboardLayout: true,
     },
   });
   res.json(await buildCurrentUserPayload({ ...user, grantedSoftwareLineIds: req.user!.grantedSoftwareLineIds }));
