@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import { COOKIE_NAME, verifyToken } from "../lib/auth";
 import { prisma } from "../lib/prisma";
-import { effectiveDashboardLayout, type DashboardWidgetKey } from "../lib/dashboardWidgets";
+import { effectiveDashboardLayout, type DashboardWidgetEntry } from "../lib/dashboardWidgets";
 
 export interface AuthedUser {
   id: string;
@@ -17,7 +17,7 @@ export interface AuthedUser {
   teamSupportUserId: string | null;
   // Already resolved to "what actually renders" (default-filled and role-filtered) — see
   // lib/dashboardWidgets.ts — so nothing downstream needs to re-derive it from the raw column.
-  dashboardLayout: DashboardWidgetKey[];
+  dashboardLayout: DashboardWidgetEntry[];
 }
 
 // The software line whose data this request should operate on. Admins can switch to any

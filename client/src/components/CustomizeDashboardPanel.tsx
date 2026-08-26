@@ -4,15 +4,23 @@ import { useTranslation } from "react-i18next";
 import type { TFunction } from "i18next";
 import { api } from "../api/client";
 import { useAuth } from "../context/AuthContext";
-import type { CurrentUser, DashboardWidgetKey } from "../api/types";
-import { widgetsAllowedForRole } from "../api/types";
+import type { CurrentUser, DashboardWidgetEntry, DashboardWidgetKey, DashboardWidgetSize } from "../api/types";
+import { DASHBOARD_WIDGET_SIZES, widgetsAllowedForRole } from "../api/types";
 
 function widgetLabel(t: TFunction, key: DashboardWidgetKey): string {
-  if (key === "statTiles") return t("dashboard.widgetStatTiles");
+  if (key === "totalProjects") return t("dashboard.totalProjects");
+  if (key === "completedThisWeek") return t("dashboard.completedThisWeek");
+  if (key === "hoursLogged") return t("dashboard.widgetHoursLogged");
   if (key === "deadlines") return t("dashboard.widgetDeadlines");
   if (key === "projectProgress") return t("dashboard.projectProgress");
   if (key === "recentActivity") return t("dashboard.recentActivity");
   return t("dashboard.myTasks");
+}
+
+function sizeLabel(t: TFunction, size: DashboardWidgetSize): string {
+  if (size === "S") return t("dashboard.sizeSmall");
+  if (size === "L") return t("dashboard.sizeLarge");
+  return t("dashboard.sizeMedium");
 }
 
 // Inline panel, not a modal — matches how every other in-app editor (FollowUpsPanel, the
@@ -22,15 +30,17 @@ export function CustomizeDashboardPanel({ onClose }: { onClose: () => void }) {
   const { user, updateUser } = useAuth();
   const queryClient = useQueryClient();
   const allowed = widgetsAllowedForRole(user!.role);
-  // Visible widgets keep the user's saved order; anything allowed but not yet in that list
-  // (e.g. never customized, or a widget added after they last saved) starts out hidden,
-  // appended in catalog order so it's still reachable from the Hidden list below.
-  const [visible, setVisible] = useState<DashboardWidgetKey[]>(user!.dashboardLayout.filter((k) => allowed.includes(k)));
+  // Visible widgets keep the user's saved order (and size); anything allowed but not yet in
+  // that list (e.g. never customized, or a widget added after they last saved) starts out
+  // hidden, appended in catalog order so it's still reachable from the Hidden list below.
+  const [visible, setVisible] = useState<DashboardWidgetEntry[]>(
+    user!.dashboardLayout.filter((entry) => allowed.includes(entry.key))
+  );
   const [dragKey, setDragKey] = useState<DashboardWidgetKey | null>(null);
-  const hidden = allowed.filter((k) => !visible.includes(k));
+  const hidden = allowed.filter((key) => !visible.some((entry) => entry.key === key));
 
   const save = useMutation({
-    mutationFn: (layout: DashboardWidgetKey[] | null) => api.patch<CurrentUser>("/auth/me", { dashboardLayout: layout }),
+    mutationFn: (layout: DashboardWidgetEntry[] | null) => api.patch<CurrentUser>("/auth/me", { dashboardLayout: layout }),
     onSuccess: (updated) => {
       updateUser(updated);
       queryClient.invalidateQueries({ queryKey: ["dashboard"] });
@@ -39,16 +49,24 @@ export function CustomizeDashboardPanel({ onClose }: { onClose: () => void }) {
   });
 
   function show(key: DashboardWidgetKey) {
-    setVisible((v) => [...v, key]);
+    setVisible((v) => [...v, { key, size: "M" }]);
   }
   function hide(key: DashboardWidgetKey) {
-    setVisible((v) => v.filter((k) => k !== key));
+    setVisible((v) => v.filter((entry) => entry.key !== key));
+  }
+  function setSize(key: DashboardWidgetKey, size: DashboardWidgetSize) {
+    setVisible((v) => v.map((entry) => (entry.key === key ? { ...entry, size } : entry)));
   }
   function reorder(dragged: DashboardWidgetKey, target: DashboardWidgetKey) {
     if (dragged === target) return;
     setVisible((v) => {
-      const next = v.filter((k) => k !== dragged);
-      next.splice(next.indexOf(target), 0, dragged);
+      const draggedEntry = v.find((entry) => entry.key === dragged)!;
+      const next = v.filter((entry) => entry.key !== dragged);
+      next.splice(
+        next.findIndex((entry) => entry.key === target),
+        0,
+        draggedEntry
+      );
       return next;
     });
   }
@@ -60,24 +78,33 @@ export function CustomizeDashboardPanel({ onClose }: { onClose: () => void }) {
       <div className="field" style={{ marginBottom: 16 }}>
         <label>{t("dashboard.visibleWidgets")}</label>
         {visible.length === 0 && <p className="muted" style={{ fontSize: 13, margin: "4px 0" }}>{t("dashboard.noWidgetsVisible")}</p>}
-        {visible.map((key) => (
+        {visible.map((entry) => (
           <div
-            key={key}
-            className={`task-list-item${dragKey === key ? " dragging" : ""}`}
+            key={entry.key}
+            className={`task-list-item${dragKey === entry.key ? " dragging" : ""}`}
             draggable
-            onDragStart={() => setDragKey(key)}
+            onDragStart={() => setDragKey(entry.key)}
             onDragEnd={() => setDragKey(null)}
             onDragOver={(e) => e.preventDefault()}
             onDrop={(e) => {
               e.preventDefault();
-              if (dragKey) reorder(dragKey, key);
+              if (dragKey) reorder(dragKey, entry.key);
             }}
             style={{ cursor: "grab" }}
           >
-            <span>⠿ {widgetLabel(t, key)}</span>
-            <button className="btn btn-sm" onClick={() => hide(key)}>
-              {t("dashboard.hide")}
-            </button>
+            <span>⠿ {widgetLabel(t, entry.key)}</span>
+            <span className="gap-8">
+              <select value={entry.size} onChange={(e) => setSize(entry.key, e.target.value as DashboardWidgetSize)}>
+                {DASHBOARD_WIDGET_SIZES.map((size) => (
+                  <option key={size} value={size}>
+                    {sizeLabel(t, size)}
+                  </option>
+                ))}
+              </select>
+              <button className="btn btn-sm" onClick={() => hide(entry.key)}>
+                {t("dashboard.hide")}
+              </button>
+            </span>
           </div>
         ))}
       </div>

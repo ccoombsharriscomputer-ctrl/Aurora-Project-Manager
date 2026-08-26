@@ -44,14 +44,35 @@ export interface CurrentUser {
   // Already resolved server-side to what actually renders — default-filled if this user has
   // never customized, and filtered to widgets their role can see either way. See
   // dashboardWidgets.ts for the widget catalog and per-role availability.
-  dashboardLayout: DashboardWidgetKey[];
+  dashboardLayout: DashboardWidgetEntry[];
 }
 
 // The Dashboard's customizable sections — kept in sync by hand with the server's
 // lib/dashboardWidgets.ts, matching how ActivityType is already duplicated between client and
 // server in this codebase rather than shared through a package.
-export const DASHBOARD_WIDGET_KEYS = ["statTiles", "deadlines", "projectProgress", "recentActivity", "myTasks"] as const;
+//
+// The 3 stat tiles used to be one fused "statTiles" widget; they're independently
+// sizeable/orderable now, since sizing only makes sense per-tile.
+export const DASHBOARD_WIDGET_KEYS = [
+  "totalProjects",
+  "completedThisWeek",
+  "hoursLogged",
+  "deadlines",
+  "projectProgress",
+  "recentActivity",
+  "myTasks",
+] as const;
 export type DashboardWidgetKey = (typeof DASHBOARD_WIDGET_KEYS)[number];
+
+// Width via CSS grid-column span (see index.css) and, for the list-style widgets, how many
+// items show before "Show more".
+export const DASHBOARD_WIDGET_SIZES = ["S", "M", "L"] as const;
+export type DashboardWidgetSize = (typeof DASHBOARD_WIDGET_SIZES)[number];
+
+export interface DashboardWidgetEntry {
+  key: DashboardWidgetKey;
+  size: DashboardWidgetSize;
+}
 
 // Every widget is open to every role today — the Dashboard has never had an admin-only
 // section — but this is a real per-widget rule, not a placeholder: a future widget needing
@@ -59,7 +80,9 @@ export type DashboardWidgetKey = (typeof DASHBOARD_WIDGET_KEYS)[number];
 // both pick it up automatically.
 const ALL_ROLES: UserRole[] = ["ADMIN", "PROJECT_LEAD", "MEMBER", "READ_ONLY"];
 export const DASHBOARD_WIDGET_ROLES: Record<DashboardWidgetKey, UserRole[]> = {
-  statTiles: ALL_ROLES,
+  totalProjects: ALL_ROLES,
+  completedThisWeek: ALL_ROLES,
+  hoursLogged: ALL_ROLES,
   deadlines: ALL_ROLES,
   projectProgress: ALL_ROLES,
   recentActivity: ALL_ROLES,
@@ -69,6 +92,18 @@ export const DASHBOARD_WIDGET_ROLES: Record<DashboardWidgetKey, UserRole[]> = {
 export function widgetsAllowedForRole(role: UserRole): DashboardWidgetKey[] {
   return DASHBOARD_WIDGET_KEYS.filter((key) => DASHBOARD_WIDGET_ROLES[key].includes(role));
 }
+
+export const DASHBOARD_DEFAULT_LAYOUT: DashboardWidgetEntry[] = [
+  { key: "totalProjects", size: "S" },
+  { key: "completedThisWeek", size: "S" },
+  { key: "hoursLogged", size: "S" },
+  { key: "deadlines", size: "L" },
+  { key: "projectProgress", size: "L" },
+  { key: "recentActivity", size: "L" },
+  { key: "myTasks", size: "L" },
+];
+
+export const DASHBOARD_COLLAPSED_COUNT_BY_SIZE: Record<DashboardWidgetSize, number> = { S: 1, M: 2, L: 5 };
 
 export interface UserSummary {
   id: string;
