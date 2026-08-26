@@ -10,6 +10,15 @@ on:
     branches: [main]
   workflow_dispatch:
 
+# Two deploys racing for the same App Service (e.g. a push-triggered run and a manual
+# workflow_dispatch landing at the same time) makes Azure's OneDeploy API reject the loser
+# with a 400 Bad Request — confirmed via a real failed run, not theoretical. Queuing runs for
+# the same ref instead of letting them race means every push still gets its own real deploy
+# attempt, just serialized, rather than one failing outright.
+concurrency:
+  group: azure-deploy-${{ github.ref }}
+  cancel-in-progress: false
+
 env:
   AZURE_WEBAPP_NAME: APM
 
