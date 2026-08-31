@@ -390,7 +390,8 @@
     "noDeadlines": "Rien de prévu ce jour-là.",
     "followUp": "Suivi",
     "markComplete": "Marquer comme terminé",
-    "reopen": "Rouvrir"
+    "reopen": "Rouvrir",
+    "scheduledBy": "Planifié par {{name}}"
   },
   "settings": {
     "title": "Paramètres",

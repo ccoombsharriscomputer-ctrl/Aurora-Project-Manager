@@ -52,15 +52,22 @@ function followUpLink(entry: FollowUpItem): string {
   return "#";
 }
 
+// The pill itself only has room for "Follow up" — everything else (what it's on, and who
+// scheduled it) lives in the hover tooltip instead.
+function followUpTooltip(entry: FollowUpItem, t: (key: string, opts?: Record<string, unknown>) => string): string {
+  const label = entry.taskTitle ?? entry.project?.name ?? t("calendar.followUp");
+  const context = entry.project?.name && entry.taskTitle ? `${entry.project.name} — ${entry.taskTitle}` : label;
+  return `${context} · ${t("calendar.scheduledBy", { name: entry.user.name })}`;
+}
+
 function EntryPill({ entry }: { entry: CalendarEntry }) {
   const { t } = useTranslation();
   if (entry.kind === "followUp") {
-    const label = entry.taskTitle ?? entry.project?.name ?? t("calendar.followUp");
     return (
       <Link
         to={followUpLink(entry)}
         className={`calendar-task-pill follow-up${entry.completedAt ? " completed" : ""}`}
-        title={entry.project?.name && entry.taskTitle ? `${entry.project.name} — ${entry.taskTitle}` : label}
+        title={followUpTooltip(entry, t)}
       >
         {t("calendar.followUp")}
       </Link>

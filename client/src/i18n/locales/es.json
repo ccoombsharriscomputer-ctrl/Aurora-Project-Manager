@@ -390,7 +390,8 @@
     "noDeadlines": "Nada programado para este día.",
     "followUp": "Seguimiento",
     "markComplete": "Marcar como completado",
-    "reopen": "Reabrir"
+    "reopen": "Reabrir",
+    "scheduledBy": "Programado por {{name}}"
   },
   "settings": {
     "title": "Configuración",
