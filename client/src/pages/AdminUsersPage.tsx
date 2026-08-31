@@ -409,6 +409,9 @@ export function AdminUsersPage() {
   const [editEmail, setEditEmail] = useState("");
   const [editPassword, setEditPassword] = useState("");
   const [editError, setEditError] = useState<string | null>(null);
+  // Filters by home software line (the "Software line" column) — not by an extra granted
+  // line, which is a different, narrower kind of access than where someone actually lives.
+  const [lineFilter, setLineFilter] = useState("");
 
   const { data: users, isLoading } = useQuery({
     queryKey: ["users"],
@@ -488,6 +491,8 @@ export function AdminUsersPage() {
     return <div className="muted">{t("adminUsers.loadingUsers")}</div>;
   }
 
+  const filteredUsers = lineFilter ? users.filter((u) => u.softwareLine.id === lineFilter) : users;
+
   return (
     <div>
       <div className="page-header">
@@ -495,6 +500,19 @@ export function AdminUsersPage() {
         <CreateUserForm prefill={prefill} softwareLines={softwareLines ?? []} onDone={() => setPrefill(null)} />
       </div>
       <PendingAccessRequests onApprove={setPrefill} />
+      <div className="card" style={{ marginBottom: 16 }}>
+        <div className="field" style={{ maxWidth: 260, marginBottom: 0 }}>
+          <label>{t("adminUsers.filterBySoftwareLine")}</label>
+          <select value={lineFilter} onChange={(e) => setLineFilter(e.target.value)}>
+            <option value="">{t("adminUsers.allSoftwareLines")}</option>
+            {(softwareLines ?? []).map((line) => (
+              <option key={line.id} value={line.id}>
+                {line.name}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
       <div className="card">
         <table className="table">
           <thead>
@@ -512,7 +530,14 @@ export function AdminUsersPage() {
             </tr>
           </thead>
           <tbody>
-            {users.map((u) =>
+            {filteredUsers.length === 0 && (
+              <tr>
+                <td colSpan={10} className="muted">
+                  {t("adminUsers.noUsersMatchFilter")}
+                </td>
+              </tr>
+            )}
+            {filteredUsers.map((u) =>
               editingUserId === u.id ? (
                 <tr key={u.id}>
                   <td colSpan={10}>
