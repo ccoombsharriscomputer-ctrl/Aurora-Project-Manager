@@ -390,7 +390,8 @@
     "noDeadlines": "Nothing scheduled for this day.",
     "followUp": "Follow up",
     "markComplete": "Mark complete",
-    "reopen": "Reopen"
+    "reopen": "Reopen",
+    "scheduledBy": "Scheduled by {{name}}"
   },
   "settings": {
     "title": "Settings",
