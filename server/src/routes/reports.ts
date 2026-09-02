@@ -50,6 +50,9 @@ router.get("/by-user", async (req, res) => {
     orderBy: { name: "asc" },
     include: {
       projectMemberships: { where: inLine, include: { project: { select: { id: true, name: true } } } },
+      // Projects this user is the assignee of — a project-level assignment, distinct from
+      // (and not required to overlap with) which projects they're just a member of.
+      assignedProjects: { where: { softwareLineId: lineId }, select: { id: true, name: true } },
       assignedTasks: { where: inLine, select: taskSelect },
       timeEntries: { where: { task: inLine }, select: timeEntrySelect },
     },
@@ -63,6 +66,7 @@ router.get("/by-user", async (req, res) => {
       email: u.email,
       role: u.role,
       projects: u.projectMemberships.map((m) => m.project),
+      assignedProjects: u.assignedProjects,
       ...stats,
       hoursLogged: sumHours(u.timeEntries, range),
     };
@@ -81,6 +85,7 @@ router.get("/by-project", async (req, res) => {
     orderBy: { createdAt: "desc" },
     include: {
       projectType: { select: { id: true, name: true } },
+      assignee: { select: { id: true, name: true } },
       members: { include: { user: { select: { id: true, name: true } } } },
       _count: { select: { subProjects: true } },
     },
@@ -103,6 +108,7 @@ router.get("/by-project", async (req, res) => {
         id: p.id,
         name: p.name,
         projectType: p.projectType,
+        assignee: p.assignee,
         members: p.members.map((m) => m.user),
         totalSubProjects: p._count.subProjects,
         ...stats,
@@ -208,8 +214,16 @@ router.get("/overdue", async (req, res) => {
   res.json(rows);
 });
 
+// Kept in sync by hand with the Prisma ActivityType enum — this was missing several values
+// already in the enum and in active use (PROJECT_UPDATED/ARCHIVED/UNARCHIVED, COMMENT_DELETED,
+// FOLLOW_UP_SCHEDULED), which meant filtering the Activity tab by any of those types silently
+// fell through to "all types" instead of erroring. Fixed here while adding PROJECT_ASSIGNED.
 const ACTIVITY_TYPES = [
   "PROJECT_CREATED",
+  "PROJECT_UPDATED",
+  "PROJECT_ASSIGNED",
+  "PROJECT_ARCHIVED",
+  "PROJECT_UNARCHIVED",
   "PROJECT_DELETED",
   "SUBPROJECT_DELETED",
   "TASK_CREATED",
@@ -217,9 +231,11 @@ const ACTIVITY_TYPES = [
   "TASK_STATUS_CHANGED",
   "TASK_ASSIGNED",
   "COMMENT_ADDED",
+  "COMMENT_DELETED",
   "ATTACHMENT_ADDED",
   "ATTACHMENT_DELETED",
   "TIME_LOGGED",
+  "FOLLOW_UP_SCHEDULED",
 ] as const;
 
 // Audit trail: every logged activity in the line, newest first. Capped well above any

@@ -81,7 +81,19 @@ function RecentActivity({ activities, size }: { activities: Activity[]; size: Da
   );
 }
 
-function ProjectProgress({ projects, size }: { projects: DashboardSummary["projectProgress"]; size: DashboardWidgetSize }) {
+// Shared by "Project progress" (every active project) and "My projects" (just the ones
+// assigned to me) — same shape, same layout, different title/empty-state text and source data.
+function ProjectProgress({
+  projects,
+  size,
+  title,
+  emptyMessage,
+}: {
+  projects: DashboardSummary["projectProgress"];
+  size: DashboardWidgetSize;
+  title: string;
+  emptyMessage: string;
+}) {
   const { t } = useTranslation();
   const [expanded, setExpanded] = useState(false);
   const collapsedCount = DASHBOARD_COLLAPSED_COUNT_BY_SIZE[size];
@@ -91,7 +103,7 @@ function ProjectProgress({ projects, size }: { projects: DashboardSummary["proje
     <div className="card">
       <div className="flex-between">
         <div className="section-title" style={{ marginBottom: 0 }}>
-          {t("dashboard.projectProgress")}
+          {title}
         </div>
         {projects.length > collapsedCount && (
           <button className="btn btn-sm" onClick={() => setExpanded((v) => !v)}>
@@ -99,7 +111,7 @@ function ProjectProgress({ projects, size }: { projects: DashboardSummary["proje
           </button>
         )}
       </div>
-      {projects.length === 0 && <p className="muted">{t("dashboard.noProjectsYet")}</p>}
+      {projects.length === 0 && <p className="muted">{emptyMessage}</p>}
       {visible.map((p) => (
         <div className="progress-row" key={p.id}>
           <div className="progress-row-top">
@@ -214,7 +226,23 @@ export function DashboardPage() {
           />
         );
       case "projectProgress":
-        return <ProjectProgress projects={data!.projectProgress} size={size} />;
+        return (
+          <ProjectProgress
+            projects={data!.projectProgress}
+            size={size}
+            title={t("dashboard.projectProgress")}
+            emptyMessage={t("dashboard.noProjectsYet")}
+          />
+        );
+      case "myProjects":
+        return (
+          <ProjectProgress
+            projects={data!.myProjects}
+            size={size}
+            title={t("dashboard.myProjects")}
+            emptyMessage={t("dashboard.noProjectsAssigned")}
+          />
+        );
       case "recentActivity":
         return <RecentActivity activities={data!.recentActivity} size={size} />;
       case "myTasks":

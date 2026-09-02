@@ -8,6 +8,7 @@ export type Locale = "EN" | "ES" | "FR_CA";
 export type ActivityType =
   | "PROJECT_CREATED"
   | "PROJECT_UPDATED"
+  | "PROJECT_ASSIGNED"
   | "PROJECT_ARCHIVED"
   | "PROJECT_UNARCHIVED"
   | "PROJECT_DELETED"
@@ -61,6 +62,7 @@ export const DASHBOARD_WIDGET_KEYS = [
   "projectProgress",
   "recentActivity",
   "myTasks",
+  "myProjects",
 ] as const;
 export type DashboardWidgetKey = (typeof DASHBOARD_WIDGET_KEYS)[number];
 
@@ -87,6 +89,7 @@ export const DASHBOARD_WIDGET_ROLES: Record<DashboardWidgetKey, UserRole[]> = {
   projectProgress: ALL_ROLES,
   recentActivity: ALL_ROLES,
   myTasks: ALL_ROLES,
+  myProjects: ALL_ROLES,
 };
 
 export function widgetsAllowedForRole(role: UserRole): DashboardWidgetKey[] {
@@ -101,6 +104,7 @@ export const DASHBOARD_DEFAULT_LAYOUT: DashboardWidgetEntry[] = [
   { key: "projectProgress", size: "L" },
   { key: "recentActivity", size: "L" },
   { key: "myTasks", size: "L" },
+  { key: "myProjects", size: "L" },
 ];
 
 export const DASHBOARD_COLLAPSED_COUNT_BY_SIZE: Record<DashboardWidgetSize, number> = { S: 1, M: 2, L: 5 };
@@ -153,6 +157,10 @@ export interface Project {
   teamSupportTicketNumber: string | null;
   projectType: { id: string; name: string };
   createdBy: UserSummary;
+  // Whoever's on the hook for the project as a whole — a lighter-weight alternative to
+  // assigning every task individually. Purely informational; doesn't require them to be a
+  // task assignee, though assigning a project does add them as a Member if they weren't one.
+  assignee: { id: string; name: string } | null;
   createdAt: string;
   archivedAt: string | null;
   members: ProjectMember[];
@@ -321,6 +329,7 @@ export interface DashboardSummary {
   totalProjects: number;
   tasksCompletedThisWeek: number;
   projectProgress: { id: string; name: string; totalTasks: number; doneTasks: number; percent: number }[];
+  myProjects: { id: string; name: string; totalTasks: number; doneTasks: number; percent: number }[];
   myTasks: Task[];
   recentActivity: Activity[];
 }
@@ -347,12 +356,14 @@ export interface UserReportRow extends ReportStats {
   email: string;
   role: UserRole;
   projects: { id: string; name: string }[];
+  assignedProjects: { id: string; name: string }[];
 }
 
 export interface ProjectReportRow extends ReportStats {
   id: string;
   name: string;
   projectType: { id: string; name: string };
+  assignee: { id: string; name: string } | null;
   members: UserSummary[];
   totalSubProjects: number;
 }

@@ -12,7 +12,7 @@ const VIEW_STORAGE_KEY = "aurora-projects-view";
 // Same shape as the sortable header on the Dashboard's "Completed this week" drill-down
 // (DashboardDrilldowns.tsx) — kept local rather than shared since that's the existing
 // convention in this codebase (TimeEntriesThisWeekPage doesn't reuse it either).
-type ProjectSortKey = "name" | "type" | "description" | "progress" | "members";
+type ProjectSortKey = "name" | "type" | "description" | "progress" | "members" | "assignee";
 type ProjectSortState = { key: ProjectSortKey; direction: "asc" | "desc" };
 
 function projectPercent(p: Project): number {
@@ -45,6 +45,7 @@ export function ProjectsPage() {
   const queryClient = useQueryClient();
   const [showArchived, setShowArchived] = useState(false);
   const [filterProjectTypeId, setFilterProjectTypeId] = useState("");
+  const [filterAssigneeId, setFilterAssigneeId] = useState("");
   const [sort, setSort] = useState<ProjectSortState | null>(null);
   // Remembered per-browser rather than per-user — it's a display preference, not data
   // worth round-tripping to the server the way theme/locale are.
@@ -83,6 +84,7 @@ export function ProjectsPage() {
   const [projectTypeId, setProjectTypeId] = useState("");
   const [checklistItemIds, setChecklistItemIds] = useState<string[]>([]);
   const [memberIds, setMemberIds] = useState<string[]>([]);
+  const [assigneeId, setAssigneeId] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [contractError, setContractError] = useState<string | null>(null);
   const [contractNotes, setContractNotes] = useState<string | null>(null);
@@ -92,7 +94,9 @@ export function ProjectsPage() {
   const activeProducts = (products ?? []).filter((p) => p.active);
   const otherUsers = (users ?? []).filter((u) => u.id !== user?.id);
   const filteredProjects = (projects ?? []).filter(
-    (p) => !filterProjectTypeId || p.projectType.id === filterProjectTypeId
+    (p) =>
+      (!filterProjectTypeId || p.projectType.id === filterProjectTypeId) &&
+      (!filterAssigneeId || p.assignee?.id === filterAssigneeId)
   );
 
   function handleSort(key: ProjectSortKey) {
@@ -120,6 +124,8 @@ export function ProjectsPage() {
           return projectPercent(p);
         case "members":
           return p.members.length;
+        case "assignee":
+          return p.assignee?.name.toLowerCase() ?? "";
       }
     }
 
@@ -154,6 +160,7 @@ export function ProjectsPage() {
         projectTypeId,
         checklistItemIds,
         memberIds,
+        assigneeId: assigneeId || undefined,
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["projects"] });
@@ -164,6 +171,7 @@ export function ProjectsPage() {
       setProjectTypeId("");
       setChecklistItemIds([]);
       setMemberIds([]);
+      setAssigneeId("");
       setShowForm(false);
       setError(null);
       setContractNotes(null);
@@ -216,6 +224,14 @@ export function ProjectsPage() {
             {(projectTypes ?? []).map((pt) => (
               <option key={pt.id} value={pt.id}>
                 {pt.name}
+              </option>
+            ))}
+          </select>
+          <select value={filterAssigneeId} onChange={(e) => setFilterAssigneeId(e.target.value)}>
+            <option value="">{t("projects.allAssignees")}</option>
+            {(users ?? []).map((u) => (
+              <option key={u.id} value={u.id}>
+                {u.name}
               </option>
             ))}
           </select>
@@ -338,6 +354,20 @@ export function ProjectsPage() {
               ))}
             </div>
           </div>
+          <div className="field" style={{ maxWidth: 360 }}>
+            <label htmlFor="assignee">{t("projects.assignProject")}</label>
+            <select id="assignee" value={assigneeId} onChange={(e) => setAssigneeId(e.target.value)}>
+              <option value="">{t("subProjectDetail.unassigned")}</option>
+              {(users ?? []).map((u) => (
+                <option key={u.id} value={u.id}>
+                  {u.name}
+                </option>
+              ))}
+            </select>
+            <p className="muted" style={{ fontSize: 12, marginTop: 6 }}>
+              {t("projects.assignProjectHint")}
+            </p>
+          </div>
           <div className="field">
             <label htmlFor="description">{t("common.description")}</label>
             <textarea id="description" value={description} onChange={(e) => setDescription(e.target.value)} />
@@ -387,6 +417,7 @@ export function ProjectsPage() {
                 </div>
                 <div className="muted" style={{ marginTop: 10, fontSize: 12 }}>
                   {t("projects.memberCount", { count: p.members.length })}
+                  {p.assignee && ` · ${t("projects.assignedTo", { name: p.assignee.name })}`}
                 </div>
               </Link>
             );
@@ -408,6 +439,7 @@ export function ProjectsPage() {
                   />
                   <SortableHeader label={t("projects.progress")} sortKey="progress" sort={sort} onSort={handleSort} />
                   <SortableHeader label={t("projects.members")} sortKey="members" sort={sort} onSort={handleSort} />
+                  <SortableHeader label={t("subProjectDetail.assignee")} sortKey="assignee" sort={sort} onSort={handleSort} />
                 </tr>
               </thead>
               <tbody>
@@ -438,6 +470,7 @@ export function ProjectsPage() {
                         </div>
                       </td>
                       <td className="muted">{p.members.length}</td>
+                      <td className="muted">{p.assignee?.name ?? "—"}</td>
                     </tr>
                   );
                 })}

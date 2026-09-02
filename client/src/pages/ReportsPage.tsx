@@ -38,6 +38,7 @@ function buildQuery(filters: Filters): string {
 const ACTIVITY_TYPES: ActivityType[] = [
   "PROJECT_CREATED",
   "PROJECT_UPDATED",
+  "PROJECT_ASSIGNED",
   "PROJECT_ARCHIVED",
   "PROJECT_UNARCHIVED",
   "PROJECT_DELETED",
@@ -57,6 +58,7 @@ const ACTIVITY_TYPES: ActivityType[] = [
 function activityTypeLabel(t: TFunction, type: ActivityType): string {
   if (type === "PROJECT_CREATED") return t("reports.activityTypeProjectCreated");
   if (type === "PROJECT_UPDATED") return t("reports.activityTypeProjectUpdated");
+  if (type === "PROJECT_ASSIGNED") return t("reports.activityTypeProjectAssigned");
   if (type === "PROJECT_ARCHIVED") return t("reports.activityTypeProjectArchived");
   if (type === "PROJECT_UNARCHIVED") return t("reports.activityTypeProjectUnarchived");
   if (type === "PROJECT_DELETED") return t("reports.activityTypeProjectDeleted");
@@ -184,6 +186,7 @@ function ByUserTab({ filters }: { filters: Filters }) {
               { header: t("common.email"), value: (r) => r.email },
               { header: t("common.role"), value: (r) => roleLabel(t, r.role) },
               { header: t("reports.projects"), value: (r) => r.projects.map((p) => p.name).join("; ") },
+              { header: t("reports.assignedProjects"), value: (r) => r.assignedProjects.map((p) => p.name).join("; ") },
               { header: t("reports.openTasks"), value: (r) => r.openTasks },
               { header: t("reports.naTasks"), value: (r) => r.naTasks },
               { header: t("reports.overdue"), value: (r) => r.overdueOpen },
@@ -205,6 +208,7 @@ function ByUserTab({ filters }: { filters: Filters }) {
               <th>{t("common.name")}</th>
               <th>{t("common.role")}</th>
               <th>{t("reports.projects")}</th>
+              <th>{t("reports.assignedProjects")}</th>
               <th>{t("reports.openTasks")}</th>
               <th>{t("reports.naTasks")}</th>
               <th>{t("reports.overdue")}</th>
@@ -226,6 +230,7 @@ function ByUserTab({ filters }: { filters: Filters }) {
                 </td>
                 <td>{roleLabel(t, r.role)}</td>
                 <td>{r.projects.length === 0 ? "—" : r.projects.map((p) => p.name).join(", ")}</td>
+                <td>{r.assignedProjects.length === 0 ? "—" : r.assignedProjects.map((p) => p.name).join(", ")}</td>
                 <td>{r.openTasks}</td>
                 <td>{r.naTasks}</td>
                 <td>
@@ -242,7 +247,7 @@ function ByUserTab({ filters }: { filters: Filters }) {
             ))}
             {rows.length === 0 && (
               <tr>
-                <td colSpan={11} className="muted">
+                <td colSpan={12} className="muted">
                   {t("reports.noActiveUsers")}
                 </td>
               </tr>
@@ -356,6 +361,7 @@ function ByProjectTab({ filters }: { filters: Filters }) {
             projectRows &&
             downloadCsv("report-by-project.csv", projectRows, [
               { header: t("reports.project"), value: (r) => r.name },
+              { header: t("subProjectDetail.assignee"), value: (r) => r.assignee?.name ?? "" },
               { header: t("reports.type"), value: (r) => r.projectType.name },
               { header: t("reports.subProjects"), value: (r) => r.totalSubProjects },
               { header: t("reports.openTasks"), value: (r) => r.openTasks },
@@ -381,6 +387,7 @@ function ByProjectTab({ filters }: { filters: Filters }) {
               <thead>
                 <tr>
                   <th>{t("reports.project")}</th>
+                  <th>{t("subProjectDetail.assignee")}</th>
                   <th>{t("reports.type")}</th>
                   <th>{t("reports.subProjects")}</th>
                   <th>{t("reports.openTasks")}</th>
@@ -398,6 +405,7 @@ function ByProjectTab({ filters }: { filters: Filters }) {
                 {projectRows.map((p) => (
                   <tr key={p.id}>
                     <td>{p.name}</td>
+                    <td className="muted">{p.assignee?.name ?? "—"}</td>
                     <td>{p.projectType.name}</td>
                     <td>{p.totalSubProjects}</td>
                     <td>{p.openTasks}</td>
@@ -417,7 +425,7 @@ function ByProjectTab({ filters }: { filters: Filters }) {
                 ))}
                 {projectRows.length === 0 && (
                   <tr>
-                    <td colSpan={12} className="muted">
+                    <td colSpan={13} className="muted">
                       {t("reports.noProjectsYet")}
                     </td>
                   </tr>

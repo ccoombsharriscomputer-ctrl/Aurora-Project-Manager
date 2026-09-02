@@ -42,6 +42,7 @@ enum TaskPriority {
 enum ActivityType {
   PROJECT_CREATED
   PROJECT_UPDATED
+  PROJECT_ASSIGNED
   PROJECT_ARCHIVED
   PROJECT_UNARCHIVED
   PROJECT_DELETED
@@ -142,6 +143,7 @@ model User {
   dashboardLayout Json?
 
   createdProjects   Project[]       @relation("ProjectCreatedBy")
+  assignedProjects  Project[]       @relation("ProjectAssignee")
   projectMemberships ProjectMember[]
   createdTasks      Task[]          @relation("TaskCreatedBy")
   assignedTasks     Task[]          @relation("TaskAssignee")
@@ -200,6 +202,14 @@ model Project {
   createdBy              User        @relation("ProjectCreatedBy", fields: [createdById], references: [id])
   createdAt              DateTime    @default(now())
   archivedAt             DateTime?
+  // Whoever is on the hook for the project as a whole — a lighter-weight alternative to
+  // assigning every task individually when one person is handling the entire engagement.
+  // Purely informational: it doesn't touch any task's own assigneeId, and isn't required to
+  // equal the OWNER-role member (though it usually will). Assigning someone here adds them as
+  // a project Member automatically if they aren't one already (see routes/projects.ts), same
+  // as how being a project member doesn't require being assigned anything.
+  assigneeId             String?
+  assignee               User?       @relation("ProjectAssignee", fields: [assigneeId], references: [id])
 
   members    ProjectMember[]
   tasks      Task[]
