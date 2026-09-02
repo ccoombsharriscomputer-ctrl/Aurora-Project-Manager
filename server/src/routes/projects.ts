@@ -32,6 +32,7 @@ router.get("/", async (req, res) => {
     orderBy: { createdAt: "desc" },
     include: {
       createdBy: { select: { id: true, name: true } },
+      assignee: { select: { id: true, name: true } },
       projectType: { select: { id: true, name: true } },
       members: { include: { user: { select: { id: true, name: true, email: true } } } },
       _count: { select: { tasks: true } },
@@ -48,6 +49,7 @@ router.get("/", async (req, res) => {
         teamSupportTicketNumber: p.teamSupportTicketNumber,
         projectType: p.projectType,
         createdBy: p.createdBy,
+        assignee: p.assignee,
         createdAt: p.createdAt,
         archivedAt: p.archivedAt,
         members: p.members.map((m) => ({ ...m.user, role: m.role })),
@@ -67,6 +69,7 @@ const createSchema = z.object({
   projectTypeId: z.string().min(1),
   checklistItemIds: z.array(z.string().min(1)).optional(),
   memberIds: z.array(z.string().min(1)).optional(),
+  assigneeId: z.string().min(1).optional(),
 });
 
 router.post("/", blockReadOnly, async (req, res) => {
@@ -108,6 +111,28 @@ router.post("/", blockReadOnly, async (req, res) => {
       .json({ error: `${wrongLineUser.name} belongs to a different software line and can't be added to this project` });
   }
 
+  let assignee: (typeof memberUsers)[number] | null = null;
+  if (parsed.data.assigneeId) {
+    assignee =
+      memberUsers.find((u) => u.id === parsed.data.assigneeId) ??
+      (parsed.data.assigneeId === req.user!.id
+        ? null
+        : await prisma.user.findUnique({ where: { id: parsed.data.assigneeId }, include: { softwareLineGrants: true } }));
+    if (parsed.data.assigneeId !== req.user!.id && (!assignee || !userHasLineAccess(assignee, lineId))) {
+      return res.status(400).json({ error: "Assignee belongs to a different software line" });
+    }
+  }
+
+  // The assignee is always a project member (added below if they weren't already selected as
+  // one) — never downgrades the creator's OWNER role even if the creator assigns the project
+  // to themselves.
+  const memberRoles = new Map<string, "OWNER" | "MEMBER">();
+  memberRoles.set(req.user!.id, "OWNER");
+  for (const u of memberUsers) memberRoles.set(u.id, "MEMBER");
+  if (parsed.data.assigneeId && !memberRoles.has(parsed.data.assigneeId)) {
+    memberRoles.set(parsed.data.assigneeId, "MEMBER");
+  }
+
   const project = await prisma.project.create({
     data: {
       name: parsed.data.name,
@@ -116,14 +141,13 @@ router.post("/", blockReadOnly, async (req, res) => {
       projectTypeId: projectType.id,
       softwareLineId: lineId,
       createdById: req.user!.id,
+      assigneeId: parsed.data.assigneeId,
       members: {
-        create: [
-          { userId: req.user!.id, role: "OWNER" },
-          ...memberUsers.map((u) => ({ userId: u.id, role: "MEMBER" as const })),
-        ],
+        create: [...memberRoles.entries()].map(([userId, role]) => ({ userId, role })),
       },
     },
     include: {
+      assignee: { select: { id: true, name: true } },
       projectType: { select: { id: true, name: true } },
       members: { include: { user: { select: { id: true, name: true, email: true } } } },
     },
@@ -230,6 +254,7 @@ router.get("/:id", async (req, res) => {
     where: { id: req.params.id },
     include: {
       createdBy: { select: { id: true, name: true } },
+      assignee: { select: { id: true, name: true } },
       projectType: { select: { id: true, name: true } },
       members: { include: { user: { select: { id: true, name: true, email: true } } } },
     },
@@ -280,6 +305,7 @@ const updateSchema = z.object({
   description: z.string().max(2000).nullable().optional(),
   teamSupportTicketNumber: z.string().max(50).nullable().optional(),
   archived: z.boolean().optional(),
+  assigneeId: z.string().min(1).nullable().optional(),
 });
 
 // Any Project Lead or Member can edit or archive a project, not just its creator or an
@@ -297,13 +323,37 @@ router.patch("/:id", blockReadOnly, async (req, res) => {
     return res.status(400).json({ error: parsed.error.issues[0].message });
   }
 
+  let newAssignee: { id: string; name: string } | null = null;
+  if (parsed.data.assigneeId) {
+    const user = await prisma.user.findUnique({
+      where: { id: parsed.data.assigneeId },
+      include: { softwareLineGrants: true },
+    });
+    if (!user || !userHasLineAccess(user, project.softwareLineId)) {
+      return res.status(400).json({ error: "Assignee belongs to a different software line" });
+    }
+    newAssignee = user;
+    // Assigning the project adds them as a Member if they aren't one already — never
+    // downgrades an existing membership (e.g. leaves an OWNER as OWNER).
+    const existingMembership = await prisma.projectMember.findUnique({
+      where: { projectId_userId: { projectId: project.id, userId: parsed.data.assigneeId } },
+    });
+    if (!existingMembership) {
+      await prisma.projectMember.create({ data: { projectId: project.id, userId: parsed.data.assigneeId, role: "MEMBER" } });
+    }
+  }
+
   const { archived, ...rest } = parsed.data;
   const data: Record<string, unknown> = { ...rest };
   if (archived !== undefined) {
     data.archivedAt = archived ? new Date() : null;
   }
 
-  const updated = await prisma.project.update({ where: { id: req.params.id }, data });
+  const updated = await prisma.project.update({
+    where: { id: req.params.id },
+    data,
+    include: { assignee: { select: { id: true, name: true } } },
+  });
 
   const changedFields: string[] = [];
   if (rest.name !== undefined && rest.name !== project.name) changedFields.push("name");
@@ -315,6 +365,19 @@ router.patch("/:id", blockReadOnly, async (req, res) => {
     await logActivity({
       type: "PROJECT_UPDATED",
       message: `${req.user!.name} updated ${changedFields.join(", ")} on project "${updated.name}"`,
+      userId: req.user!.id,
+      softwareLineId: project.softwareLineId,
+      projectId: project.id,
+    });
+  }
+  // A distinct activity type from PROJECT_UPDATED, matching how TASK_ASSIGNED is its own
+  // type rather than folded into a generic task-edited entry.
+  if (rest.assigneeId !== undefined && rest.assigneeId !== project.assigneeId) {
+    await logActivity({
+      type: "PROJECT_ASSIGNED",
+      message: newAssignee
+        ? `${req.user!.name} assigned project "${updated.name}" to ${newAssignee.name}`
+        : `${req.user!.name} removed the assignee from project "${updated.name}"`,
       userId: req.user!.id,
       softwareLineId: project.softwareLineId,
       projectId: project.id,
@@ -373,7 +436,9 @@ const duplicateSchema = z.object({
 // attachments, and time entries are deliberately left behind — those belong to the original
 // engagement's history, not a fresh copy of it. The TeamSupport ticket # is deliberately NOT
 // copied either — it identifies one specific support ticket, and the copy is a distinct
-// engagement that hasn't been tied to a ticket yet (or needs its own).
+// engagement that hasn't been tied to a ticket yet (or needs its own). Same reasoning for the
+// project assignee: the copy starts unassigned rather than inheriting who was on the hook for
+// the original engagement.
 router.post("/:id/duplicate", blockReadOnly, async (req, res) => {
   const lineId = effectiveSoftwareLineId(req.user!);
   const parsed = duplicateSchema.safeParse(req.body);
@@ -409,6 +474,7 @@ router.post("/:id/duplicate", blockReadOnly, async (req, res) => {
       },
     },
     include: {
+      assignee: { select: { id: true, name: true } },
       projectType: { select: { id: true, name: true } },
       members: { include: { user: { select: { id: true, name: true, email: true } } } },
     },

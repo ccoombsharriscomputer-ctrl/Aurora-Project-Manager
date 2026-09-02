@@ -14,6 +14,26 @@ function startOfWeekUTC(now: Date): Date {
   return start;
 }
 
+// Shared shape for both "every active project" (projectProgress) and "projects assigned to
+// me" (myProjects) — same per-project task tally either way.
+async function withTaskProgress(projects: { id: string; name: string }[]) {
+  return Promise.all(
+    projects.map(async (p) => {
+      const [total, done] = await Promise.all([
+        prisma.task.count({ where: { projectId: p.id } }),
+        prisma.task.count({ where: { projectId: p.id, status: "DONE" } }),
+      ]);
+      return {
+        id: p.id,
+        name: p.name,
+        totalTasks: total,
+        doneTasks: done,
+        percent: total === 0 ? 0 : Math.round((done / total) * 100),
+      };
+    })
+  );
+}
+
 router.get("/summary", async (req, res) => {
   const weekStart = startOfWeekUTC(new Date());
   const lineId = effectiveSoftwareLineId(req.user!);
@@ -24,6 +44,7 @@ router.get("/summary", async (req, res) => {
     totalProjects,
     tasksCompletedThisWeek,
     projects,
+    myAssignedProjects,
     myTasks,
     recentActivity,
   ] = await Promise.all([
@@ -33,6 +54,10 @@ router.get("/summary", async (req, res) => {
     // tasks finished earlier but touched again this week.
     prisma.task.count({ where: { status: "DONE", completedAt: { gte: weekStart }, ...inLine } }),
     prisma.project.findMany({ where: { softwareLineId: lineId, archivedAt: null }, select: { id: true, name: true } }),
+    prisma.project.findMany({
+      where: { softwareLineId: lineId, archivedAt: null, assigneeId: req.user!.id },
+      select: { id: true, name: true },
+    }),
     prisma.task.findMany({
       where: { assigneeId: req.user!.id, status: { notIn: ["DONE", "NA"] }, ...inLine },
       orderBy: [{ dueDate: "asc" }, { createdAt: "asc" }],
@@ -58,26 +83,16 @@ router.get("/summary", async (req, res) => {
     }),
   ]);
 
-  const projectProgress = await Promise.all(
-    projects.map(async (p) => {
-      const [total, done] = await Promise.all([
-        prisma.task.count({ where: { projectId: p.id } }),
-        prisma.task.count({ where: { projectId: p.id, status: "DONE" } }),
-      ]);
-      return {
-        id: p.id,
-        name: p.name,
-        totalTasks: total,
-        doneTasks: done,
-        percent: total === 0 ? 0 : Math.round((done / total) * 100),
-      };
-    })
-  );
+  const [projectProgress, myProjects] = await Promise.all([
+    withTaskProgress(projects),
+    withTaskProgress(myAssignedProjects),
+  ]);
 
   res.json({
     totalProjects,
     tasksCompletedThisWeek,
     projectProgress,
+    myProjects,
     myTasks,
     recentActivity,
   });

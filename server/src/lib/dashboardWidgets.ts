@@ -17,6 +17,7 @@ export const DASHBOARD_WIDGET_KEYS = [
   "projectProgress",
   "recentActivity",
   "myTasks",
+  "myProjects",
 ] as const;
 
 export type DashboardWidgetKey = (typeof DASHBOARD_WIDGET_KEYS)[number];
@@ -42,6 +43,7 @@ export const DASHBOARD_WIDGET_ROLES: Record<DashboardWidgetKey, UserRole[]> = {
   projectProgress: ALL_ROLES,
   recentActivity: ALL_ROLES,
   myTasks: ALL_ROLES,
+  myProjects: ALL_ROLES,
 };
 
 // The order (and sizes) every user starts with before they've customized anything, and what
@@ -55,10 +57,10 @@ export const DEFAULT_DASHBOARD_LAYOUT: DashboardWidgetEntry[] = [
   { key: "projectProgress", size: "L" },
   { key: "recentActivity", size: "L" },
   { key: "myTasks", size: "L" },
+  { key: "myProjects", size: "L" },
 ];
 
-// How many items a list-style widget (projectProgress/recentActivity/myTasks — myTasks
-// doesn't actually collapse today, but this stays the single source of truth if it ever does)
+// How many items a list-style widget (projectProgress/recentActivity/myTasks/myProjects)
 // shows before "Show more", by size.
 export const COLLAPSED_COUNT_BY_SIZE: Record<DashboardWidgetSize, number> = { S: 1, M: 2, L: 5 };
 

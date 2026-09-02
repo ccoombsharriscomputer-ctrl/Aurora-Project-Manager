@@ -14,7 +14,8 @@ function widgetLabel(t: TFunction, key: DashboardWidgetKey): string {
   if (key === "deadlines") return t("dashboard.widgetDeadlines");
   if (key === "projectProgress") return t("dashboard.projectProgress");
   if (key === "recentActivity") return t("dashboard.recentActivity");
-  return t("dashboard.myTasks");
+  if (key === "myTasks") return t("dashboard.myTasks");
+  return t("dashboard.myProjects");
 }
 
 function sizeLabel(t: TFunction, size: DashboardWidgetSize): string {

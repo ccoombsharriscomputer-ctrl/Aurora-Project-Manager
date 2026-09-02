@@ -115,6 +115,8 @@
     "loggedToday": "Logged today",
     "projectProgress": "Project progress",
     "noProjectsYet": "No projects yet.",
+    "myProjects": "My projects",
+    "noProjectsAssigned": "No projects assigned to you.",
     "tasksCount": "{{done}}/{{total}} tasks",
     "recentActivity": "Recent activity",
     "noActivityYet": "No activity yet.",
@@ -160,7 +162,11 @@
     "listView": "List",
     "type": "Type",
     "progress": "Progress",
-    "members": "Members"
+    "members": "Members",
+    "allAssignees": "All assignees",
+    "assignProject": "Assign to",
+    "assignProjectHint": "Assigning the project adds them as a member if they aren't one already.",
+    "assignedTo": "Assigned to {{name}}"
   },
   "projectDetail": {
     "newSubProject": "New sub-project",
@@ -286,6 +292,7 @@
   },
   "reports": {
     "projects": "Projects",
+    "assignedProjects": "Assigned projects",
     "openTasks": "Open tasks",
     "completedTasks": "Completed tasks",
     "hoursLogged": "Hours logged",
@@ -324,6 +331,7 @@
     "activityTruncatedNotice": "Showing the most recent {{count}} entries. Narrow the filters to see everything.",
     "activityTypeProjectCreated": "Project created",
     "activityTypeProjectUpdated": "Project edited",
+    "activityTypeProjectAssigned": "Project assigned",
     "activityTypeProjectArchived": "Project archived",
     "activityTypeProjectUnarchived": "Project unarchived",
     "activityTypeProjectDeleted": "Project deleted",
