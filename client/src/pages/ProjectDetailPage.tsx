@@ -416,7 +416,6 @@ export function ProjectDetailPage() {
   const [editing, setEditing] = useState(false);
   const [editName, setEditName] = useState("");
   const [editDescription, setEditDescription] = useState("");
-  const [editAssigneeId, setEditAssigneeId] = useState("");
 
   if (projectLoading || !project) {
     return <div className="muted">{t("projectDetail.loadingProject")}</div>;
@@ -436,7 +435,7 @@ export function ProjectDetailPage() {
               onSubmit={(e: FormEvent) => {
                 e.preventDefault();
                 updateProject.mutate(
-                  { name: editName, description: editDescription || null, assigneeId: editAssigneeId || null },
+                  { name: editName, description: editDescription || null },
                   { onSuccess: () => setEditing(false) }
                 );
               }}
@@ -448,20 +447,6 @@ export function ProjectDetailPage() {
               <div className="field">
                 <label>{t("common.description")}</label>
                 <textarea value={editDescription} onChange={(e) => setEditDescription(e.target.value)} />
-              </div>
-              <div className="field">
-                <label>{t("projects.assignProject")}</label>
-                <select value={editAssigneeId} onChange={(e) => setEditAssigneeId(e.target.value)}>
-                  <option value="">{t("subProjectDetail.unassigned")}</option>
-                  {(allUsers ?? []).map((u) => (
-                    <option key={u.id} value={u.id}>
-                      {u.name}
-                    </option>
-                  ))}
-                </select>
-                <p className="muted" style={{ fontSize: 12, marginTop: 6 }}>
-                  {t("projects.assignProjectHint")}
-                </p>
               </div>
               {editError && <div className="error-text">{editError}</div>}
               <div className="gap-8">
@@ -490,12 +475,32 @@ export function ProjectDetailPage() {
                 {project.projectType.name}
                 {project.description ? ` · ${project.description}` : ""}
               </p>
-              {project.assignee && (
-                <p className="muted" style={{ margin: "4px 0 0" }}>
-                  {t("projects.assignedTo", { name: project.assignee.name })}
-                </p>
-              )}
             </>
+          )}
+          <div className="gap-8" style={{ marginTop: 8 }}>
+            <label style={{ margin: 0 }}>{t("projects.assignProject")}</label>
+            {canWrite ? (
+              <select
+                value={project.assignee?.id ?? ""}
+                disabled={updateProject.isPending}
+                onChange={(e) => updateProject.mutate({ assigneeId: e.target.value || null })}
+                style={{ width: "auto" }}
+              >
+                <option value="">{t("subProjectDetail.unassigned")}</option>
+                {(allUsers ?? []).map((u) => (
+                  <option key={u.id} value={u.id}>
+                    {u.name}
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <span>{project.assignee?.name ?? t("subProjectDetail.unassigned")}</span>
+            )}
+          </div>
+          {canWrite && (
+            <p className="muted" style={{ fontSize: 12, margin: "4px 0 0" }}>
+              {t("projects.assignProjectHint")}
+            </p>
           )}
           <div className="gap-8" style={{ marginTop: 8 }}>
             <label style={{ margin: 0 }}>{t("projectDetail.teamSupportTicket")}</label>
@@ -553,7 +558,6 @@ export function ProjectDetailPage() {
               onClick={() => {
                 setEditName(project.name);
                 setEditDescription(project.description ?? "");
-                setEditAssigneeId(project.assignee?.id ?? "");
                 setEditError(null);
                 setEditing(true);
               }}
