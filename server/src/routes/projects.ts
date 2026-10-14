@@ -35,13 +35,16 @@ router.get("/", async (req, res) => {
       assignee: { select: { id: true, name: true } },
       projectType: { select: { id: true, name: true } },
       members: { include: { user: { select: { id: true, name: true, email: true } } } },
-      _count: { select: { tasks: true } },
     },
   });
 
   const withProgress = await Promise.all(
     projects.map(async (p) => {
-      const doneCount = await prisma.task.count({ where: { projectId: p.id, status: "DONE" } });
+      // N/A tasks are left out of the total so the remaining tasks share 100% between them.
+      const [totalCount, doneCount] = await Promise.all([
+        prisma.task.count({ where: { projectId: p.id, status: { not: "NA" } } }),
+        prisma.task.count({ where: { projectId: p.id, status: "DONE" } }),
+      ]);
       return {
         id: p.id,
         name: p.name,
@@ -53,7 +56,7 @@ router.get("/", async (req, res) => {
         createdAt: p.createdAt,
         archivedAt: p.archivedAt,
         members: p.members.map((m) => ({ ...m.user, role: m.role })),
-        totalTasks: p._count.tasks,
+        totalTasks: totalCount,
         doneTasks: doneCount,
       };
     })
@@ -584,13 +587,15 @@ router.get("/:id/sub-projects", async (req, res) => {
     include: {
       checklistItem: true,
       createdBy: { select: { id: true, name: true } },
-      _count: { select: { tasks: true } },
     },
   });
 
   const withProgress = await Promise.all(
     subProjects.map(async (sp) => {
-      const doneCount = await prisma.task.count({ where: { subProjectId: sp.id, status: "DONE" } });
+      const [totalCount, doneCount] = await Promise.all([
+        prisma.task.count({ where: { subProjectId: sp.id, status: { not: "NA" } } }),
+        prisma.task.count({ where: { subProjectId: sp.id, status: "DONE" } }),
+      ]);
       return {
         id: sp.id,
         projectId: sp.projectId,
@@ -598,7 +603,7 @@ router.get("/:id/sub-projects", async (req, res) => {
         checklistItem: sp.checklistItem,
         createdBy: sp.createdBy,
         createdAt: sp.createdAt,
-        totalTasks: sp._count.tasks,
+        totalTasks: totalCount,
         doneTasks: doneCount,
       };
     })

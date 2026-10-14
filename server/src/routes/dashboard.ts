@@ -15,12 +15,13 @@ function startOfWeekUTC(now: Date): Date {
 }
 
 // Shared shape for both "every active project" (projectProgress) and "projects assigned to
-// me" (myProjects) — same per-project task tally either way.
+// me" (myProjects) — same per-project task tally either way. N/A tasks are left out of the
+// total so the remaining tasks share 100% between them.
 async function withTaskProgress(projects: { id: string; name: string }[]) {
   return Promise.all(
     projects.map(async (p) => {
       const [total, done] = await Promise.all([
-        prisma.task.count({ where: { projectId: p.id } }),
+        prisma.task.count({ where: { projectId: p.id, status: { not: "NA" } } }),
         prisma.task.count({ where: { projectId: p.id, status: "DONE" } }),
       ]);
       return {
