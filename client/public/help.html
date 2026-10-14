@@ -584,7 +584,8 @@
           can't. Beyond that, both work identically — including editing or archiving <em>any</em> project in
           their line, not just ones they created themselves. Every edit and archive/unarchive is recorded in the
           audit trail (see <a href="#reports-activity">Activity</a>) so there's still a record of who changed what.
-          Deleting a project outright remains admin-only, even for its creator.
+          Deleting a project outright remains admin-only, even for its creator. Project Leads can also remove a
+          sub-project from any project in their line, which Members can only do on projects they created.
           <span class="badge badge-readonly"><span class="role-dot" style="background:var(--role-readonly)"></span>Read Only</span>
           is covered on its own further down, since it changes how every screen behaves rather than just what's
           in the sidebar.
@@ -617,6 +618,10 @@
             <tr>
               <td>Edit or archive a project</td>
               <td class="yes">Any project</td><td class="yes">Any project</td><td class="yes">Any project</td><td class="no">—</td>
+            </tr>
+            <tr>
+              <td>Remove a sub-project from a project</td>
+              <td class="yes">Any project</td><td class="yes">Any project</td><td class="partial">Projects they created</td><td class="no">—</td>
             </tr>
             <tr>
               <td>Delete a project outright</td>
@@ -820,7 +825,8 @@
             underneath it — so only admins can do it, even if you created the project yourself. Project Leads and
             Members only see <em>Archive project</em>; if a project truly needs to go, ask an admin.</li>
           <li>Each sub-project card has its own <strong>Remove</strong> button — it deletes that sub-project and its
-            tasks without touching the rest of the project.</li>
+            tasks without touching the rest of the project. Admins, Project Leads, and the person who created the
+            project see it; Members who didn't create the project don't.</li>
           <li><strong>Assign to</strong>, next to the title, sets who's on the hook for the project as a whole — useful
             when one person is handling the entire engagement instead of being assigned task by task. Purely
             informational (it doesn't touch any task's own assignee), and assigning someone adds them as a
@@ -899,6 +905,12 @@
           N/A is deliberately its own bucket, not a variant of Done or a hidden version of open: it's excluded
           from open-task counts and overdue calculations everywhere in Aurora — the Dashboard, Upcoming deadlines,
           and Reports — and gets its own column so it can still be tracked and reported on separately.
+        </p>
+        <p>
+          N/A tasks also don't count toward <strong>progress percentages</strong>. If a sub-project has five tasks
+          and you mark one N/A, the other four are worth 25% each, so finishing all four reads 100% instead of
+          stalling at 80%. This applies to the progress bars and task counts on project cards, sub-project cards,
+          and the Dashboard.
         </p>
       </div>
 
