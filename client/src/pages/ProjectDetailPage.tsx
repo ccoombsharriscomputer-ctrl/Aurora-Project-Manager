@@ -422,7 +422,7 @@ export function ProjectDetailPage() {
   }
 
   const isAdmin = user?.role === "ADMIN";
-  const canManage = isAdmin || user?.id === project.createdBy.id;
+  const canRemoveSubProjects = isAdmin || user?.role === "PROJECT_LEAD" || user?.id === project.createdBy.id;
 
   return (
     <div>
@@ -612,7 +612,7 @@ export function ProjectDetailPage() {
                       <div className="progress-bar-fill" style={{ width: `${percent}%` }} />
                     </div>
                   </Link>
-                  {canManage && (
+                  {canRemoveSubProjects && (
                     <button
                       className="btn btn-sm btn-danger"
                       style={{ marginTop: 12 }}

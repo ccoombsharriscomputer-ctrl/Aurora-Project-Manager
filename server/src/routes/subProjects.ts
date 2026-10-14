@@ -14,6 +14,12 @@ function canManageProject(projectCreatedById: string, req: import("express").Req
   return req.user!.role === "ADMIN" || req.user!.id === projectCreatedById;
 }
 
+// Project leads can remove sub-projects from any project on their line (line scoping is already
+// enforced by loadSubProjectInScope); editing a sub-project stays creator/admin-only.
+function canRemoveSubProject(projectCreatedById: string, req: import("express").Request) {
+  return req.user!.role === "PROJECT_LEAD" || canManageProject(projectCreatedById, req);
+}
+
 router.get("/:id", async (req, res) => {
   const subProject = await loadSubProjectInScope(req.params.id, effectiveSoftwareLineId(req.user!));
   if (!subProject) {
@@ -74,8 +80,8 @@ router.delete("/:id", blockReadOnly, async (req, res) => {
   if (!subProject) {
     return res.status(404).json({ error: "Sub-project not found" });
   }
-  if (!canManageProject(subProject.project.createdById, req)) {
-    return res.status(403).json({ error: "Only the project creator or an admin can delete this sub-project" });
+  if (!canRemoveSubProject(subProject.project.createdById, req)) {
+    return res.status(403).json({ error: "Only a project lead, the project creator, or an admin can delete this sub-project" });
   }
   const checklistItem = await prisma.checklistItem.findUnique({
     where: { id: subProject.checklistItemId },
