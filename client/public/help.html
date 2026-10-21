@@ -827,6 +827,9 @@
           <li>Set a <strong>TeamSupport ticket #</strong> and Aurora fetches that ticket's live status right
             underneath — a status badge and its subject line. See <a href="#teamsupport">TeamSupport
             integration</a> for what else this unlocks.</li>
+          <li>No ticket yet? Click <strong>Create TeamSupport ticket</strong> next to the ticket number field. Aurora
+            creates the ticket for you and fills in the number. See <a href="#teamsupport">TeamSupport
+            integration</a>.</li>
           <li><strong>Archive project</strong> hides it from the Dashboard, Calendar, and default Projects list without
             deleting anything — it still shows up in Reports and behind <em>Show archived projects</em>. Any
             Project Lead, Member, or admin sees this button; Read Only accounts are the only ones who don't.</li>
@@ -981,6 +984,15 @@
           status and subject line right underneath the ticket number field — no need to leave Aurora to check where
           things stand. There's no link into the ticket itself here — TeamSupport doesn't support linking straight
           to one, so pull it up over in TeamSupport the way you normally would if you need to.
+        </p>
+        <p>
+          If a project doesn't have a ticket yet, click <strong>Create TeamSupport ticket</strong> next to the ticket
+          number field (Read Only accounts don't see it). After you confirm, Aurora creates a new ticket in
+          TeamSupport and fills in the ticket # for you. The ticket's title is the project name, and its description
+          is the project description plus a line saying who created it. It's created as a <em>PS Projects</em> ticket
+          with status <em>Not Started</em> and severity <em>Normal</em>. The ticket isn't attached to a customer, so
+          add that in TeamSupport. If the ticket is created but its description can't be filled in, Aurora tells you so
+          and keeps the ticket linked.
         </p>
         <p>
           From there, every comment posted on any task in that project — with or without logged time attached — is

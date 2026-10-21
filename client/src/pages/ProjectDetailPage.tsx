@@ -393,6 +393,23 @@ export function ProjectDetailPage() {
     onError: (err) => setEditError(extractErrorMessage(err)),
   });
 
+  const [ticketMessage, setTicketMessage] = useState<{ text: string; isError: boolean } | null>(null);
+  const createTicket = useMutation({
+    mutationFn: () => api.post<{ ticketNumber: string; descriptionSet: boolean }>(`/projects/${projectId}/teamsupport-ticket`, {}),
+    onSuccess: ({ ticketNumber, descriptionSet }) => {
+      queryClient.invalidateQueries({ queryKey: ["project", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["projects"] });
+      queryClient.invalidateQueries({ queryKey: ["project-teamsupport-ticket", projectId] });
+      setTicketMessage({
+        text: t(descriptionSet ? "projectDetail.teamSupportTicketCreated" : "projectDetail.teamSupportTicketCreatedNoDescription", {
+          number: ticketNumber,
+        }),
+        isError: !descriptionSet,
+      });
+    },
+    onError: (err) => setTicketMessage({ text: extractErrorMessage(err), isError: true }),
+  });
+
   const [duplicateError, setDuplicateError] = useState<string | null>(null);
   const duplicateProject = useMutation({
     mutationFn: (name: string) => api.post<Project>(`/projects/${projectId}/duplicate`, { name }),
@@ -519,7 +536,25 @@ export function ProjectDetailPage() {
             ) : (
               <span>{project.teamSupportTicketNumber || "—"}</span>
             )}
+            {canWrite && !project.teamSupportTicketNumber && (
+              <button
+                className="btn"
+                disabled={createTicket.isPending}
+                onClick={() => {
+                  if (!window.confirm(t("projectDetail.confirmCreateTeamSupportTicket"))) return;
+                  setTicketMessage(null);
+                  createTicket.mutate();
+                }}
+              >
+                {createTicket.isPending ? t("projectDetail.creatingTeamSupportTicket") : t("projectDetail.createTeamSupportTicket")}
+              </button>
+            )}
           </div>
+          {ticketMessage && (
+            <div style={{ marginTop: 4 }}>
+              <span className={ticketMessage.isError ? "error-text" : "muted"}>{ticketMessage.text}</span>
+            </div>
+          )}
           {project.teamSupportTicketNumber && (
             <div className="gap-8" style={{ marginTop: 4 }}>
               {teamSupportError ? (

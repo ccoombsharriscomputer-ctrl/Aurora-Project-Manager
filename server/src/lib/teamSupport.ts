@@ -216,6 +216,81 @@ export function syncTaskUpdateToTeamSupport(
   });
 }
 
+// IDs for tickets the APM creates, captured from TeamSupport's own property lists (Harris
+// Computer's NA2 instance) on 2026-10-21: ticket type "PS Projects", its "Not Started" status
+// (statuses belong to a ticket type, so these two must stay a matching pair), and severity
+// "Normal". If TeamSupport admins rename or replace any of them, update here.
+const NEW_TICKET_TYPE_ID = "28879";
+const NEW_TICKET_STATUS_ID = "172708";
+const NEW_TICKET_SEVERITY_ID = "18224";
+
+// The description is a ticket action with SystemActionTypeID 1 that TeamSupport creates empty
+// along with the ticket — it can only be filled in with a second call after creation.
+const DESCRIPTION_SYSTEM_ACTION_TYPE_ID = "1";
+
+export interface CreateTicketResult {
+  ticketNumber: string;
+  // False when the ticket exists but its description couldn't be filled in — the ticket is
+  // still usable, so callers should keep it and just tell the user.
+  descriptionSet: boolean;
+}
+
+// Creates a ticket (POST Tickets) and then fills in its description. assigneeUserId is a
+// TeamSupport UserID, sent on a best-effort basis like postTicketAction's creatorId.
+export async function createTicket(
+  name: string,
+  description: string,
+  assigneeUserId?: string | null
+): Promise<CreateTicketResult> {
+  const ticket: Record<string, unknown> = {
+    Name: name,
+    TicketTypeID: NEW_TICKET_TYPE_ID,
+    TicketStatusID: NEW_TICKET_STATUS_ID,
+    TicketSeverityID: NEW_TICKET_SEVERITY_ID,
+  };
+  if (assigneeUserId) {
+    ticket.UserID = assigneeUserId;
+  }
+
+  const raw = await teamSupportRequest("/api/json/tickets", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ Ticket: ticket }),
+  });
+  const created = extractTicketPayload(raw);
+  const ticketNumber = created?.TicketNumber != null ? String(created.TicketNumber) : null;
+  if (!ticketNumber) {
+    console.error(`[teamSupport] unrecognized response shape creating ticket: ${JSON.stringify(raw).slice(0, 500)}`);
+    throw new TeamSupportUpstreamError("TeamSupport created the ticket but didn't say what its number is", null);
+  }
+
+  try {
+    const actionsRaw = await teamSupportRequest(`/api/json/tickets/${encodeURIComponent(ticketNumber)}/actions`);
+    const actions: Record<string, unknown>[] = Array.isArray(actionsRaw)
+      ? actionsRaw
+      : Array.isArray((actionsRaw as Record<string, unknown> | null)?.Actions)
+        ? ((actionsRaw as Record<string, unknown>).Actions as Record<string, unknown>[])
+        : [];
+    const descriptionAction = actions.find((a) => String(a.SystemActionTypeID) === DESCRIPTION_SYSTEM_ACTION_TYPE_ID);
+    const actionId = descriptionAction?.ActionID ?? descriptionAction?.ID;
+    if (actionId == null) {
+      throw new Error("couldn't find the ticket's description entry");
+    }
+    await teamSupportRequest(`/api/json/tickets/${encodeURIComponent(ticketNumber)}/actions/${encodeURIComponent(String(actionId))}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      // Plain text with real newlines: unlike posted actions, TeamSupport HTML-escapes a
+      // ticket description on the way in (confirmed live, 2026-10-21 — a "<br>" came back as
+      // literal "&lt;br&gt;"), so toHtmlLines would only add visible junk here.
+      body: JSON.stringify({ Action: { Description: description } }),
+    });
+    return { ticketNumber, descriptionSet: true };
+  } catch (err) {
+    console.error(`[teamSupport] ticket ${ticketNumber} created but description not set: ${err instanceof Error ? err.message : err}`);
+    return { ticketNumber, descriptionSet: false };
+  }
+}
+
 export interface TeamSupportUser {
   id: string;
   name: string;

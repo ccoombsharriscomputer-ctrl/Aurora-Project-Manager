@@ -1,4 +1,4 @@
-import { Router } from "express";
+import { Router, type Response } from "express";
 import multer from "multer";
 import { z } from "zod";
 import { prisma } from "../lib/prisma";
@@ -10,6 +10,7 @@ import { storage } from "../lib/storage";
 import { loadProjectInScope, userHasLineAccess } from "../lib/scope";
 import { extractProjectDetailsFromContract, extractTextFromPdf } from "../lib/contractExtraction";
 import {
+  createTicket,
   fetchTicketByNumber,
   TeamSupportNotConfiguredError,
   TeamSupportTicketNotFoundError,
@@ -284,22 +285,71 @@ router.get("/:id/teamsupport-ticket", async (req, res) => {
     const ticket = await fetchTicketByNumber(project.teamSupportTicketNumber);
     res.json({ linked: true, ticket });
   } catch (err) {
-    if (err instanceof TeamSupportNotConfiguredError) {
-      return res
-        .status(503)
-        .json({ error: "TeamSupport isn't set up yet — ask an admin to configure TEAMSUPPORT_ORG_ID and TEAMSUPPORT_API_TOKEN." });
-    }
-    if (err instanceof TeamSupportTicketNotFoundError) {
-      return res.status(404).json({ error: `Ticket ${project.teamSupportTicketNumber} wasn't found in TeamSupport.` });
-    }
-    if (err instanceof TeamSupportUpstreamError) {
-      const hint =
-        err.status === 401 || err.status === 403
-          ? " Double-check TEAMSUPPORT_ORG_ID and TEAMSUPPORT_API_TOKEN are correct, and that TEAMSUPPORT_API_BASE_URL matches your account's server (NA1/NA2/NA3/NA4 — check the URL when logged into TeamSupport)."
-          : "";
-      return res.status(502).json({ error: `Couldn't reach TeamSupport (${err.message}).${hint}` });
-    }
-    res.status(502).json({ error: "Couldn't reach TeamSupport. Try again shortly." });
+    respondTeamSupportError(res, err, project.teamSupportTicketNumber);
+  }
+});
+
+function respondTeamSupportError(res: Response, err: unknown, ticketNumber?: string) {
+  if (err instanceof TeamSupportNotConfiguredError) {
+    return res
+      .status(503)
+      .json({ error: "TeamSupport isn't set up yet — ask an admin to configure TEAMSUPPORT_ORG_ID and TEAMSUPPORT_API_TOKEN." });
+  }
+  if (err instanceof TeamSupportTicketNotFoundError) {
+    return res.status(404).json({ error: `${ticketNumber ? `Ticket ${ticketNumber}` : "The ticket"} wasn't found in TeamSupport.` });
+  }
+  if (err instanceof TeamSupportUpstreamError) {
+    const hint =
+      err.status === 401 || err.status === 403
+        ? " Double-check TEAMSUPPORT_ORG_ID and TEAMSUPPORT_API_TOKEN are correct, and that TEAMSUPPORT_API_BASE_URL matches your account's server (NA1/NA2/NA3/NA4 — check the URL when logged into TeamSupport)."
+        : "";
+    return res.status(502).json({ error: `Couldn't reach TeamSupport (${err.message}).${hint}` });
+  }
+  res.status(502).json({ error: "Couldn't reach TeamSupport. Try again shortly." });
+}
+
+// Creates a TeamSupport ticket for a project that doesn't have one yet and links it. The
+// assignee on the ticket is the project's assignee if they've been mapped to a TeamSupport
+// user (Admin > Users), else whoever clicked the button.
+router.post("/:id/teamsupport-ticket", blockReadOnly, async (req, res) => {
+  const project = await loadProjectInScope(req.params.id, effectiveSoftwareLineId(req.user!));
+  if (!project) {
+    return res.status(404).json({ error: "Project not found" });
+  }
+  if (project.teamSupportTicketNumber) {
+    return res.status(409).json({ error: `This project is already linked to ticket ${project.teamSupportTicketNumber}.` });
+  }
+
+  const [softwareLine, assignee, creator] = await Promise.all([
+    prisma.softwareLine.findUnique({ where: { id: project.softwareLineId }, select: { name: true } }),
+    project.assigneeId ? prisma.user.findUnique({ where: { id: project.assigneeId }, select: { teamSupportUserId: true } }) : null,
+    prisma.user.findUnique({ where: { id: req.user!.id }, select: { teamSupportUserId: true } }),
+  ]);
+
+  const description = [
+    project.description,
+    `Created from the ${softwareLine?.name ?? "Aurora"} Project Manager by ${req.user!.name}.`,
+  ]
+    .filter(Boolean)
+    .join("\n\n");
+
+  try {
+    const { ticketNumber, descriptionSet } = await createTicket(
+      project.name,
+      description,
+      assignee?.teamSupportUserId ?? creator?.teamSupportUserId
+    );
+    await prisma.project.update({ where: { id: project.id }, data: { teamSupportTicketNumber: ticketNumber } });
+    await logActivity({
+      type: "PROJECT_UPDATED",
+      message: `${req.user!.name} created TeamSupport ticket ${ticketNumber} for project "${project.name}"`,
+      userId: req.user!.id,
+      softwareLineId: project.softwareLineId,
+      projectId: project.id,
+    });
+    res.status(201).json({ ticketNumber, descriptionSet });
+  } catch (err) {
+    respondTeamSupportError(res, err);
   }
 });
 
