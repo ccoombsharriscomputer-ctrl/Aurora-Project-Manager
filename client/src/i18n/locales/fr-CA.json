@@ -149,6 +149,7 @@
     "selectAll": "Tout sélectionner",
     "clearAll": "Tout effacer",
     "teamSupportTicketNumber": "N° de billet TeamSupport (facultatif)",
+    "createTicketNeedsName": "Entrez d'abord le nom du projet : il devient le titre du billet.",
     "createProject": "Créer le projet",
     "loadingProjects": "Chargement des projets…",
     "noProjectsYet": "Aucun projet pour l'instant — créez le premier.",

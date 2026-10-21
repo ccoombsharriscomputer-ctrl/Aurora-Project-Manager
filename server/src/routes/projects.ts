@@ -308,6 +308,49 @@ function respondTeamSupportError(res: Response, err: unknown, ticketNumber?: str
   res.status(502).json({ error: "Couldn't reach TeamSupport. Try again shortly." });
 }
 
+// Shared by both ways of creating a ticket (an existing project, or the new-project form
+// before the project itself exists): builds the description, picks the TeamSupport assignee,
+// and calls TeamSupport.
+async function createTicketForUser(
+  user: { id: string; name: string },
+  ticket: { lineId: string; name: string; description?: string | null; assigneeId?: string | null }
+) {
+  const [softwareLine, assignee, creator] = await Promise.all([
+    prisma.softwareLine.findUnique({ where: { id: ticket.lineId }, select: { name: true } }),
+    ticket.assigneeId ? prisma.user.findUnique({ where: { id: ticket.assigneeId }, select: { teamSupportUserId: true } }) : null,
+    prisma.user.findUnique({ where: { id: user.id }, select: { teamSupportUserId: true } }),
+  ]);
+
+  const description = [ticket.description, `Created from the ${softwareLine?.name ?? "Aurora"} Project Manager by ${user.name}.`]
+    .filter(Boolean)
+    .join("\n\n");
+
+  return createTicket(ticket.name, description, assignee?.teamSupportUserId ?? creator?.teamSupportUserId);
+}
+
+const createTicketSchema = z.object({
+  name: z.string().min(1).max(200),
+  description: z.string().max(2000).optional(),
+  assigneeId: z.string().min(1).optional(),
+});
+
+// For the new-project form: creates the ticket before the project exists, so the form can
+// fill in its ticket # field. Nothing is saved on our side until the project is created.
+router.post("/teamsupport-ticket", blockReadOnly, async (req, res) => {
+  const parsed = createTicketSchema.safeParse(req.body);
+  if (!parsed.success) {
+    return res.status(400).json({ error: parsed.error.issues[0].message });
+  }
+  try {
+    // Not logged to the activity feed: it has no project to attach to yet, and the project's
+    // own creation entry follows once the form is submitted.
+    const result = await createTicketForUser(req.user!, { lineId: effectiveSoftwareLineId(req.user!), ...parsed.data });
+    res.status(201).json(result);
+  } catch (err) {
+    respondTeamSupportError(res, err);
+  }
+});
+
 // Creates a TeamSupport ticket for a project that doesn't have one yet and links it. The
 // assignee on the ticket is the project's assignee if they've been mapped to a TeamSupport
 // user (Admin > Users), else whoever clicked the button.
@@ -320,25 +363,13 @@ router.post("/:id/teamsupport-ticket", blockReadOnly, async (req, res) => {
     return res.status(409).json({ error: `This project is already linked to ticket ${project.teamSupportTicketNumber}.` });
   }
 
-  const [softwareLine, assignee, creator] = await Promise.all([
-    prisma.softwareLine.findUnique({ where: { id: project.softwareLineId }, select: { name: true } }),
-    project.assigneeId ? prisma.user.findUnique({ where: { id: project.assigneeId }, select: { teamSupportUserId: true } }) : null,
-    prisma.user.findUnique({ where: { id: req.user!.id }, select: { teamSupportUserId: true } }),
-  ]);
-
-  const description = [
-    project.description,
-    `Created from the ${softwareLine?.name ?? "Aurora"} Project Manager by ${req.user!.name}.`,
-  ]
-    .filter(Boolean)
-    .join("\n\n");
-
   try {
-    const { ticketNumber, descriptionSet } = await createTicket(
-      project.name,
-      description,
-      assignee?.teamSupportUserId ?? creator?.teamSupportUserId
-    );
+    const { ticketNumber, descriptionSet } = await createTicketForUser(req.user!, {
+      lineId: project.softwareLineId,
+      name: project.name,
+      description: project.description,
+      assigneeId: project.assigneeId,
+    });
     await prisma.project.update({ where: { id: project.id }, data: { teamSupportTicketNumber: ticketNumber } });
     await logActivity({
       type: "PROJECT_UPDATED",

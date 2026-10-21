@@ -176,8 +176,29 @@ export function ProjectsPage() {
       setError(null);
       setContractNotes(null);
       setContractError(null);
+      setTicketMessage(null);
     },
     onError: (err) => setError(extractErrorMessage(err)),
+  });
+
+  const [ticketMessage, setTicketMessage] = useState<{ text: string; isError: boolean } | null>(null);
+  const createTicket = useMutation({
+    mutationFn: () =>
+      api.post<{ ticketNumber: string; descriptionSet: boolean }>("/projects/teamsupport-ticket", {
+        name,
+        description: description || undefined,
+        assigneeId: assigneeId || undefined,
+      }),
+    onSuccess: ({ ticketNumber, descriptionSet }) => {
+      setTeamSupportTicketNumber(ticketNumber);
+      setTicketMessage({
+        text: t(descriptionSet ? "projectDetail.teamSupportTicketCreated" : "projectDetail.teamSupportTicketCreatedNoDescription", {
+          number: ticketNumber,
+        }),
+        isError: !descriptionSet,
+      });
+    },
+    onError: (err) => setTicketMessage({ text: extractErrorMessage(err), isError: true }),
   });
 
   const parseContract = useMutation({
@@ -380,6 +401,28 @@ export function ProjectsPage() {
               value={teamSupportTicketNumber}
               onChange={(e) => setTeamSupportTicketNumber(e.target.value)}
             />
+            {!teamSupportTicketNumber && (
+              <div style={{ marginTop: 6 }}>
+                <button
+                  type="button"
+                  className="btn"
+                  disabled={createTicket.isPending || !name.trim()}
+                  title={!name.trim() ? t("projects.createTicketNeedsName") : undefined}
+                  onClick={() => {
+                    if (!window.confirm(t("projectDetail.confirmCreateTeamSupportTicket"))) return;
+                    setTicketMessage(null);
+                    createTicket.mutate();
+                  }}
+                >
+                  {createTicket.isPending ? t("projectDetail.creatingTeamSupportTicket") : t("projectDetail.createTeamSupportTicket")}
+                </button>
+              </div>
+            )}
+            {ticketMessage && (
+              <p className={ticketMessage.isError ? "error-text" : "muted"} style={{ fontSize: 12, marginTop: 6 }}>
+                {ticketMessage.text}
+              </p>
+            )}
           </div>
           {error && <div className="error-text">{error}</div>}
           <button className="btn btn-primary" type="submit" disabled={createProject.isPending || !projectTypeId}>

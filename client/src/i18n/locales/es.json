@@ -149,6 +149,7 @@
     "selectAll": "Seleccionar todo",
     "clearAll": "Borrar todo",
     "teamSupportTicketNumber": "N.º de ticket de TeamSupport (opcional)",
+    "createTicketNeedsName": "Ingrese primero el nombre del proyecto: será el título del ticket.",
     "createProject": "Crear proyecto",
     "loadingProjects": "Cargando proyectos…",
     "noProjectsYet": "Aún no hay proyectos — crea el primero.",
