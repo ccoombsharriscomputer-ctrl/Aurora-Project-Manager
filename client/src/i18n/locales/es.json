@@ -149,6 +149,7 @@
     "selectAll": "Seleccionar todo",
     "clearAll": "Borrar todo",
     "teamSupportTicketNumber": "N.º de ticket de TeamSupport (opcional)",
+    "teamSupportCustomer": "Cliente de TeamSupport (opcional)",
     "createTicketNeedsName": "Ingrese primero el nombre del proyecto: será el título del ticket.",
     "createProject": "Crear proyecto",
     "loadingProjects": "Cargando proyectos…",
@@ -197,6 +198,10 @@
     "confirmCreateTeamSupportTicket": "¿Crear un nuevo ticket de TeamSupport para este proyecto?",
     "teamSupportTicketCreated": "Ticket {{number}} creado.",
     "teamSupportTicketCreatedNoDescription": "Ticket {{number}} creado, pero no se pudo completar su descripción. Agréguela en TeamSupport.",
+    "teamSupportCustomer": "Cliente de TeamSupport",
+    "customerHint": "Se adjunta al ticket cuando lo crea desde aquí.",
+    "teamSupportTicketCreatedNoCustomer": "Ticket {{number}} creado, pero no se pudo adjuntar su cliente. Agréguelo en TeamSupport.",
+    "teamSupportTicketCreatedNoDescriptionOrCustomer": "Ticket {{number}} creado, pero no se pudieron agregar su descripción y su cliente. Agréguelos en TeamSupport.",
     "confirmDeleteProject": "¿Eliminar el proyecto \"{{name}}\"? Esta acción no se puede deshacer.",
     "deleteProject": "Eliminar proyecto",
     "loadingSubProjects": "Cargando subproyectos…",
@@ -431,5 +436,13 @@
     "newPassword": "Nueva contraseña",
     "confirmNewPassword": "Confirmar nueva contraseña",
     "passwordsDoNotMatch": "La nueva contraseña y la confirmación no coinciden"
+  },
+  "customerPicker": {
+    "placeholder": "Buscar clientes…",
+    "loading": "Cargando clientes…",
+    "unavailable": "Clientes no disponibles",
+    "clear": "Sin cliente",
+    "noMatches": "No hay clientes que coincidan",
+    "typeToSearch": "Escriba para buscar clientes de TeamSupport"
   }
 }

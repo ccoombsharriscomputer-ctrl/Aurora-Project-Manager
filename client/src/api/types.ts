@@ -135,6 +135,11 @@ export interface TeamSupportUser {
   name: string;
 }
 
+export interface TeamSupportCustomer {
+  id: string;
+  name: string;
+}
+
 export interface AccessRequest {
   id: string;
   name: string;
@@ -155,6 +160,8 @@ export interface Project {
   name: string;
   description: string | null;
   teamSupportTicketNumber: string | null;
+  teamSupportCustomerId: string | null;
+  teamSupportCustomerName: string | null;
   projectType: { id: string; name: string };
   createdBy: UserSummary;
   // Whoever's on the hook for the project as a whole — a lighter-weight alternative to

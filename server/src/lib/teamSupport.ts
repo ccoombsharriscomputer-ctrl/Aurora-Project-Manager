@@ -233,14 +233,19 @@ export interface CreateTicketResult {
   // False when the ticket exists but its description couldn't be filled in — the ticket is
   // still usable, so callers should keep it and just tell the user.
   descriptionSet: boolean;
+  // Same idea for the customer: false when one was asked for but couldn't be attached, null
+  // when none was asked for.
+  customerSet: boolean | null;
 }
 
-// Creates a ticket (POST Tickets) and then fills in its description. assigneeUserId is a
-// TeamSupport UserID, sent on a best-effort basis like postTicketAction's creatorId.
+// Creates a ticket (POST Tickets), attaches the customer, and fills in its description.
+// assigneeUserId is a TeamSupport UserID, sent on a best-effort basis like postTicketAction's
+// creatorId. customerId is a TeamSupport customer (organization) ID.
 export async function createTicket(
   name: string,
   description: string,
-  assigneeUserId?: string | null
+  assigneeUserId?: string | null,
+  customerId?: string | null
 ): Promise<CreateTicketResult> {
   const ticket: Record<string, unknown> = {
     Name: name,
@@ -264,6 +269,26 @@ export async function createTicket(
     throw new TeamSupportUpstreamError("TeamSupport created the ticket but didn't say what its number is", null);
   }
 
+  // Attaching a customer is its own call, and it takes the ticket's internal ID (TicketID),
+  // not the ticket number. Confirmed live 2026-10-21: POST Tickets/{TicketID}/Customers/{customerId}
+  // with an empty body links it; posting the customer in a body to Tickets/{TicketID}/Customers
+  // returns 404, and setting it on the ticket itself via PUT is silently ignored.
+  let customerSet: boolean | null = null;
+  if (customerId) {
+    try {
+      const ticketId = created?.TicketID ?? created?.ID;
+      if (ticketId == null) throw new Error("TeamSupport didn't say the ticket's internal ID");
+      await teamSupportRequest(
+        `/api/json/tickets/${encodeURIComponent(String(ticketId))}/customers/${encodeURIComponent(customerId)}`,
+        { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" }
+      );
+      customerSet = true;
+    } catch (err) {
+      console.error(`[teamSupport] ticket ${ticketNumber} created but customer not attached: ${err instanceof Error ? err.message : err}`);
+      customerSet = false;
+    }
+  }
+
   try {
     const actionsRaw = await teamSupportRequest(`/api/json/tickets/${encodeURIComponent(ticketNumber)}/actions`);
     const actions: Record<string, unknown>[] = Array.isArray(actionsRaw)
@@ -284,10 +309,10 @@ export async function createTicket(
       // literal "&lt;br&gt;"), so toHtmlLines would only add visible junk here.
       body: JSON.stringify({ Action: { Description: description } }),
     });
-    return { ticketNumber, descriptionSet: true };
+    return { ticketNumber, descriptionSet: true, customerSet };
   } catch (err) {
     console.error(`[teamSupport] ticket ${ticketNumber} created but description not set: ${err instanceof Error ? err.message : err}`);
-    return { ticketNumber, descriptionSet: false };
+    return { ticketNumber, descriptionSet: false, customerSet };
   }
 }
 
@@ -317,4 +342,79 @@ export async function fetchTeamSupportUsers(): Promise<TeamSupportUser[]> {
     })
     .filter((u): u is TeamSupportUser => u !== null)
     .sort((a, b) => a.name.localeCompare(b.name));
+}
+
+export interface TeamSupportCustomer {
+  id: string;
+  name: string;
+}
+
+function extractCustomersPayload(raw: unknown): Record<string, unknown>[] {
+  if (Array.isArray(raw)) return raw as Record<string, unknown>[];
+  if (raw && typeof raw === "object") {
+    const obj = raw as Record<string, unknown>;
+    if (Array.isArray(obj.Customers)) return obj.Customers as Record<string, unknown>[];
+    // A single result comes back as an object rather than a one-item list.
+    if (obj.Customers && typeof obj.Customers === "object") return [obj.Customers as Record<string, unknown>];
+  }
+  return [];
+}
+
+const CUSTOMER_PAGE_SIZE = 1000;
+const MAX_CUSTOMER_PAGES = 20;
+// The customer list is ~4,000 entries (5 slow API calls, ~25 seconds in all) and barely
+// changes, while every call counts against the daily TeamSupport quota — so it's kept in
+// memory and shared by every user rather than re-read on each search. Once it's older than
+// this, the next request still gets the old copy instantly while a fresh one loads behind it.
+const CUSTOMER_CACHE_MS = 6 * 60 * 60 * 1000;
+let customerCache: { at: number; customers: TeamSupportCustomer[] } | null = null;
+let customerFetch: Promise<TeamSupportCustomer[]> | null = null;
+
+async function loadAllCustomers(): Promise<TeamSupportCustomer[]> {
+  const customers: TeamSupportCustomer[] = [];
+  for (let page = 1; page <= MAX_CUSTOMER_PAGES; page++) {
+    const raw = await teamSupportRequest(`/api/json/customers?PageSize=${CUSTOMER_PAGE_SIZE}&PageNumber=${page}`);
+    const rows = extractCustomersPayload(raw);
+    for (const row of rows) {
+      const id = row.ID ?? row.OrganizationID;
+      const name = String(row.Name ?? "").trim();
+      // Inactive customers can't sensibly be put on a new ticket.
+      if (id != null && name && String(row.IsActive).toLowerCase() !== "false") customers.push({ id: String(id), name });
+    }
+    if (rows.length < CUSTOMER_PAGE_SIZE) break;
+  }
+  return customers.sort((a, b) => a.name.localeCompare(b.name));
+}
+
+function refreshCustomers(): Promise<TeamSupportCustomer[]> {
+  // Several people opening the picker at once share one read instead of each doing their own.
+  customerFetch ??= loadAllCustomers()
+    .then((customers) => {
+      customerCache = { at: Date.now(), customers };
+      return customers;
+    })
+    .finally(() => {
+      customerFetch = null;
+    });
+  return customerFetch;
+}
+
+// For the searchable Customer picker on projects.
+export async function fetchTeamSupportCustomers(): Promise<TeamSupportCustomer[]> {
+  if (!customerCache) return refreshCustomers();
+  if (Date.now() - customerCache.at >= CUSTOMER_CACHE_MS) {
+    refreshCustomers().catch((err) => {
+      console.error(`[teamSupport] customer list refresh failed: ${err instanceof Error ? err.message : err}`);
+    });
+  }
+  return customerCache.customers;
+}
+
+// Called once at startup so the first person to open the picker doesn't wait for the slow
+// first read. Quietly does nothing when TeamSupport isn't configured.
+export function warmTeamSupportCustomers(): void {
+  if (!process.env.TEAMSUPPORT_ORG_ID || !process.env.TEAMSUPPORT_API_TOKEN) return;
+  refreshCustomers().catch((err) => {
+    console.error(`[teamSupport] couldn't pre-load the customer list: ${err instanceof Error ? err.message : err}`);
+  });
 }

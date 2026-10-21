@@ -828,7 +828,8 @@
             underneath — a status badge and its subject line. See <a href="#teamsupport">TeamSupport
             integration</a> for what else this unlocks.</li>
           <li>No ticket yet? Click <strong>Create TeamSupport ticket</strong> next to the ticket number field. Aurora
-            creates the ticket for you and fills in the number. See <a href="#teamsupport">TeamSupport
+            creates the ticket for you and fills in the number, attaching the project's <strong>TeamSupport Customer</strong>
+            if you've picked one. See <a href="#teamsupport">TeamSupport
             integration</a>.</li>
           <li><strong>Archive project</strong> hides it from the Dashboard, Calendar, and default Projects list without
             deleting anything — it still shows up in Reports and behind <em>Show archived projects</em>. Any
@@ -990,9 +991,16 @@
           number field (Read Only accounts don't see it). After you confirm, Aurora creates a new ticket in
           TeamSupport and fills in the ticket # for you. The ticket's title is the project name, and its description
           is the project description plus a line saying who created it. It's created as a <em>PS Projects</em> ticket
-          with status <em>Not Started</em> and severity <em>Normal</em>. The ticket isn't attached to a customer, so
-          add that in TeamSupport. If the ticket is created but its description can't be filled in, Aurora tells you so
-          and keeps the ticket linked.
+          with status <em>Not Started</em> and severity <em>Normal</em>. If the ticket is created but its description
+          or customer can't be added, Aurora tells you so and keeps the ticket linked.
+        </p>
+        <p>
+          Projects have a searchable <strong>TeamSupport Customer</strong> field, on the project page and on the
+          <strong>New project</strong> form. Start typing a customer's name and pick it from the list (choose
+          <em>No customer</em> to clear it). When Aurora creates a ticket, it attaches that customer to the ticket. Pick
+          the customer first: setting or changing it afterward doesn't change a ticket that already exists, so add it in
+          TeamSupport for those. The customer list comes from TeamSupport and refreshes every few hours, so a brand-new
+          customer can take a while to show up. Duplicating a project keeps its customer.
         </p>
         <p>
           The same button is on the <strong>New project</strong> form, under the ticket # field. Fill in at least the

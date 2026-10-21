@@ -51,6 +51,8 @@ router.get("/", async (req, res) => {
         name: p.name,
         description: p.description,
         teamSupportTicketNumber: p.teamSupportTicketNumber,
+        teamSupportCustomerId: p.teamSupportCustomerId,
+        teamSupportCustomerName: p.teamSupportCustomerName,
         projectType: p.projectType,
         createdBy: p.createdBy,
         assignee: p.assignee,
@@ -70,6 +72,8 @@ const createSchema = z.object({
   name: z.string().min(1).max(200),
   description: z.string().max(2000).optional(),
   teamSupportTicketNumber: z.string().max(50).optional(),
+  teamSupportCustomerId: z.string().max(50).optional(),
+  teamSupportCustomerName: z.string().max(200).optional(),
   projectTypeId: z.string().min(1),
   checklistItemIds: z.array(z.string().min(1)).optional(),
   memberIds: z.array(z.string().min(1)).optional(),
@@ -142,6 +146,9 @@ router.post("/", blockReadOnly, async (req, res) => {
       name: parsed.data.name,
       description: parsed.data.description,
       teamSupportTicketNumber: parsed.data.teamSupportTicketNumber,
+      ...(parsed.data.teamSupportCustomerId && parsed.data.teamSupportCustomerName
+        ? { teamSupportCustomerId: parsed.data.teamSupportCustomerId, teamSupportCustomerName: parsed.data.teamSupportCustomerName }
+        : {}),
       projectTypeId: projectType.id,
       softwareLineId: lineId,
       createdById: req.user!.id,
@@ -313,7 +320,7 @@ function respondTeamSupportError(res: Response, err: unknown, ticketNumber?: str
 // and calls TeamSupport.
 async function createTicketForUser(
   user: { id: string; name: string },
-  ticket: { lineId: string; name: string; description?: string | null; assigneeId?: string | null }
+  ticket: { lineId: string; name: string; description?: string | null; assigneeId?: string | null; customerId?: string | null }
 ) {
   const [softwareLine, assignee, creator] = await Promise.all([
     prisma.softwareLine.findUnique({ where: { id: ticket.lineId }, select: { name: true } }),
@@ -325,13 +332,14 @@ async function createTicketForUser(
     .filter(Boolean)
     .join("\n\n");
 
-  return createTicket(ticket.name, description, assignee?.teamSupportUserId ?? creator?.teamSupportUserId);
+  return createTicket(ticket.name, description, assignee?.teamSupportUserId ?? creator?.teamSupportUserId, ticket.customerId);
 }
 
 const createTicketSchema = z.object({
   name: z.string().min(1).max(200),
   description: z.string().max(2000).optional(),
   assigneeId: z.string().min(1).optional(),
+  customerId: z.string().min(1).max(50).optional(),
 });
 
 // For the new-project form: creates the ticket before the project exists, so the form can
@@ -364,11 +372,12 @@ router.post("/:id/teamsupport-ticket", blockReadOnly, async (req, res) => {
   }
 
   try {
-    const { ticketNumber, descriptionSet } = await createTicketForUser(req.user!, {
+    const { ticketNumber, descriptionSet, customerSet } = await createTicketForUser(req.user!, {
       lineId: project.softwareLineId,
       name: project.name,
       description: project.description,
       assigneeId: project.assigneeId,
+      customerId: project.teamSupportCustomerId,
     });
     await prisma.project.update({ where: { id: project.id }, data: { teamSupportTicketNumber: ticketNumber } });
     await logActivity({
@@ -378,7 +387,7 @@ router.post("/:id/teamsupport-ticket", blockReadOnly, async (req, res) => {
       softwareLineId: project.softwareLineId,
       projectId: project.id,
     });
-    res.status(201).json({ ticketNumber, descriptionSet });
+    res.status(201).json({ ticketNumber, descriptionSet, customerSet });
   } catch (err) {
     respondTeamSupportError(res, err);
   }
@@ -388,6 +397,8 @@ const updateSchema = z.object({
   name: z.string().min(1).max(200).optional(),
   description: z.string().max(2000).nullable().optional(),
   teamSupportTicketNumber: z.string().max(50).nullable().optional(),
+  teamSupportCustomerId: z.string().max(50).nullable().optional(),
+  teamSupportCustomerName: z.string().max(200).nullable().optional(),
   archived: z.boolean().optional(),
   assigneeId: z.string().min(1).nullable().optional(),
 });
@@ -444,6 +455,9 @@ router.patch("/:id", blockReadOnly, async (req, res) => {
   if (rest.description !== undefined && rest.description !== project.description) changedFields.push("description");
   if (rest.teamSupportTicketNumber !== undefined && rest.teamSupportTicketNumber !== project.teamSupportTicketNumber) {
     changedFields.push("TeamSupport ticket #");
+  }
+  if (rest.teamSupportCustomerId !== undefined && rest.teamSupportCustomerId !== project.teamSupportCustomerId) {
+    changedFields.push("customer");
   }
   if (changedFields.length > 0) {
     await logActivity({
@@ -520,7 +534,8 @@ const duplicateSchema = z.object({
 // attachments, and time entries are deliberately left behind — those belong to the original
 // engagement's history, not a fresh copy of it. The TeamSupport ticket # is deliberately NOT
 // copied either — it identifies one specific support ticket, and the copy is a distinct
-// engagement that hasn't been tied to a ticket yet (or needs its own). Same reasoning for the
+// engagement that hasn't been tied to a ticket yet (or needs its own). The TeamSupport customer
+// IS copied: a repeat engagement is usually for the same customer. Same reasoning for the
 // project assignee: the copy starts unassigned rather than inheriting who was on the hook for
 // the original engagement.
 router.post("/:id/duplicate", blockReadOnly, async (req, res) => {
@@ -550,6 +565,8 @@ router.post("/:id/duplicate", blockReadOnly, async (req, res) => {
     data: {
       name: parsed.data.name,
       description: source.description,
+      teamSupportCustomerId: source.teamSupportCustomerId,
+      teamSupportCustomerName: source.teamSupportCustomerName,
       projectTypeId: source.projectTypeId,
       softwareLineId: source.softwareLineId,
       createdById: req.user!.id,

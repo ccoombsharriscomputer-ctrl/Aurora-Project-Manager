@@ -4,9 +4,11 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { api } from "../api/client";
 import type { Attachment, ChecklistItem, Project, ProjectFollowUp, SubProject, TeamSupportTicketResponse, UserSummary } from "../api/types";
+import { TeamSupportCustomerPicker } from "../components/TeamSupportCustomerPicker";
 import { extractErrorMessage, useAuth } from "../context/AuthContext";
 import { useOpenTabs } from "../context/OpenTabsContext";
 import { formatDueDate } from "../utils/format";
+import { ticketCreatedMessage } from "../utils/ticketMessage";
 
 function NewSubProjectForm({ projectId }: { projectId: string }) {
   const { t } = useTranslation();
@@ -395,17 +397,13 @@ export function ProjectDetailPage() {
 
   const [ticketMessage, setTicketMessage] = useState<{ text: string; isError: boolean } | null>(null);
   const createTicket = useMutation({
-    mutationFn: () => api.post<{ ticketNumber: string; descriptionSet: boolean }>(`/projects/${projectId}/teamsupport-ticket`, {}),
-    onSuccess: ({ ticketNumber, descriptionSet }) => {
+    mutationFn: () =>
+      api.post<{ ticketNumber: string; descriptionSet: boolean; customerSet: boolean | null }>(`/projects/${projectId}/teamsupport-ticket`, {}),
+    onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ["project", projectId] });
       queryClient.invalidateQueries({ queryKey: ["projects"] });
       queryClient.invalidateQueries({ queryKey: ["project-teamsupport-ticket", projectId] });
-      setTicketMessage({
-        text: t(descriptionSet ? "projectDetail.teamSupportTicketCreated" : "projectDetail.teamSupportTicketCreatedNoDescription", {
-          number: ticketNumber,
-        }),
-        isError: !descriptionSet,
-      });
+      setTicketMessage(ticketCreatedMessage(t, result));
     },
     onError: (err) => setTicketMessage({ text: extractErrorMessage(err), isError: true }),
   });
@@ -550,6 +548,23 @@ export function ProjectDetailPage() {
               </button>
             )}
           </div>
+          <div className="gap-8" style={{ marginTop: 8 }}>
+            <label style={{ margin: 0 }}>{t("projectDetail.teamSupportCustomer")}</label>
+            {canWrite ? (
+              <TeamSupportCustomerPicker
+                value={project.teamSupportCustomerId ? { id: project.teamSupportCustomerId, name: project.teamSupportCustomerName ?? "" } : null}
+                disabled={updateProject.isPending}
+                onChange={(c) => updateProject.mutate({ teamSupportCustomerId: c?.id ?? null, teamSupportCustomerName: c?.name ?? null })}
+              />
+            ) : (
+              <span>{project.teamSupportCustomerName || "—"}</span>
+            )}
+          </div>
+          {canWrite && !project.teamSupportTicketNumber && (
+            <p className="muted" style={{ fontSize: 12, margin: "4px 0 0" }}>
+              {t("projectDetail.customerHint")}
+            </p>
+          )}
           {ticketMessage && (
             <div style={{ marginTop: 4 }}>
               <span className={ticketMessage.isError ? "error-text" : "muted"}>{ticketMessage.text}</span>

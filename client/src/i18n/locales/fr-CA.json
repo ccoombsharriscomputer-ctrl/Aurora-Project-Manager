@@ -149,6 +149,7 @@
     "selectAll": "Tout sélectionner",
     "clearAll": "Tout effacer",
     "teamSupportTicketNumber": "N° de billet TeamSupport (facultatif)",
+    "teamSupportCustomer": "Client TeamSupport (facultatif)",
     "createTicketNeedsName": "Entrez d'abord le nom du projet : il devient le titre du billet.",
     "createProject": "Créer le projet",
     "loadingProjects": "Chargement des projets…",
@@ -197,6 +198,10 @@
     "confirmCreateTeamSupportTicket": "Créer un nouveau billet TeamSupport pour ce projet?",
     "teamSupportTicketCreated": "Billet {{number}} créé.",
     "teamSupportTicketCreatedNoDescription": "Billet {{number}} créé, mais sa description n'a pas pu être remplie. Ajoutez-la dans TeamSupport.",
+    "teamSupportCustomer": "Client TeamSupport",
+    "customerHint": "Joint au billet lorsque vous le créez à partir d'ici.",
+    "teamSupportTicketCreatedNoCustomer": "Billet {{number}} créé, mais son client n'a pas pu être joint. Ajoutez-le dans TeamSupport.",
+    "teamSupportTicketCreatedNoDescriptionOrCustomer": "Billet {{number}} créé, mais sa description et son client n'ont pas pu être ajoutés. Ajoutez-les dans TeamSupport.",
     "confirmDeleteProject": "Supprimer le projet « {{name}} »? Cette action est irréversible.",
     "deleteProject": "Supprimer le projet",
     "loadingSubProjects": "Chargement des sous-projets…",
@@ -431,5 +436,13 @@
     "newPassword": "Nouveau mot de passe",
     "confirmNewPassword": "Confirmer le nouveau mot de passe",
     "passwordsDoNotMatch": "Le nouveau mot de passe et la confirmation ne correspondent pas"
+  },
+  "customerPicker": {
+    "placeholder": "Rechercher des clients…",
+    "loading": "Chargement des clients…",
+    "unavailable": "Clients non disponibles",
+    "clear": "Aucun client",
+    "noMatches": "Aucun client correspondant",
+    "typeToSearch": "Tapez pour rechercher des clients TeamSupport"
   }
 }

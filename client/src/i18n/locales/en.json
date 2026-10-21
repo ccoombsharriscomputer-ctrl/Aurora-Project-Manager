@@ -149,6 +149,7 @@
     "selectAll": "Select all",
     "clearAll": "Clear all",
     "teamSupportTicketNumber": "TeamSupport ticket # (optional)",
+    "teamSupportCustomer": "TeamSupport customer (optional)",
     "createTicketNeedsName": "Enter a project name first — it becomes the ticket's title.",
     "createProject": "Create project",
     "loadingProjects": "Loading projects…",
@@ -197,6 +198,10 @@
     "confirmCreateTeamSupportTicket": "Create a new TeamSupport ticket for this project?",
     "teamSupportTicketCreated": "Ticket {{number}} created.",
     "teamSupportTicketCreatedNoDescription": "Ticket {{number}} created, but its description couldn't be filled in. Add it in TeamSupport.",
+    "teamSupportCustomer": "TeamSupport Customer",
+    "customerHint": "Attached to the ticket when you create it from here.",
+    "teamSupportTicketCreatedNoCustomer": "Ticket {{number}} created, but its customer couldn't be attached. Add it in TeamSupport.",
+    "teamSupportTicketCreatedNoDescriptionOrCustomer": "Ticket {{number}} created, but its description and customer couldn't be added. Add them in TeamSupport.",
     "confirmDeleteProject": "Delete project \"{{name}}\"? This cannot be undone.",
     "deleteProject": "Delete project",
     "loadingSubProjects": "Loading sub-projects…",
@@ -431,5 +436,13 @@
     "newPassword": "New password",
     "confirmNewPassword": "Confirm new password",
     "passwordsDoNotMatch": "New password and confirmation don't match"
+  },
+  "customerPicker": {
+    "placeholder": "Search customers…",
+    "loading": "Loading customers…",
+    "unavailable": "Customers unavailable",
+    "clear": "No customer",
+    "noMatches": "No matching customers",
+    "typeToSearch": "Type to search TeamSupport customers"
   }
 }

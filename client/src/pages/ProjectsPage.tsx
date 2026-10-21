@@ -3,8 +3,10 @@ import { Link } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { api } from "../api/client";
-import type { ChecklistItem, ExtractedProjectDetails, Project, ProjectType, UserSummary } from "../api/types";
+import type { ChecklistItem, ExtractedProjectDetails, Project, ProjectType, TeamSupportCustomer, UserSummary } from "../api/types";
+import { TeamSupportCustomerPicker } from "../components/TeamSupportCustomerPicker";
 import { extractErrorMessage, useAuth } from "../context/AuthContext";
+import { ticketCreatedMessage } from "../utils/ticketMessage";
 
 type ProjectsView = "grid" | "list";
 const VIEW_STORAGE_KEY = "aurora-projects-view";
@@ -81,6 +83,7 @@ export function ProjectsPage() {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [teamSupportTicketNumber, setTeamSupportTicketNumber] = useState("");
+  const [customer, setCustomer] = useState<TeamSupportCustomer | null>(null);
   const [projectTypeId, setProjectTypeId] = useState("");
   const [checklistItemIds, setChecklistItemIds] = useState<string[]>([]);
   const [memberIds, setMemberIds] = useState<string[]>([]);
@@ -157,6 +160,8 @@ export function ProjectsPage() {
         name,
         description: description || undefined,
         teamSupportTicketNumber: teamSupportTicketNumber || undefined,
+        teamSupportCustomerId: customer?.id,
+        teamSupportCustomerName: customer?.name,
         projectTypeId,
         checklistItemIds,
         memberIds,
@@ -168,6 +173,7 @@ export function ProjectsPage() {
       setName("");
       setDescription("");
       setTeamSupportTicketNumber("");
+      setCustomer(null);
       setProjectTypeId("");
       setChecklistItemIds([]);
       setMemberIds([]);
@@ -184,19 +190,15 @@ export function ProjectsPage() {
   const [ticketMessage, setTicketMessage] = useState<{ text: string; isError: boolean } | null>(null);
   const createTicket = useMutation({
     mutationFn: () =>
-      api.post<{ ticketNumber: string; descriptionSet: boolean }>("/projects/teamsupport-ticket", {
+      api.post<{ ticketNumber: string; descriptionSet: boolean; customerSet: boolean | null }>("/projects/teamsupport-ticket", {
         name,
         description: description || undefined,
         assigneeId: assigneeId || undefined,
+        customerId: customer?.id,
       }),
-    onSuccess: ({ ticketNumber, descriptionSet }) => {
-      setTeamSupportTicketNumber(ticketNumber);
-      setTicketMessage({
-        text: t(descriptionSet ? "projectDetail.teamSupportTicketCreated" : "projectDetail.teamSupportTicketCreatedNoDescription", {
-          number: ticketNumber,
-        }),
-        isError: !descriptionSet,
-      });
+    onSuccess: (result) => {
+      setTeamSupportTicketNumber(result.ticketNumber);
+      setTicketMessage(ticketCreatedMessage(t, result));
     },
     onError: (err) => setTicketMessage({ text: extractErrorMessage(err), isError: true }),
   });
@@ -392,6 +394,13 @@ export function ProjectsPage() {
           <div className="field">
             <label htmlFor="description">{t("common.description")}</label>
             <textarea id="description" value={description} onChange={(e) => setDescription(e.target.value)} />
+          </div>
+          <div className="field">
+            <label>{t("projects.teamSupportCustomer")}</label>
+            <TeamSupportCustomerPicker value={customer} onChange={setCustomer} />
+            <p className="muted" style={{ fontSize: 12, marginTop: 6 }}>
+              {t("projectDetail.customerHint")}
+            </p>
           </div>
           <div className="field">
             <label htmlFor="teamSupportTicketNumber">{t("projects.teamSupportTicketNumber")}</label>

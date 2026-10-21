@@ -194,6 +194,10 @@ model Project {
   name                   String
   description            String?
   teamSupportTicketNumber String?
+  // The TeamSupport customer (organization) this project is for — picked from TeamSupport's own
+  // list, name kept alongside so the page doesn't need a TeamSupport call to show it.
+  teamSupportCustomerId   String?
+  teamSupportCustomerName String?
   projectTypeId          String
   projectType            ProjectType @relation(fields: [projectTypeId], references: [id])
   softwareLineId         String
