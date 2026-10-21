@@ -59,7 +59,8 @@
     "loggingIn": "Logging in…",
     "needAccess": "Need access?",
     "requestAnAccount": "Request an account",
-    "forgotPassword": "Forgot password?"
+    "forgotPassword": "Forgot password?",
+    "idleLogout": "You were signed out after 4 hours of inactivity."
   },
   "forgotPassword": {
     "title": "Forgot your password?",

@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from "react";
 import { Link, Navigate, useLocation, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { useAuth, extractErrorMessage } from "../context/AuthContext";
+import { useAuth, extractErrorMessage, IDLE_LOGOUT_NOTICE_KEY } from "../context/AuthContext";
 
 export function LoginPage() {
   const { t } = useTranslation();
@@ -15,6 +15,16 @@ export function LoginPage() {
   // Set by ResetPasswordPage's navigate() after a successful reset — a one-time confirmation
   // that the new password took effect, not persisted anywhere.
   const passwordResetDone = Boolean((location.state as { passwordResetDone?: boolean } | null)?.passwordResetDone);
+  // Set by AuthContext when the inactivity timeout signed the user out; shown once, then cleared.
+  const [idleLogout] = useState(() => {
+    try {
+      const flag = sessionStorage.getItem(IDLE_LOGOUT_NOTICE_KEY) === "1";
+      sessionStorage.removeItem(IDLE_LOGOUT_NOTICE_KEY);
+      return flag;
+    } catch {
+      return false;
+    }
+  });
 
   if (user) {
     return <Navigate to="/dashboard" replace />;
@@ -41,6 +51,7 @@ export function LoginPage() {
         <h1>{t("login.title")}</h1>
         <div className="subtitle">{t("login.subtitle")}</div>
         {passwordResetDone && <div className="success-text">{t("resetPassword.done")}</div>}
+        {idleLogout && <div className="muted">{t("login.idleLogout")}</div>}
         <form onSubmit={handleSubmit}>
           <div className="field">
             <label htmlFor="email">{t("common.email")}</label>

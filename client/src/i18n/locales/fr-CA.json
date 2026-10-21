@@ -59,7 +59,8 @@
     "loggingIn": "Connexion en cours…",
     "needAccess": "Besoin d'accès?",
     "requestAnAccount": "Demander un compte",
-    "forgotPassword": "Mot de passe oublié?"
+    "forgotPassword": "Mot de passe oublié?",
+    "idleLogout": "Vous avez été déconnecté après 4 heures d'inactivité."
   },
   "forgotPassword": {
     "title": "Mot de passe oublié?",

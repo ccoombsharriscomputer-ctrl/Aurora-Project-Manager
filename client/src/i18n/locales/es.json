@@ -59,7 +59,8 @@
     "loggingIn": "Iniciando sesión…",
     "needAccess": "¿Necesitas acceso?",
     "requestAnAccount": "Solicitar una cuenta",
-    "forgotPassword": "¿Olvidó su contraseña?"
+    "forgotPassword": "¿Olvidó su contraseña?",
+    "idleLogout": "Se cerró su sesión tras 4 horas de inactividad."
   },
   "forgotPassword": {
     "title": "¿Olvidó su contraseña?",
