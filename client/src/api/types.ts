@@ -146,6 +146,19 @@ export interface TeamSupportCustomer {
   name: string;
 }
 
+// preferred = belongs to the current software line (its name starts with the line's name).
+export interface TeamSupportProductOption {
+  id: string;
+  name: string;
+  preferred: boolean;
+}
+
+export interface TicketOptionsResponse {
+  defaultGroupName: string | null;
+  natures: string[];
+  products: TeamSupportProductOption[];
+}
+
 export interface AccessRequest {
   id: string;
   name: string;

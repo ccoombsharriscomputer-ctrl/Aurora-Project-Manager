@@ -452,5 +452,18 @@
     "clear": "No customer",
     "noMatches": "No matching customers",
     "typeToSearch": "Type to search TeamSupport customers"
+  },
+  "ticketOptions": {
+    "title": "New TeamSupport ticket",
+    "group": "Group",
+    "product": "Product (optional)",
+    "nature": "Nature (optional)",
+    "productPlaceholder": "Search products…",
+    "loading": "Loading products…",
+    "unavailable": "Products unavailable",
+    "clearProduct": "No product",
+    "noProductMatches": "No matching products",
+    "typeToSearchProducts": "Type to search all TeamSupport products",
+    "natureNone": "— Not set —"
   }
 }

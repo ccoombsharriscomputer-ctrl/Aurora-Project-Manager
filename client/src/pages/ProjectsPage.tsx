@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 import { api } from "../api/client";
 import type { ChecklistItem, ExtractedProjectDetails, Project, ProjectType, TeamSupportCustomer, UserSummary } from "../api/types";
 import { TeamSupportCustomerPicker } from "../components/TeamSupportCustomerPicker";
+import { TicketOptionsPanel, type TicketChoices } from "../components/TicketOptionsPanel";
 import { extractErrorMessage, useAuth } from "../context/AuthContext";
 import { ticketCreatedMessage } from "../utils/ticketMessage";
 
@@ -174,6 +175,7 @@ export function ProjectsPage() {
       setDescription("");
       setTeamSupportTicketNumber("");
       setCustomer(null);
+      setShowTicketOptions(false);
       setProjectTypeId("");
       setChecklistItemIds([]);
       setMemberIds([]);
@@ -188,15 +190,18 @@ export function ProjectsPage() {
   });
 
   const [ticketMessage, setTicketMessage] = useState<{ text: string; isError: boolean } | null>(null);
+  const [showTicketOptions, setShowTicketOptions] = useState(false);
   const createTicket = useMutation({
-    mutationFn: () =>
+    mutationFn: (choices: TicketChoices) =>
       api.post<{ ticketNumber: string; descriptionSet: boolean; customerSet: boolean | null }>("/projects/teamsupport-ticket", {
         name,
         description: description || undefined,
         assigneeId: assigneeId || undefined,
         customerId: customer?.id,
+        ...choices,
       }),
     onSuccess: (result) => {
+      setShowTicketOptions(false);
       setTeamSupportTicketNumber(result.ticketNumber);
       setTicketMessage(ticketCreatedMessage(t, result));
     },
@@ -410,22 +415,28 @@ export function ProjectsPage() {
               value={teamSupportTicketNumber}
               onChange={(e) => setTeamSupportTicketNumber(e.target.value)}
             />
-            {!teamSupportTicketNumber && (
+            {!teamSupportTicketNumber && !showTicketOptions && (
               <div style={{ marginTop: 6 }}>
                 <button
                   type="button"
                   className="btn"
-                  disabled={createTicket.isPending || !name.trim()}
+                  disabled={!name.trim()}
                   title={!name.trim() ? t("projects.createTicketNeedsName") : undefined}
                   onClick={() => {
-                    if (!window.confirm(t("projectDetail.confirmCreateTeamSupportTicket"))) return;
                     setTicketMessage(null);
-                    createTicket.mutate();
+                    setShowTicketOptions(true);
                   }}
                 >
-                  {createTicket.isPending ? t("projectDetail.creatingTeamSupportTicket") : t("projectDetail.createTeamSupportTicket")}
+                  {t("projectDetail.createTeamSupportTicket")}
                 </button>
               </div>
+            )}
+            {!teamSupportTicketNumber && showTicketOptions && (
+              <TicketOptionsPanel
+                pending={createTicket.isPending}
+                onCreate={(choices) => createTicket.mutate(choices)}
+                onCancel={() => setShowTicketOptions(false)}
+              />
             )}
             {ticketMessage && (
               <p className={ticketMessage.isError ? "error-text" : "muted"} style={{ fontSize: 12, marginTop: 6 }}>

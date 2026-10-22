@@ -238,15 +238,68 @@ export interface CreateTicketResult {
   customerSet: boolean | null;
 }
 
+// The Group every ticket created from the TRIO software line goes to ("TRIO Support", not one
+// of its L1/L2/SQL/Web lookalikes), captured from TeamSupport's group list 2026-10-22. Other
+// lines have no default and leave the group blank.
+const TRIO_SUPPORT_GROUP = { id: "30759", name: "TRIO Support" };
+
+export function defaultTicketGroup(softwareLineName: string): { id: string; name: string } | null {
+  return /^trio$/i.test(softwareLineName.trim()) ? TRIO_SUPPORT_GROUP : null;
+}
+
+// The choices in TeamSupport's custom "Nature" dropdown on tickets. There is no API for a
+// custom field's options, so this is every value found on the existing PS Projects tickets
+// (2026-10-22, most-used first) — if TeamSupport admins add or rename an option, update here.
+// TeamSupport accepts any text for it without checking, so a stale list can only hide a new
+// option, never break ticket creation.
+export const TICKET_NATURES = [
+  "Implementation",
+  "Upgrade",
+  "Other",
+  "Hosting Installation",
+  "Consulting and Training",
+  "Non-Billable Time",
+  "Post Go-Live Support",
+  "LAN Installation",
+  "DeliveryPoint Installation",
+  "Procedural",
+  "Installation/Configuration",
+  "TCP Installation",
+  "Discovery and Testing",
+  "Data Extraction Service",
+  "Hardware/Network Issue",
+  "Training",
+  "Assistance to PS",
+  "Administration",
+  "Data Conversion Issue",
+  "Bug",
+  "Data Issue",
+  "Training/Procedural",
+  "Performance Issue",
+  "Enhancement",
+  "Customer Relationship",
+  "Client Involvement",
+  "Gov Window Implementation/Support",
+  "Server Migration",
+] as const;
+
+export interface CreateTicketOptions {
+  // A TeamSupport UserID, sent on a best-effort basis like postTicketAction's creatorId.
+  assigneeUserId?: string | null;
+  // A TeamSupport customer (organization) ID.
+  customerId?: string | null;
+  groupId?: string | null;
+  productId?: string | null;
+  nature?: string | null;
+}
+
 // Creates a ticket (POST Tickets), attaches the customer, and fills in its description.
-// assigneeUserId is a TeamSupport UserID, sent on a best-effort basis like postTicketAction's
-// creatorId. customerId is a TeamSupport customer (organization) ID.
 export async function createTicket(
   name: string,
   description: string,
-  assigneeUserId?: string | null,
-  customerId?: string | null
+  options: CreateTicketOptions = {}
 ): Promise<CreateTicketResult> {
+  const { assigneeUserId, customerId, groupId, productId, nature } = options;
   const ticket: Record<string, unknown> = {
     Name: name,
     TicketTypeID: NEW_TICKET_TYPE_ID,
@@ -256,6 +309,11 @@ export async function createTicket(
   if (assigneeUserId) {
     ticket.UserID = assigneeUserId;
   }
+  // Group, Product and the custom Nature field are all plain fields on the create call —
+  // confirmed live 2026-10-22 (all three came back set on the new ticket).
+  if (groupId) ticket.GroupID = groupId;
+  if (productId) ticket.ProductID = productId;
+  if (nature) ticket.Nature = nature;
 
   const raw = await teamSupportRequest("/api/json/tickets", {
     method: "POST",
@@ -362,14 +420,51 @@ function extractCustomersPayload(raw: unknown): Record<string, unknown>[] {
 
 const CUSTOMER_PAGE_SIZE = 1000;
 const MAX_CUSTOMER_PAGES = 20;
-// The customer list is ~4,000 entries (5 slow API calls, ~25 seconds in all) and barely
-// changes, while every call counts against the daily TeamSupport quota — so it's kept in
-// memory and shared by every user rather than re-read on each search. Once it's older than
-// this, the next request still gets the old copy instantly while a fresh one loads behind it.
-const CUSTOMER_CACHE_MS = 6 * 60 * 60 * 1000;
-let customerCache: { at: number; customers: TeamSupportCustomer[] } | null = null;
-let customerFetch: Promise<TeamSupportCustomer[]> | null = null;
 
+// TeamSupport's lookup lists (customers, products) are big, barely change, and every call
+// counts against the daily quota — so each is kept in memory and shared by every user rather
+// than re-read on each search. Once a list is older than maxAgeMs, the next request still gets
+// the old copy instantly while a fresh one loads behind it, and the first read can be started
+// at server startup (warm) so nobody waits for it.
+function cachedList<T>(load: () => Promise<T[]>, maxAgeMs: number, label: string) {
+  let cache: { at: number; items: T[] } | null = null;
+  let inFlight: Promise<T[]> | null = null;
+
+  function refresh(): Promise<T[]> {
+    // Several people opening a picker at once share one read instead of each doing their own.
+    inFlight ??= load()
+      .then((items) => {
+        cache = { at: Date.now(), items };
+        return items;
+      })
+      .finally(() => {
+        inFlight = null;
+      });
+    return inFlight;
+  }
+
+  return {
+    async get(): Promise<T[]> {
+      if (!cache) return refresh();
+      if (Date.now() - cache.at >= maxAgeMs) {
+        refresh().catch((err) => {
+          console.error(`[teamSupport] ${label} refresh failed: ${err instanceof Error ? err.message : err}`);
+        });
+      }
+      return cache.items;
+    },
+    warm(): void {
+      if (!process.env.TEAMSUPPORT_ORG_ID || !process.env.TEAMSUPPORT_API_TOKEN) return;
+      refresh().catch((err) => {
+        console.error(`[teamSupport] couldn't pre-load the ${label}: ${err instanceof Error ? err.message : err}`);
+      });
+    },
+  };
+}
+
+const LIST_CACHE_MS = 6 * 60 * 60 * 1000;
+
+// ~4,000 entries over 5 slow API calls (about 25 seconds in all).
 async function loadAllCustomers(): Promise<TeamSupportCustomer[]> {
   const customers: TeamSupportCustomer[] = [];
   for (let page = 1; page <= MAX_CUSTOMER_PAGES; page++) {
@@ -386,35 +481,52 @@ async function loadAllCustomers(): Promise<TeamSupportCustomer[]> {
   return customers.sort((a, b) => a.name.localeCompare(b.name));
 }
 
-function refreshCustomers(): Promise<TeamSupportCustomer[]> {
-  // Several people opening the picker at once share one read instead of each doing their own.
-  customerFetch ??= loadAllCustomers()
-    .then((customers) => {
-      customerCache = { at: Date.now(), customers };
-      return customers;
-    })
-    .finally(() => {
-      customerFetch = null;
-    });
-  return customerFetch;
-}
+const customerList = cachedList(loadAllCustomers, LIST_CACHE_MS, "customer list");
 
 // For the searchable Customer picker on projects.
-export async function fetchTeamSupportCustomers(): Promise<TeamSupportCustomer[]> {
-  if (!customerCache) return refreshCustomers();
-  if (Date.now() - customerCache.at >= CUSTOMER_CACHE_MS) {
-    refreshCustomers().catch((err) => {
-      console.error(`[teamSupport] customer list refresh failed: ${err instanceof Error ? err.message : err}`);
-    });
-  }
-  return customerCache.customers;
+export const fetchTeamSupportCustomers = customerList.get;
+
+export interface TeamSupportProduct {
+  id: string;
+  name: string;
 }
 
-// Called once at startup so the first person to open the picker doesn't wait for the slow
-// first read. Quietly does nothing when TeamSupport isn't configured.
-export function warmTeamSupportCustomers(): void {
-  if (!process.env.TEAMSUPPORT_ORG_ID || !process.env.TEAMSUPPORT_API_TOKEN) return;
-  refreshCustomers().catch((err) => {
-    console.error(`[teamSupport] couldn't pre-load the customer list: ${err instanceof Error ? err.message : err}`);
-  });
+// TeamSupport returns names HTML-escaped ("Marshall &amp; Swift", "O&apos;Donnell").
+function decodeEntities(text: string): string {
+  return text
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&apos;|&#39;/g, "'");
+}
+
+// Every product across all of Harris's software lines (~830) comes back in a single call —
+// and only when called with no paging parameters: PageSize/PageNumber make this endpoint
+// return nothing at all (confirmed 2026-10-22).
+async function loadAllProducts(): Promise<TeamSupportProduct[]> {
+  const raw = await teamSupportRequest("/api/json/products");
+  const rows =
+    raw && typeof raw === "object" && Array.isArray((raw as Record<string, unknown>).Products)
+      ? ((raw as Record<string, unknown>).Products as Record<string, unknown>[])
+      : [];
+  const products: TeamSupportProduct[] = [];
+  for (const row of rows) {
+    const name = decodeEntities(String(row.Name ?? "").trim());
+    // The list has a few unnamed rows and import leftovers ("#N/A").
+    if (row.ID != null && name && name !== "#N/A") products.push({ id: String(row.ID), name });
+  }
+  return products.sort((a, b) => a.name.localeCompare(b.name));
+}
+
+const productList = cachedList(loadAllProducts, LIST_CACHE_MS, "product list");
+
+// For the Product choice when creating a ticket.
+export const fetchTeamSupportProducts = productList.get;
+
+// Called once at startup so the first person to open a picker doesn't wait for the slow first
+// read. Quietly does nothing when TeamSupport isn't configured.
+export function warmTeamSupportLists(): void {
+  customerList.warm();
+  productList.warm();
 }

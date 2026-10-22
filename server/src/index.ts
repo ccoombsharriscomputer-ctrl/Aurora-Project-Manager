@@ -23,12 +23,13 @@ import calendarRoutes from "./routes/calendar";
 import softwareLineRoutes from "./routes/softwareLines";
 import teamSupportUserRoutes from "./routes/teamSupportUsers";
 import teamSupportCustomerRoutes from "./routes/teamSupportCustomers";
+import teamSupportTicketOptionRoutes from "./routes/teamSupportTicketOptions";
 import teamSupportActionTypeRoutes from "./routes/teamSupportActionTypes";
 import notificationRoutes from "./routes/notifications";
 import followUpRoutes from "./routes/followUps";
 import { attachRealtime } from "./lib/realtime";
 import { startScheduler } from "./lib/scheduler";
-import { warmTeamSupportCustomers } from "./lib/teamSupport";
+import { warmTeamSupportLists } from "./lib/teamSupport";
 
 const app = express();
 const PORT = process.env.PORT ? Number(process.env.PORT) : 4000;
@@ -60,6 +61,7 @@ app.use("/api/calendar", calendarRoutes);
 app.use("/api/software-lines", softwareLineRoutes);
 app.use("/api/teamsupport-users", teamSupportUserRoutes);
 app.use("/api/teamsupport-customers", teamSupportCustomerRoutes);
+app.use("/api/teamsupport-ticket-options", teamSupportTicketOptionRoutes);
 app.use("/api/teamsupport-action-types", teamSupportActionTypeRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/follow-ups", followUpRoutes);
@@ -85,7 +87,7 @@ attachRealtime(server);
 
 server.listen(PORT, () => {
   console.log(`Aurora Project Manager API listening on http://localhost:${PORT}`);
-  warmTeamSupportCustomers();
+  warmTeamSupportLists();
   // Started after the port is bound, not before, so its startup upsert can't delay Azure's
   // health check. startScheduler() shouldn't ever reject (see its own internal handling), but
   // .catch() here is a deliberate second layer: an unhandled rejection here is fatal to the

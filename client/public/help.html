@@ -990,11 +990,21 @@
         </p>
         <p>
           If a project doesn't have a ticket yet, click <strong>Create TeamSupport ticket</strong> next to the ticket
-          number field (Read Only accounts don't see it). After you confirm, Aurora creates a new ticket in
-          TeamSupport and fills in the ticket # for you. The ticket's title is the project name, and its description
+          number field (Read Only accounts don't see it). A small panel opens where you can pick the ticket's
+          <strong>Product</strong> and <strong>Nature</strong> (both optional); click <strong>Create ticket</strong>
+          there and Aurora creates the ticket in TeamSupport and fills in the ticket # for you. The ticket's title is the project name, and its description
           is the project description plus a line saying who created it. It's created as a <em>PS Projects</em> ticket
           with status <em>Not Started</em> and severity <em>Normal</em>. If the ticket is created but its description
           or customer can't be added, Aurora tells you so and keeps the ticket linked.
+        </p>
+        <p>
+          <strong>Group:</strong> tickets created in the TRIO environment go to the <em>TRIO Support</em> group
+          automatically (the panel shows it); other environments leave the group blank for now.
+          <strong>Product:</strong> start typing to search every TeamSupport product, or open the box empty to see your
+          environment's own products (in TRIO, the ones named "TRIO …") first.
+          <strong>Nature:</strong> choose from the list of options TeamSupport uses on these tickets. That list is kept
+          inside Aurora, so if TeamSupport gets a new Nature option it won't appear here until Aurora is updated, but you
+          can always change it in TeamSupport.
         </p>
         <p>
           Projects have a searchable <strong>TeamSupport Customer</strong> field, on the project page and on the
@@ -1007,7 +1017,7 @@
         <p>
           The same button is on the <strong>New project</strong> form, under the ticket # field. Fill in at least the
           project name first (it becomes the ticket's title); the description is used too. The new ticket's number
-          drops into the field. The ticket is created the moment you click, so
+          drops into the field. The ticket is created the moment you click <strong>Create ticket</strong> in the panel, so
           if you then close the form without creating the project, the ticket stays in TeamSupport and has to be
           deleted there.
         </p>

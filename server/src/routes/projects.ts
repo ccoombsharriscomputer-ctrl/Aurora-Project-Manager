@@ -11,10 +11,12 @@ import { loadProjectInScope, userHasLineAccess } from "../lib/scope";
 import { extractProjectDetailsFromContract, extractTextFromPdf } from "../lib/contractExtraction";
 import {
   createTicket,
+  defaultTicketGroup,
   fetchTicketByNumber,
   TeamSupportNotConfiguredError,
   TeamSupportTicketNotFoundError,
   TeamSupportUpstreamError,
+  TICKET_NATURES,
 } from "../lib/teamSupport";
 
 const router = Router();
@@ -320,7 +322,15 @@ function respondTeamSupportError(res: Response, err: unknown, ticketNumber?: str
 // and calls TeamSupport.
 async function createTicketForUser(
   user: { id: string; name: string },
-  ticket: { lineId: string; name: string; description?: string | null; assigneeId?: string | null; customerId?: string | null }
+  ticket: {
+    lineId: string;
+    name: string;
+    description?: string | null;
+    assigneeId?: string | null;
+    customerId?: string | null;
+    productId?: string | null;
+    nature?: string | null;
+  }
 ) {
   const [softwareLine, assignee, creator] = await Promise.all([
     prisma.softwareLine.findUnique({ where: { id: ticket.lineId }, select: { name: true } }),
@@ -332,7 +342,14 @@ async function createTicketForUser(
     .filter(Boolean)
     .join("\n\n");
 
-  return createTicket(ticket.name, description, assignee?.teamSupportUserId ?? creator?.teamSupportUserId, ticket.customerId);
+  return createTicket(ticket.name, description, {
+    assigneeUserId: assignee?.teamSupportUserId ?? creator?.teamSupportUserId,
+    customerId: ticket.customerId,
+    // Tickets from the TRIO line go to the TRIO Support group; other lines leave it blank.
+    groupId: defaultTicketGroup(softwareLine?.name ?? "")?.id,
+    productId: ticket.productId,
+    nature: ticket.nature,
+  });
 }
 
 const createTicketSchema = z.object({
@@ -340,6 +357,15 @@ const createTicketSchema = z.object({
   description: z.string().max(2000).optional(),
   assigneeId: z.string().min(1).optional(),
   customerId: z.string().min(1).max(50).optional(),
+  productId: z.string().min(1).max(50).optional(),
+  nature: z.enum(TICKET_NATURES).optional(),
+});
+
+// Chosen in the create-ticket panel on the project page (the new-project form sends them in the
+// body above instead, since it has no project yet).
+const createTicketChoicesSchema = z.object({
+  productId: z.string().min(1).max(50).optional(),
+  nature: z.enum(TICKET_NATURES).optional(),
 });
 
 // For the new-project form: creates the ticket before the project exists, so the form can
@@ -371,6 +397,11 @@ router.post("/:id/teamsupport-ticket", blockReadOnly, async (req, res) => {
     return res.status(409).json({ error: `This project is already linked to ticket ${project.teamSupportTicketNumber}.` });
   }
 
+  const choices = createTicketChoicesSchema.safeParse(req.body ?? {});
+  if (!choices.success) {
+    return res.status(400).json({ error: choices.error.issues[0].message });
+  }
+
   try {
     const { ticketNumber, descriptionSet, customerSet } = await createTicketForUser(req.user!, {
       lineId: project.softwareLineId,
@@ -378,6 +409,7 @@ router.post("/:id/teamsupport-ticket", blockReadOnly, async (req, res) => {
       description: project.description,
       assigneeId: project.assigneeId,
       customerId: project.teamSupportCustomerId,
+      ...choices.data,
     });
     await prisma.project.update({ where: { id: project.id }, data: { teamSupportTicketNumber: ticketNumber } });
     await logActivity({

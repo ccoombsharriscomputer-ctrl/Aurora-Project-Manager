@@ -452,5 +452,18 @@
     "clear": "Aucun client",
     "noMatches": "Aucun client correspondant",
     "typeToSearch": "Tapez pour rechercher des clients TeamSupport"
+  },
+  "ticketOptions": {
+    "title": "Nouveau billet TeamSupport",
+    "group": "Groupe",
+    "product": "Produit (facultatif)",
+    "nature": "Nature (facultatif)",
+    "productPlaceholder": "Rechercher des produits…",
+    "loading": "Chargement des produits…",
+    "unavailable": "Produits non disponibles",
+    "clearProduct": "Aucun produit",
+    "noProductMatches": "Aucun produit correspondant",
+    "typeToSearchProducts": "Tapez pour rechercher parmi tous les produits TeamSupport",
+    "natureNone": "— Non défini —"
   }
 }

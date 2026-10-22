@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 import { api } from "../api/client";
 import type { Attachment, ChecklistItem, Project, ProjectFollowUp, SubProject, TeamSupportTicketResponse, UserSummary } from "../api/types";
 import { TeamSupportCustomerPicker } from "../components/TeamSupportCustomerPicker";
+import { TicketOptionsPanel, type TicketChoices } from "../components/TicketOptionsPanel";
 import { extractErrorMessage, useAuth } from "../context/AuthContext";
 import { useOpenTabs } from "../context/OpenTabsContext";
 import { formatDueDate } from "../utils/format";
@@ -396,10 +397,12 @@ export function ProjectDetailPage() {
   });
 
   const [ticketMessage, setTicketMessage] = useState<{ text: string; isError: boolean } | null>(null);
+  const [showTicketOptions, setShowTicketOptions] = useState(false);
   const createTicket = useMutation({
-    mutationFn: () =>
-      api.post<{ ticketNumber: string; descriptionSet: boolean; customerSet: boolean | null }>(`/projects/${projectId}/teamsupport-ticket`, {}),
+    mutationFn: (choices: TicketChoices) =>
+      api.post<{ ticketNumber: string; descriptionSet: boolean; customerSet: boolean | null }>(`/projects/${projectId}/teamsupport-ticket`, choices),
     onSuccess: (result) => {
+      setShowTicketOptions(false);
       queryClient.invalidateQueries({ queryKey: ["project", projectId] });
       queryClient.invalidateQueries({ queryKey: ["projects"] });
       queryClient.invalidateQueries({ queryKey: ["project-teamsupport-ticket", projectId] });
@@ -534,20 +537,25 @@ export function ProjectDetailPage() {
             ) : (
               <span>{project.teamSupportTicketNumber || "—"}</span>
             )}
-            {canWrite && !project.teamSupportTicketNumber && (
+            {canWrite && !project.teamSupportTicketNumber && !showTicketOptions && (
               <button
                 className="btn"
-                disabled={createTicket.isPending}
                 onClick={() => {
-                  if (!window.confirm(t("projectDetail.confirmCreateTeamSupportTicket"))) return;
                   setTicketMessage(null);
-                  createTicket.mutate();
+                  setShowTicketOptions(true);
                 }}
               >
-                {createTicket.isPending ? t("projectDetail.creatingTeamSupportTicket") : t("projectDetail.createTeamSupportTicket")}
+                {t("projectDetail.createTeamSupportTicket")}
               </button>
             )}
           </div>
+          {canWrite && !project.teamSupportTicketNumber && showTicketOptions && (
+            <TicketOptionsPanel
+              pending={createTicket.isPending}
+              onCreate={(choices) => createTicket.mutate(choices)}
+              onCancel={() => setShowTicketOptions(false)}
+            />
+          )}
           <div className="gap-8" style={{ marginTop: 8 }}>
             <label style={{ margin: 0 }}>{t("projectDetail.teamSupportCustomer")}</label>
             {canWrite ? (
