@@ -441,7 +441,7 @@ export function ProjectDetailPage() {
 
   return (
     <div>
-      <div className="page-header">
+      <div className="page-header page-header-plain">
         <div>
           {editing ? (
             <form

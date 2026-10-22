@@ -78,6 +78,12 @@ enum AccentColor {
   ORANGE
   RED
   TEAL
+  INDIGO
+  PINK
+  CYAN
+  GOLD
+  LIME
+  GRAPHITE
 }
 
 enum Locale {

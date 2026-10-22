@@ -3,7 +3,7 @@ export type ProjectMemberRole = "OWNER" | "MEMBER";
 export type TaskStatus = "TODO" | "IN_PROGRESS" | "DONE" | "NA";
 export type TaskPriority = "LOW" | "MEDIUM" | "HIGH";
 export type ThemeMode = "LIGHT" | "DARK" | "SYSTEM";
-export type AccentColor = "BLUE" | "GREEN" | "PURPLE" | "ORANGE" | "RED" | "TEAL";
+export type AccentColor = "BLUE" | "GREEN" | "PURPLE" | "ORANGE" | "RED" | "TEAL" | "INDIGO" | "PINK" | "CYAN" | "GOLD" | "LIME" | "GRAPHITE";
 export type Locale = "EN" | "ES" | "FR_CA";
 export type ActivityType =
   | "PROJECT_CREATED"
@@ -71,9 +71,15 @@ export type DashboardWidgetKey = (typeof DASHBOARD_WIDGET_KEYS)[number];
 export const DASHBOARD_WIDGET_SIZES = ["S", "M", "L"] as const;
 export type DashboardWidgetSize = (typeof DASHBOARD_WIDGET_SIZES)[number];
 
+// x/y/w/h place the card on the Dashboard's 12-column grid once it's been dragged or resized;
+// older saved entries have only a size and get laid out automatically (see utils/dashboardGrid).
 export interface DashboardWidgetEntry {
   key: DashboardWidgetKey;
   size: DashboardWidgetSize;
+  x?: number;
+  y?: number;
+  w?: number;
+  h?: number;
 }
 
 // Every widget is open to every role today — the Dashboard has never had an admin-only

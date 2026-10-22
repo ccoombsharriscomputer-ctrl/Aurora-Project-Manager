@@ -1,5 +1,5 @@
 :root {
-  --bg: #f4f6f8;
+  --bg: #f1f3fa;
   --surface: #ffffff;
   --border: #e1e5ea;
   --text: #1a2233;
@@ -10,8 +10,14 @@
   --todo-bg: #eef1f6;
   --progress-bg: #fff4e0;
   --done-bg: #e6f6ec;
-  --radius: 8px;
-  --shadow: 0 1px 2px rgba(20, 24, 40, 0.06), 0 1px 3px rgba(20, 24, 40, 0.08);
+  --radius: 10px;
+  --radius-lg: 16px;
+  --shadow: 0 6px 20px rgba(30, 30, 80, 0.08);
+  /* Gradients run from the accent color to its partner color (--accent-end, set per accent
+     preset below), so changing the accent in Settings recolors the whole look. They use the accent itself, not
+     --primary, because in dark mode --primary is lightened and white text on it loses contrast. */
+  --accent-end: #7c3aed;
+  --gradient-end: var(--accent-end);
   --accent-color: #3457d5;
   --primary: var(--accent-color, #3457d5);
   --primary-hover: color-mix(in srgb, var(--primary) 85%, black);
@@ -62,21 +68,51 @@
 /* Accent color presets — pick a single hue; hover shade is derived automatically above. */
 :root[data-accent="blue"] {
   --accent-color: #3457d5;
+  --accent-end: #7c3aed;
 }
 :root[data-accent="green"] {
   --accent-color: #1f9d55;
+  --accent-end: #0d9488;
 }
 :root[data-accent="purple"] {
   --accent-color: #7c3aed;
+  --accent-end: #db2777;
 }
 :root[data-accent="orange"] {
   --accent-color: #d97706;
+  --accent-end: #dc2626;
 }
 :root[data-accent="red"] {
   --accent-color: #d64545;
+  --accent-end: #ea580c;
 }
 :root[data-accent="teal"] {
   --accent-color: #0d9488;
+  --accent-end: #2563eb;
+}
+:root[data-accent="indigo"] {
+  --accent-color: #4f46e5;
+  --accent-end: #9333ea;
+}
+:root[data-accent="pink"] {
+  --accent-color: #db2777;
+  --accent-end: #8b5cf6;
+}
+:root[data-accent="cyan"] {
+  --accent-color: #0891b2;
+  --accent-end: #2563eb;
+}
+:root[data-accent="gold"] {
+  --accent-color: #b7791f;
+  --accent-end: #dc2626;
+}
+:root[data-accent="lime"] {
+  --accent-color: #4d7c0f;
+  --accent-end: #0d9488;
+}
+:root[data-accent="graphite"] {
+  --accent-color: #475569;
+  --accent-end: #6366f1;
 }
 
 * {
@@ -121,9 +157,16 @@ select {
   flex-shrink: 0;
   height: 100vh;
   overflow-y: auto;
-  background: var(--surface);
-  border-right: 1px solid var(--border);
-  padding: 20px 16px;
+  /* Dark in both light and dark mode, tinted by the accent color. */
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--accent-color) 22%, #10122b) 0%,
+    color-mix(in srgb, var(--accent-color) 48%, #10122b) 100%
+  );
+  color: #e8e9ff;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.3) transparent;
+  padding: 20px 14px;
   display: flex;
   flex-direction: column;
   gap: 4px;
@@ -133,10 +176,11 @@ select {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-weight: 700;
+  font-weight: 800;
   font-size: 18px;
   margin-bottom: 8px;
   padding: 0 8px;
+  color: #fff;
 }
 
 .sidebar-brand-logo {
@@ -152,8 +196,8 @@ select {
   font-size: 12px;
   font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.03em;
-  color: var(--muted);
+  letter-spacing: 0.08em;
+  color: rgba(232, 233, 255, 0.6);
 }
 
 .sidebar-line-select {
@@ -162,31 +206,45 @@ select {
   font-size: 13px;
   font-weight: 600;
   padding: 6px 8px;
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.2);
+  color: #fff;
+}
+
+.sidebar-line-select option {
+  color: #1a2233;
 }
 
 .sidebar-link {
-  padding: 9px 10px;
+  padding: 10px 12px;
   border-radius: var(--radius);
-  color: var(--text);
+  color: #e8e9ff;
   font-size: 14px;
-  font-weight: 500;
+  font-weight: 600;
 }
 
 .sidebar-link:hover {
-  background: var(--bg);
+  background: rgba(255, 255, 255, 0.1);
 }
 
 .sidebar-link.active {
-  background: var(--primary);
+  background: linear-gradient(90deg, var(--accent-color), var(--gradient-end));
   color: white;
+  box-shadow: 0 6px 16px color-mix(in srgb, var(--accent-color) 45%, transparent);
 }
 
 .sidebar-footer {
   margin-top: auto;
   padding-top: 12px;
-  border-top: 1px solid var(--border);
+  border-top: 1px solid rgba(255, 255, 255, 0.15);
   font-size: 13px;
-  color: var(--muted);
+  color: rgba(232, 233, 255, 0.7);
+}
+
+.sidebar-footer .btn {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.25);
+  color: #fff;
 }
 
 .main-content {
@@ -264,24 +322,122 @@ select {
   background: var(--border);
 }
 
+/* The page title as a full-width gradient banner. It pulls up and out over .main-content's own
+   padding so it runs edge to edge (when the open-project tab bar is showing, it already sits
+   below the bar, so it only bleeds sideways). Pages whose header holds a form or editable
+   fields use .page-header-plain instead — those need a normal background to stay readable. */
 .page-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 20px;
+  margin: -28px -36px 24px;
+  padding: 28px 36px 30px;
   gap: 12px;
   flex-wrap: wrap;
+  background: linear-gradient(120deg, var(--accent-color) 0%, var(--gradient-end) 100%);
+  color: #fff;
+}
+
+.project-tab-bar + div > .page-header {
+  margin-top: 0;
 }
 
 .page-header h1 {
-  font-size: 22px;
+  font-size: 26px;
+  letter-spacing: -0.01em;
   margin: 0;
+}
+
+/* On the banner a plain button is a translucent outline, and the primary one (the main action,
+   or the selected one of a pair like Grid/List) is solid white. */
+.page-header .btn {
+  background: rgba(255, 255, 255, 0.18);
+  border-color: rgba(255, 255, 255, 0.55);
+  color: #fff;
+  font-weight: 600;
+}
+
+.page-header .btn:hover {
+  background: rgba(255, 255, 255, 0.3);
+  border-color: #fff;
+}
+
+.page-header .btn-primary {
+  background: #fff;
+  border-color: transparent;
+  color: var(--primary);
+  font-weight: 700;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.18);
+}
+
+.page-header .btn-primary:hover {
+  background: #fff;
+  border-color: transparent;
+}
+
+.page-header label {
+  color: rgba(255, 255, 255, 0.92);
+}
+
+/* Dashboard only: the cards under the banner ride up over its bottom edge. */
+.page-header-overlap {
+  margin-bottom: -26px;
+  padding-bottom: 56px;
+}
+
+.page-header-overlap ~ * {
+  position: relative;
+}
+
+.page-header.page-header-plain {
+  margin: 0 0 20px;
+  padding: 0;
+  background: none;
+  color: inherit;
+}
+
+.page-header-plain h1 {
+  font-size: 22px;
+}
+
+.page-header-plain .btn {
+  background: var(--surface);
+  border-color: var(--border);
+  color: var(--text);
+  font-weight: 500;
+  box-shadow: none;
+}
+
+.page-header-plain .btn:hover {
+  background: var(--surface);
+  border-color: var(--primary);
+}
+
+.page-header-plain .btn-primary {
+  background: linear-gradient(90deg, var(--accent-color), var(--gradient-end));
+  border-color: transparent;
+  color: white;
+  box-shadow: none;
+}
+
+.page-header-plain .btn-primary:hover {
+  background: linear-gradient(90deg, color-mix(in srgb, var(--accent-color) 85%, black), var(--gradient-end));
+  border-color: transparent;
+}
+
+.page-header-plain label {
+  color: var(--muted);
+}
+
+.page-header-plain .btn-danger {
+  color: var(--danger);
+  border-color: var(--danger);
 }
 
 .card {
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: var(--radius);
+  border-radius: var(--radius-lg);
   box-shadow: var(--shadow);
   padding: 18px;
 }
@@ -310,14 +466,14 @@ select {
 }
 
 .btn-primary {
-  background: var(--primary);
-  border-color: var(--primary);
+  background: linear-gradient(90deg, var(--accent-color), var(--gradient-end));
+  border-color: transparent;
   color: white;
 }
 
 .btn-primary:hover {
-  background: var(--primary-hover);
-  border-color: var(--primary-hover);
+  background: linear-gradient(90deg, color-mix(in srgb, var(--accent-color) 85%, black), var(--gradient-end));
+  border-color: transparent;
 }
 
 .btn-danger {
@@ -389,27 +545,39 @@ label {
 
 .stat-tile {
   display: block;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 16px;
-  color: inherit;
-  transition: border-color 0.15s ease;
+  background: linear-gradient(135deg, var(--accent-color), var(--gradient-end));
+  border-radius: var(--radius-lg);
+  padding: 18px 20px;
+  color: #fff;
+  box-shadow: 0 10px 22px rgba(30, 30, 80, 0.16);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
 
 .stat-tile:hover {
-  border-color: var(--primary);
+  transform: translateY(-2px);
+  box-shadow: 0 14px 28px rgba(30, 30, 80, 0.22);
+}
+
+/* Each kind of number gets its own color (see StatTile's tone in DashboardPage). */
+.stat-tile-green {
+  background: linear-gradient(135deg, #10b981, #14b8a6);
+}
+
+.stat-tile-orange {
+  background: linear-gradient(135deg, #f59e0b, #f97316);
 }
 
 .stat-tile .value {
-  font-size: 28px;
-  font-weight: 700;
+  font-size: 34px;
+  font-weight: 800;
+  line-height: 1.1;
 }
 
 .stat-tile .label {
-  color: var(--muted);
+  color: rgba(255, 255, 255, 0.92);
+  font-weight: 600;
   font-size: 13px;
-  margin-top: 2px;
+  margin-top: 6px;
 }
 
 /* Small/large variants of a stat tile, used when a stat tile widget's size is set to S or L
@@ -430,43 +598,103 @@ label {
   padding: 22px;
 }
 
-/* The Dashboard's customizable widgets — a 6-column span grid so each widget's chosen size
-   (see dashboardWidgets.ts) becomes a fraction of a row instead of always stacking full width.
-   Items wrap to the next row automatically; a span wider than the grid's own column count (as
-   happens once the breakpoints below narrow it) is simply clamped to the full row by the
-   browser, so no extra override is needed for that case. */
-.dashboard-widget-grid {
-  display: grid;
-  grid-template-columns: repeat(6, 1fr);
-  gap: 20px;
+/* The Dashboard's cards sit on a free grid (see DashboardGrid.tsx). Each card fills its grid
+   cell and scrolls inside it if the cell is smaller than its content, so shrinking a card never
+   spills over its neighbours. */
+.dash-cell-inner {
+  position: relative;
+  height: 100%;
 }
 
-.dashboard-widget-grid > * {
-  min-width: 0;
+.dash-cell-inner > .card,
+.dash-cell-inner > .stat-tile {
+  height: 100%;
+  overflow: auto;
 }
 
-.dashboard-widget-S {
-  grid-column: span 2;
+.dashboard-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
 }
 
-.dashboard-widget-M {
-  grid-column: span 3;
+/* Rearranging: a dashed outline, a title bar to drag by, and a visible corner to resize from. */
+.dash-cell.editing .dash-cell-inner {
+  border-radius: var(--radius-lg);
+  outline: 2px dashed color-mix(in srgb, var(--primary) 60%, transparent);
+  outline-offset: 2px;
 }
 
-.dashboard-widget-L {
-  grid-column: span 6;
+.dash-cell.editing .dash-cell-inner > .card,
+.dash-cell.editing .dash-cell-inner > .stat-tile {
+  padding-top: 38px;
+  pointer-events: none;
 }
 
-@media (max-width: 900px) {
-  .dashboard-widget-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
+.dash-edit-bar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 30px;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 10px;
+  background: rgba(16, 18, 43, 0.72);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  cursor: grab;
+  user-select: none;
 }
 
-@media (max-width: 560px) {
-  .dashboard-widget-grid {
-    grid-template-columns: 1fr;
-  }
+.dash-edit-bar:active {
+  cursor: grabbing;
+}
+
+.dash-hide {
+  border: none;
+  background: rgba(255, 255, 255, 0.18);
+  color: #fff;
+  border-radius: 6px;
+  width: 22px;
+  height: 22px;
+  cursor: pointer;
+  line-height: 1;
+}
+
+.dash-hide:hover {
+  background: rgba(255, 255, 255, 0.35);
+}
+
+.dash-cell.editing .react-resizable-handle {
+  z-index: 6;
+  width: 22px;
+  height: 22px;
+  right: 2px;
+  bottom: 2px;
+  background: none;
+  cursor: se-resize;
+}
+
+.dash-cell.editing .react-resizable-handle::after {
+  content: "";
+  position: absolute;
+  right: 5px;
+  bottom: 5px;
+  width: 11px;
+  height: 11px;
+  border-right: 3px solid var(--primary);
+  border-bottom: 3px solid var(--primary);
+  border-radius: 0 0 4px 0;
+}
+
+.react-grid-item.react-grid-placeholder {
+  background: var(--primary);
+  border-radius: var(--radius-lg);
 }
 
 .dashboard-grid {
@@ -507,16 +735,16 @@ label {
 }
 
 .progress-bar-track {
-  height: 8px;
+  height: 9px;
   background: var(--bg);
-  border-radius: 4px;
+  border-radius: 999px;
   overflow: hidden;
 }
 
 .progress-bar-fill {
   height: 100%;
-  background: var(--primary);
-  border-radius: 4px;
+  background: linear-gradient(90deg, var(--accent-color), var(--gradient-end));
+  border-radius: 999px;
 }
 
 .activity-list {

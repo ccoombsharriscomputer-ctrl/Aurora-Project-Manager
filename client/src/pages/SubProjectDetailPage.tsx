@@ -252,7 +252,7 @@ export function SubProjectDetailPage() {
 
   return (
     <div>
-      <div className="page-header">
+      <div className="page-header page-header-plain">
         <div>
           <Link to={`/projects/${projectId ?? subProject.project.id}`} className="muted">
             ← {subProject.project.name}

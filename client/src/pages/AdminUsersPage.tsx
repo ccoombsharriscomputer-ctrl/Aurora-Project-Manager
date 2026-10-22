@@ -495,7 +495,7 @@ export function AdminUsersPage() {
 
   return (
     <div>
-      <div className="page-header">
+      <div className="page-header page-header-plain">
         <h1>{t("layout.users")}</h1>
         <CreateUserForm prefill={prefill} softwareLines={softwareLines ?? []} onDone={() => setPrefill(null)} />
       </div>

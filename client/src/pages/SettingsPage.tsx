@@ -5,7 +5,7 @@ import { api } from "../api/client";
 import type { AccentColor, CurrentUser, Locale, ThemeMode } from "../api/types";
 import { extractErrorMessage, useAuth } from "../context/AuthContext";
 
-const ACCENT_COLORS: AccentColor[] = ["BLUE", "GREEN", "PURPLE", "ORANGE", "RED", "TEAL"];
+const ACCENT_COLORS: AccentColor[] = ["BLUE", "GREEN", "PURPLE", "ORANGE", "RED", "TEAL", "INDIGO", "PINK", "CYAN", "GOLD", "LIME", "GRAPHITE"];
 const ACCENT_SWATCH_COLOR: Record<AccentColor, string> = {
   BLUE: "#3457d5",
   GREEN: "#1f9d55",
@@ -13,6 +13,12 @@ const ACCENT_SWATCH_COLOR: Record<AccentColor, string> = {
   ORANGE: "#d97706",
   RED: "#d64545",
   TEAL: "#0d9488",
+  INDIGO: "#4f46e5",
+  PINK: "#db2777",
+  CYAN: "#0891b2",
+  GOLD: "#b7791f",
+  LIME: "#4d7c0f",
+  GRAPHITE: "#475569",
 };
 
 function ChangePasswordCard() {
@@ -126,7 +132,7 @@ export function SettingsPage() {
         </div>
 
         <div className="section-title">{t("settings.accentColor")}</div>
-        <div className="gap-8" style={{ marginBottom: 20 }}>
+        <div className="gap-8" style={{ marginBottom: 20, flexWrap: "wrap" }}>
           {ACCENT_COLORS.map((color) => (
             <button
               key={color}

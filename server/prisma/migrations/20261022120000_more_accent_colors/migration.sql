@@ -1,0 +1,7 @@
+-- AlterEnum
+ALTER TYPE "AccentColor" ADD VALUE 'INDIGO';
+ALTER TYPE "AccentColor" ADD VALUE 'PINK';
+ALTER TYPE "AccentColor" ADD VALUE 'CYAN';
+ALTER TYPE "AccentColor" ADD VALUE 'GOLD';
+ALTER TYPE "AccentColor" ADD VALUE 'LIME';
+ALTER TYPE "AccentColor" ADD VALUE 'GRAPHITE';

@@ -1,15 +1,25 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { api } from "../api/client";
-import type { Activity, DashboardSummary, DashboardWidgetKey, DashboardWidgetSize, HoursLoggedResponse } from "../api/types";
-import { DASHBOARD_COLLAPSED_COUNT_BY_SIZE } from "../api/types";
+import type {
+  Activity,
+  CurrentUser,
+  DashboardSummary,
+  DashboardWidgetEntry,
+  DashboardWidgetKey,
+  DashboardWidgetSize,
+  HoursLoggedResponse,
+} from "../api/types";
+import { DASHBOARD_COLLAPSED_COUNT_BY_SIZE, widgetsAllowedForRole } from "../api/types";
 import { formatDueDate, formatElapsed, formatRelativeTime } from "../utils/format";
 import { useActiveTimer } from "../hooks/useActiveTimer";
 import { useAuth } from "../context/AuthContext";
 import { DeadlinesCalendar } from "../components/DeadlinesCalendar";
-import { CustomizeDashboardPanel } from "../components/CustomizeDashboardPanel";
+import { DashboardEditBar } from "../components/DashboardEditBar";
+import { DashboardGrid } from "../components/DashboardGrid";
+import { entriesFromLayout, newEntry, placeEntries, sameLayout } from "../utils/dashboardGrid";
 import { HOURS_LOGGED_TITLE_KEY, periodRange, startOfDay, type ViewMode } from "../utils/calendarPeriod";
 
 function TimerBanner() {
@@ -41,9 +51,21 @@ function TimerBanner() {
   );
 }
 
-function StatTile({ to, value, label, size }: { to: string; value: ReactNode; label: string; size: DashboardWidgetSize }) {
+function StatTile({
+  to,
+  value,
+  label,
+  size,
+  tone,
+}: {
+  to: string;
+  value: ReactNode;
+  label: string;
+  size: DashboardWidgetSize;
+  tone?: "green" | "orange";
+}) {
   return (
-    <Link to={to} className={`stat-tile${size !== "M" ? ` stat-tile-${size}` : ""}`}>
+    <Link to={to} className={`stat-tile${size !== "M" ? ` stat-tile-${size}` : ""}${tone ? ` stat-tile-${tone}` : ""}`}>
       <div className="value">{value}</div>
       <div className="label">{label}</div>
     </Link>
@@ -162,8 +184,11 @@ function MyTasks({ tasks, size }: { tasks: DashboardSummary["myTasks"]; size: Da
 
 export function DashboardPage() {
   const { t } = useTranslation();
-  const { user } = useAuth();
-  const [customizing, setCustomizing] = useState(false);
+  const { user, updateUser } = useAuth();
+  const queryClient = useQueryClient();
+  // While rearranging, edits go to this working copy; nothing is saved until Save.
+  const [draft, setDraft] = useState<DashboardWidgetEntry[] | null>(null);
+  const customizing = draft !== null;
   const { data, isLoading } = useQuery({
     queryKey: ["dashboard"],
     queryFn: () => api.get<DashboardSummary>("/dashboard/summary"),
@@ -182,6 +207,15 @@ export function DashboardPage() {
         `/dashboard/hours-logged?start=${encodeURIComponent(start.toISOString())}&end=${encodeURIComponent(end.toISOString())}`
       ),
     refetchInterval: 15000,
+  });
+
+  const saveLayout = useMutation({
+    mutationFn: (layout: DashboardWidgetEntry[] | null) => api.patch<CurrentUser>("/auth/me", { dashboardLayout: layout }),
+    onSuccess: (updated) => {
+      updateUser(updated);
+      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+      setDraft(null);
+    },
   });
 
   if (isLoading || !data) {
@@ -205,6 +239,7 @@ export function DashboardPage() {
             value={data!.tasksCompletedThisWeek}
             label={t("dashboard.completedThisWeek")}
             size={size}
+            tone="green"
           />
         );
       case "hoursLogged":
@@ -214,6 +249,7 @@ export function DashboardPage() {
             value={`${hoursLogged?.hours ?? 0}h`}
             label={t(HOURS_LOGGED_TITLE_KEY[calendarView])}
             size={size}
+            tone="orange"
           />
         );
       case "deadlines":
@@ -254,24 +290,41 @@ export function DashboardPage() {
 
   return (
     <div>
-      <div className="page-header">
+      <div className="page-header page-header-overlap">
         <h1>{t("layout.dashboard")}</h1>
-        <button className="btn btn-sm" onClick={() => setCustomizing((v) => !v)}>
-          {t("dashboard.customize")}
-        </button>
+        {!customizing && (
+          <button className="btn btn-sm" onClick={() => setDraft(placeEntries(user!.dashboardLayout))}>
+            {t("dashboard.customize")}
+          </button>
+        )}
       </div>
 
       <TimerBanner />
 
-      {customizing && <CustomizeDashboardPanel onClose={() => setCustomizing(false)} />}
+      {draft && (
+        <DashboardEditBar
+          hidden={widgetsAllowedForRole(user!.role).filter((key) => !draft.some((entry) => entry.key === key))}
+          saving={saveLayout.isPending}
+          onAdd={(key) => setDraft((d) => d && [...d, newEntry(key, d)])}
+          onSave={() => saveLayout.mutate(draft)}
+          onReset={() => saveLayout.mutate(null)}
+          onCancel={() => setDraft(null)}
+        />
+      )}
 
-      <div className="dashboard-widget-grid">
-        {user!.dashboardLayout.map((entry) => (
-          <div className={`dashboard-widget-${entry.size}`} key={entry.key}>
-            {renderWidget(entry.key, entry.size)}
-          </div>
-        ))}
-      </div>
+      <DashboardGrid
+        entries={draft ?? user!.dashboardLayout}
+        editing={customizing}
+        renderWidget={renderWidget}
+        onHide={(key) => setDraft((d) => d && d.filter((entry) => entry.key !== key))}
+        onLayoutChange={(layout) =>
+          setDraft((d) => {
+            if (!d) return d;
+            const next = entriesFromLayout(layout, placeEntries(d));
+            return sameLayout(next, d) ? d : next;
+          })
+        }
+      />
     </div>
   );
 }

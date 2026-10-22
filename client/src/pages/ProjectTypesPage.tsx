@@ -120,7 +120,7 @@ export function ProjectTypesPage() {
 
   return (
     <div>
-      <div className="page-header">
+      <div className="page-header page-header-plain">
         <h1>{t("layout.projectTypes")}</h1>
         <CreateTypeForm />
       </div>

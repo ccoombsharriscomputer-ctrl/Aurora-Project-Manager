@@ -9,7 +9,7 @@ export interface AuthedUser {
   email: string;
   role: "ADMIN" | "PROJECT_LEAD" | "MEMBER" | "READ_ONLY";
   theme: "LIGHT" | "DARK" | "SYSTEM";
-  accentColor: "BLUE" | "GREEN" | "PURPLE" | "ORANGE" | "RED" | "TEAL";
+  accentColor: "BLUE" | "GREEN" | "PURPLE" | "ORANGE" | "RED" | "TEAL" | "INDIGO" | "PINK" | "CYAN" | "GOLD" | "LIME" | "GRAPHITE";
   locale: "EN" | "ES" | "FR_CA";
   softwareLineId: string;
   activeSoftwareLineId: string | null;

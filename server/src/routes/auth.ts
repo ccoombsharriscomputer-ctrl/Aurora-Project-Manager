@@ -73,11 +73,21 @@ router.get("/me", requireAuth, async (req, res) => {
 // widgets had a size) — sanitizeDashboardLayout is the real validator either way, dropping
 // anything that isn't a recognized key/size or that this role can't see; this schema just
 // keeps obviously-wrong request bodies (wrong types entirely) out.
-const dashboardWidgetEntrySchema = z.union([z.string(), z.object({ key: z.string(), size: z.string().optional() })]);
+const dashboardWidgetEntrySchema = z.union([
+  z.string(),
+  z.object({
+    key: z.string(),
+    size: z.string().optional(),
+    x: z.number().optional(),
+    y: z.number().optional(),
+    w: z.number().optional(),
+    h: z.number().optional(),
+  }),
+]);
 
 const updateMeSchema = z.object({
   theme: z.enum(["LIGHT", "DARK", "SYSTEM"]).optional(),
-  accentColor: z.enum(["BLUE", "GREEN", "PURPLE", "ORANGE", "RED", "TEAL"]).optional(),
+  accentColor: z.enum(["BLUE", "GREEN", "PURPLE", "ORANGE", "RED", "TEAL", "INDIGO", "PINK", "CYAN", "GOLD", "LIME", "GRAPHITE"]).optional(),
   locale: z.enum(["EN", "ES", "FR_CA"]).optional(),
   // null resets to the app default (every widget this role can see, default order); an
   // explicit [] is a deliberate "hide everything", distinct from that reset.

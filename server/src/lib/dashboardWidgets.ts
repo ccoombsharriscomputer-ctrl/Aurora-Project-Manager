@@ -28,9 +28,31 @@ export type DashboardWidgetKey = (typeof DASHBOARD_WIDGET_KEYS)[number];
 export const DASHBOARD_WIDGET_SIZES = ["S", "M", "L"] as const;
 export type DashboardWidgetSize = (typeof DASHBOARD_WIDGET_SIZES)[number];
 
+// x/y/w/h place the card on the Dashboard's 12-column grid (x/w in columns, y/h in rows) —
+// set once the user has dragged or resized a card. Entries saved before that have only a size,
+// and the client lays those out itself, so all four are optional (and always all present or
+// all absent). size stays in step with w so the list widgets still know how much to show.
 export interface DashboardWidgetEntry {
   key: DashboardWidgetKey;
   size: DashboardWidgetSize;
+  x?: number;
+  y?: number;
+  w?: number;
+  h?: number;
+}
+
+export const DASHBOARD_GRID_COLS = 12;
+
+// Returns the four grid fields only if they're a sane placement on the grid, else nothing —
+// a hand-edited or corrupt value falls back to the client's automatic layout instead of
+// putting a card off-screen.
+function validPlacement(item: { x?: unknown; y?: unknown; w?: unknown; h?: unknown }): Pick<DashboardWidgetEntry, "x" | "y" | "w" | "h"> {
+  const { x, y, w, h } = item;
+  const ok = (v: unknown, min: number, max: number): v is number => typeof v === "number" && Number.isInteger(v) && v >= min && v <= max;
+  if (ok(x, 0, DASHBOARD_GRID_COLS - 1) && ok(y, 0, 1000) && ok(w, 1, DASHBOARD_GRID_COLS) && ok(h, 1, 60) && x + w <= DASHBOARD_GRID_COLS) {
+    return { x, y, w, h };
+  }
+  return {};
 }
 
 const ALL_ROLES: UserRole[] = ["ADMIN", "PROJECT_LEAD", "MEMBER", "READ_ONLY"];
@@ -111,6 +133,7 @@ export function sanitizeDashboardLayout(value: unknown, role: UserRole): Dashboa
             {
               key: (item as { key: unknown }).key as DashboardWidgetKey,
               size: isDashboardWidgetSize((item as { size?: unknown }).size) ? (item as { size: DashboardWidgetSize }).size : "M",
+              ...validPlacement(item as { x?: unknown; y?: unknown; w?: unknown; h?: unknown }),
             },
           ]
         : migrateLegacyEntry(item);
