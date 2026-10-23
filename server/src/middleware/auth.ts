@@ -8,7 +8,7 @@ export interface AuthedUser {
   name: string;
   email: string;
   role: "ADMIN" | "PROJECT_LEAD" | "MEMBER" | "READ_ONLY";
-  theme: "LIGHT" | "DARK" | "SYSTEM";
+  theme: "LIGHT" | "DARK" | "SYSTEM" | "MIDNIGHT" | "AURORA" | "SUNSET" | "OCEAN" | "FOREST" | "PASTEL" | "SLATE" | "CONTRAST" | "GOTHAM";
   accentColor: "BLUE" | "GREEN" | "PURPLE" | "ORANGE" | "RED" | "TEAL" | "INDIGO" | "PINK" | "CYAN" | "GOLD" | "LIME" | "GRAPHITE";
   locale: "EN" | "ES" | "FR_CA";
   softwareLineId: string;

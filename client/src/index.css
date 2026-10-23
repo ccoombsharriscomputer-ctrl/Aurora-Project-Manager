@@ -21,12 +21,31 @@
   --accent-color: #3457d5;
   --primary: var(--accent-color, #3457d5);
   --primary-hover: color-mix(in srgb, var(--primary) 85%, black);
+  /* Text on accent-colored fills (buttons, the first stat tile, the active sidebar link). */
+  --on-accent: #fff;
+  /* Dashboard panels: four colors, each a gradient from --pa-N to --pb-N with --pt-N as the text
+     on it. Themes below restyle all of these. Stat tiles 2 and 3 reuse panel colors 2 and 3. */
+  --pa-1: #4f46e5;
+  --pb-1: #7c3aed;
+  --pa-2: #10b981;
+  --pb-2: #14b8a6;
+  --pa-3: #f59e0b;
+  --pb-3: #f97316;
+  --pa-4: #7c3aed;
+  --pb-4: #db2777;
+  --pt-1: #fff;
+  --pt-2: #fff;
+  --pt-3: #fff;
+  --pt-4: #fff;
+  --panel-tint: 7%;
+  --banner-text: #fff;
+  --sidebar-text: #e8e9ff;
   color-scheme: light;
 }
 
 /* System (OS) dark mode — only applies when the user hasn't explicitly forced Light. */
 @media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
+  :root:not([data-theme]) {
     --bg: #12151c;
     --surface: #1a1f2b;
     --border: #2b3140;
@@ -41,6 +60,7 @@
     --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 1px 3px rgba(0, 0, 0, 0.4);
     --primary: color-mix(in srgb, var(--accent-color) 75%, white);
     --primary-hover: color-mix(in srgb, var(--primary) 85%, white);
+    --panel-tint: 14%;
     color-scheme: dark;
   }
 }
@@ -62,6 +82,7 @@
   --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 1px 3px rgba(0, 0, 0, 0.4);
   --primary: color-mix(in srgb, var(--accent-color) 75%, white);
   --primary-hover: color-mix(in srgb, var(--primary) 85%, white);
+  --panel-tint: 14%;
   color-scheme: dark;
 }
 
@@ -115,6 +136,270 @@
   --accent-end: #6366f1;
 }
 
+/* Theme presets (Settings > Theme). Each is a whole look: page and card colors, the accent pair
+   that drives the sidebar highlight, banner, buttons and bars, and the four panel colors. They
+   come after the accent presets so a preset's colors win, and they ignore the accent choice. */
+:root[data-theme="midnight"] {
+  --bg: #0f1230;
+  --page-bg: linear-gradient(135deg, #0f1230, #241553);
+  --surface: #181b44;
+  --border: #2e3270;
+  --text: #eef0ff;
+  --muted: #a3a9d9;
+  --success: #34d399;
+  --warning: #fbbf24;
+  --danger: #fb7185;
+  --todo-bg: #232860;
+  --progress-bg: #3a2f1a;
+  --done-bg: #14382c;
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 4px 14px rgba(0, 0, 0, 0.35);
+  --accent-color: #6366f1;
+  --accent-end: #a855f7;
+  --primary: #a5b4fc;
+  --primary-hover: #c7d2fe;
+  --sidebar-bg: linear-gradient(180deg, #1c1f5c, #0b0d28);
+  --pa-1: #6366f1;
+  --pb-1: #8b5cf6;
+  --pa-2: #0891b2;
+  --pb-2: #0ea5e9;
+  --pa-3: #db2777;
+  --pb-3: #f43f5e;
+  --pa-4: #d97706;
+  --pb-4: #f97316;
+  --panel-tint: 16%;
+  color-scheme: dark;
+}
+
+:root[data-theme="aurora"] {
+  --bg: #06151f;
+  --page-bg: linear-gradient(135deg, #06151f, #1a0b3b);
+  --surface: #0f2230;
+  --border: #1f3d52;
+  --text: #e8fff6;
+  --muted: #8fb3c4;
+  --success: #34d399;
+  --warning: #fbbf24;
+  --danger: #fb7185;
+  --todo-bg: #14303f;
+  --progress-bg: #33301a;
+  --done-bg: #123a2c;
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 4px 14px rgba(0, 0, 0, 0.35);
+  --accent-color: #10b981;
+  --accent-end: #8b5cf6;
+  --primary: #5eead4;
+  --primary-hover: #99f6e4;
+  --sidebar-bg: linear-gradient(180deg, #0d3b3f, #1a0b3b);
+  --pa-1: #059669;
+  --pb-1: #10b981;
+  --pa-2: #0891b2;
+  --pb-2: #06b6d4;
+  --pa-3: #7c3aed;
+  --pb-3: #a78bfa;
+  --pa-4: #db2777;
+  --pb-4: #f472b6;
+  --panel-tint: 16%;
+  color-scheme: dark;
+}
+
+:root[data-theme="sunset"] {
+  --bg: #fff4ec;
+  --surface: #ffffff;
+  --border: #f2d9c8;
+  --text: #3a2418;
+  --muted: #8a6a58;
+  --todo-bg: #fdeee4;
+  --progress-bg: #fff1d6;
+  --done-bg: #e6f6ec;
+  --shadow: 0 6px 20px rgba(120, 50, 20, 0.1);
+  --accent-color: #f97316;
+  --accent-end: #db2777;
+  --primary: #c2410c;
+  --primary-hover: #9a3412;
+  --sidebar-bg: linear-gradient(180deg, #ea580c, #be185d);
+  --pa-1: #ea580c;
+  --pb-1: #f97316;
+  --pa-2: #e11d48;
+  --pb-2: #f43f5e;
+  --pa-3: #db2777;
+  --pb-3: #ec4899;
+  --pa-4: #d97706;
+  --pb-4: #f59e0b;
+}
+
+:root[data-theme="ocean"] {
+  --bg: #eaf7fb;
+  --surface: #ffffff;
+  --border: #cfe6ee;
+  --text: #0f2a33;
+  --muted: #587985;
+  --todo-bg: #e3f1f6;
+  --progress-bg: #fff4e0;
+  --done-bg: #e1f6ee;
+  --shadow: 0 6px 20px rgba(10, 70, 100, 0.1);
+  --accent-color: #0891b2;
+  --accent-end: #2563eb;
+  --primary: #0e7490;
+  --primary-hover: #155e75;
+  --sidebar-bg: linear-gradient(180deg, #0e7490, #1d4ed8);
+  --pa-1: #0891b2;
+  --pb-1: #06b6d4;
+  --pa-2: #2563eb;
+  --pb-2: #3b82f6;
+  --pa-3: #0d9488;
+  --pb-3: #14b8a6;
+  --pa-4: #0284c7;
+  --pb-4: #38bdf8;
+}
+
+:root[data-theme="forest"] {
+  --bg: #eef6ef;
+  --surface: #ffffff;
+  --border: #cfe3d2;
+  --text: #14281a;
+  --muted: #5b7562;
+  --todo-bg: #e6f0e8;
+  --progress-bg: #fbf1d8;
+  --done-bg: #dff3e4;
+  --shadow: 0 6px 20px rgba(20, 70, 30, 0.1);
+  --accent-color: #15803d;
+  --accent-end: #0d9488;
+  --primary: #15803d;
+  --primary-hover: #166534;
+  --sidebar-bg: linear-gradient(180deg, #14532d, #0f766e);
+  --pa-1: #15803d;
+  --pb-1: #16a34a;
+  --pa-2: #4d7c0f;
+  --pb-2: #65a30d;
+  --pa-3: #0f766e;
+  --pb-3: #14b8a6;
+  --pa-4: #a16207;
+  --pb-4: #ca8a04;
+}
+
+:root[data-theme="pastel"] {
+  --bg: #faf7ff;
+  --surface: #ffffff;
+  --border: #e6ddf5;
+  --text: #2b2347;
+  --muted: #7a6f99;
+  --todo-bg: #f1ebfb;
+  --progress-bg: #fff3dc;
+  --done-bg: #e4f6ea;
+  --shadow: 0 6px 20px rgba(110, 80, 190, 0.1);
+  --accent-color: #a78bfa;
+  --accent-end: #f9a8d4;
+  --primary: #7c3aed;
+  --primary-hover: #6d28d9;
+  --on-accent: #3b2d6b;
+  --banner-text: #3b2d6b;
+  --sidebar-bg: linear-gradient(180deg, #8b6bea, #e0609b);
+  --pa-1: #c4b5fd;
+  --pb-1: #a5b4fc;
+  --pa-2: #86efac;
+  --pb-2: #6ee7b7;
+  --pa-3: #fcd34d;
+  --pb-3: #fdba74;
+  --pa-4: #f9a8d4;
+  --pb-4: #d8b4fe;
+  --pt-1: #3b2d6b;
+  --pt-2: #14532d;
+  --pt-3: #6b3a0a;
+  --pt-4: #6b1d4a;
+}
+
+:root[data-theme="slate"] {
+  --bg: #f1f5f9;
+  --surface: #ffffff;
+  --border: #dbe2ea;
+  --text: #1e293b;
+  --muted: #64748b;
+  --accent-color: #475569;
+  --accent-end: #64748b;
+  --primary: #334155;
+  --primary-hover: #1e293b;
+  --sidebar-bg: linear-gradient(180deg, #334155, #1e293b);
+  --pa-1: #475569;
+  --pb-1: #64748b;
+  --pa-2: #475569;
+  --pb-2: #64748b;
+  --pa-3: #475569;
+  --pb-3: #64748b;
+  --pa-4: #475569;
+  --pb-4: #64748b;
+}
+
+:root[data-theme="contrast"] {
+  --bg: #000000;
+  --surface: #000000;
+  --border: #ffffff;
+  --text: #ffffff;
+  --muted: #d4d4d4;
+  --success: #4ade80;
+  --warning: #ffd400;
+  --danger: #ff7b7b;
+  --todo-bg: #1a1a1a;
+  --progress-bg: #332b00;
+  --done-bg: #0a2e14;
+  --shadow: none;
+  --accent-color: #ffd400;
+  --accent-end: #ffd400;
+  --primary: #ffd400;
+  --primary-hover: #fff27a;
+  --on-accent: #000;
+  --banner-text: #000;
+  --sidebar-bg: #000000;
+  --sidebar-text: #ffffff;
+  --pa-1: #ffd400;
+  --pb-1: #ffd400;
+  --pa-2: #00e5ff;
+  --pb-2: #00e5ff;
+  --pa-3: #ffd400;
+  --pb-3: #ffd400;
+  --pa-4: #00e5ff;
+  --pb-4: #00e5ff;
+  --pt-1: #000;
+  --pt-2: #000;
+  --pt-3: #000;
+  --pt-4: #000;
+  --panel-tint: 0%;
+  color-scheme: dark;
+}
+
+:root[data-theme="gotham"] {
+  --bg: #0b0d10;
+  --surface: #151920;
+  --border: #2a2f3a;
+  --text: #e6e9ef;
+  --muted: #8f9bad;
+  --success: #4ade80;
+  --warning: #ffd21f;
+  --danger: #ff6b6b;
+  --todo-bg: #1d222b;
+  --progress-bg: #332b0c;
+  --done-bg: #14301e;
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.5), 0 4px 14px rgba(0, 0, 0, 0.4);
+  --accent-color: #ffd21f;
+  --accent-end: #e0a800;
+  --primary: #ffd21f;
+  --primary-hover: #ffe36b;
+  --on-accent: #0b0d10;
+  --banner-bg: radial-gradient(circle at 92% -30%, rgba(255, 210, 31, 0.5), rgba(255, 210, 31, 0) 42%), linear-gradient(90deg, #1f2530, #0b0d10);
+  --banner-text: #fff;
+  --sidebar-bg: linear-gradient(180deg, #1b1f27, #0b0d10);
+  --pa-1: #ffd21f;
+  --pb-1: #e0a800;
+  --pa-2: #3b4658;
+  --pb-2: #222834;
+  --pa-3: #6f84a0;
+  --pb-3: #4a5a70;
+  --pa-4: #e0a800;
+  --pb-4: #b98600;
+  --pt-1: #0b0d10;
+  --pt-4: #0b0d10;
+  --panel-tint: 10%;
+  color-scheme: dark;
+}
+
 * {
   box-sizing: border-box;
 }
@@ -128,7 +413,8 @@ body,
 body {
   margin: 0;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-  background: var(--bg);
+  background: var(--page-bg, var(--bg));
+  background-attachment: fixed;
   color: var(--text);
 }
 
@@ -157,13 +443,16 @@ select {
   flex-shrink: 0;
   height: 100vh;
   overflow-y: auto;
-  /* Dark in both light and dark mode, tinted by the accent color. */
-  background: linear-gradient(
-    180deg,
-    color-mix(in srgb, var(--accent-color) 22%, #10122b) 0%,
-    color-mix(in srgb, var(--accent-color) 48%, #10122b) 100%
+  /* Dark in both light and dark mode, tinted by the accent color (themes can set --sidebar-bg). */
+  background: var(
+    --sidebar-bg,
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--accent-color) 22%, #10122b) 0%,
+      color-mix(in srgb, var(--accent-color) 48%, #10122b) 100%
+    )
   );
-  color: #e8e9ff;
+  color: var(--sidebar-text);
   scrollbar-width: thin;
   scrollbar-color: rgba(255, 255, 255, 0.3) transparent;
   padding: 20px 14px;
@@ -218,7 +507,7 @@ select {
 .sidebar-link {
   padding: 10px 12px;
   border-radius: var(--radius);
-  color: #e8e9ff;
+  color: var(--sidebar-text);
   font-size: 14px;
   font-weight: 600;
 }
@@ -229,7 +518,7 @@ select {
 
 .sidebar-link.active {
   background: linear-gradient(90deg, var(--accent-color), var(--gradient-end));
-  color: white;
+  color: var(--on-accent);
   box-shadow: 0 6px 16px color-mix(in srgb, var(--accent-color) 45%, transparent);
 }
 
@@ -334,8 +623,8 @@ select {
   padding: 28px 36px 30px;
   gap: 12px;
   flex-wrap: wrap;
-  background: linear-gradient(120deg, var(--accent-color) 0%, var(--gradient-end) 100%);
-  color: #fff;
+  background: var(--banner-bg, linear-gradient(120deg, var(--accent-color) 0%, var(--gradient-end) 100%));
+  color: var(--banner-text);
 }
 
 .project-tab-bar + div > .page-header {
@@ -353,7 +642,7 @@ select {
 .page-header .btn {
   background: rgba(255, 255, 255, 0.18);
   border-color: rgba(255, 255, 255, 0.55);
-  color: #fff;
+  color: var(--banner-text);
   font-weight: 600;
 }
 
@@ -365,7 +654,7 @@ select {
 .page-header .btn-primary {
   background: #fff;
   border-color: transparent;
-  color: var(--primary);
+  color: color-mix(in srgb, var(--accent-color) 70%, black);
   font-weight: 700;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.18);
 }
@@ -376,7 +665,7 @@ select {
 }
 
 .page-header label {
-  color: rgba(255, 255, 255, 0.92);
+  color: var(--banner-text);
 }
 
 /* Dashboard only: the cards under the banner ride up over its bottom edge. */
@@ -416,7 +705,7 @@ select {
 .page-header-plain .btn-primary {
   background: linear-gradient(90deg, var(--accent-color), var(--gradient-end));
   border-color: transparent;
-  color: white;
+  color: var(--on-accent);
   box-shadow: none;
 }
 
@@ -468,7 +757,7 @@ select {
 .btn-primary {
   background: linear-gradient(90deg, var(--accent-color), var(--gradient-end));
   border-color: transparent;
-  color: white;
+  color: var(--on-accent);
 }
 
 .btn-primary:hover {
@@ -548,7 +837,7 @@ label {
   background: linear-gradient(135deg, var(--accent-color), var(--gradient-end));
   border-radius: var(--radius-lg);
   padding: 18px 20px;
-  color: #fff;
+  color: var(--on-accent);
   box-shadow: 0 10px 22px rgba(30, 30, 80, 0.16);
   transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
@@ -560,11 +849,13 @@ label {
 
 /* Each kind of number gets its own color (see StatTile's tone in DashboardPage). */
 .stat-tile-green {
-  background: linear-gradient(135deg, #10b981, #14b8a6);
+  background: linear-gradient(135deg, var(--pa-2), var(--pb-2));
+  color: var(--pt-2);
 }
 
 .stat-tile-orange {
-  background: linear-gradient(135deg, #f59e0b, #f97316);
+  background: linear-gradient(135deg, var(--pa-3), var(--pb-3));
+  color: var(--pt-3);
 }
 
 .stat-tile .value {
@@ -574,7 +865,8 @@ label {
 }
 
 .stat-tile .label {
-  color: rgba(255, 255, 255, 0.92);
+  color: inherit;
+  opacity: 0.92;
   font-weight: 600;
   font-size: 13px;
   margin-top: 6px;
@@ -1185,4 +1477,183 @@ label {
   align-items: center;
   margin-bottom: 16px;
   font-size: 13px;
+}
+
+/* Dashboard panels: a colored title band over a softly tinted body (colors come from the active
+   theme's --pa-N / --pb-N / --pt-N). The band sticks to the top while a long card scrolls. */
+.card.panel {
+  --pa: var(--pa-1);
+  --pb: var(--pb-1);
+  --pt: var(--pt-1);
+  padding: 0;
+  background: color-mix(in srgb, var(--pa) var(--panel-tint), var(--surface));
+  border-color: color-mix(in srgb, var(--pa) 35%, var(--border));
+}
+
+.card.panel-2 {
+  --pa: var(--pa-2);
+  --pb: var(--pb-2);
+  --pt: var(--pt-2);
+}
+
+.card.panel-3 {
+  --pa: var(--pa-3);
+  --pb: var(--pb-3);
+  --pt: var(--pt-3);
+}
+
+.card.panel-4 {
+  --pa: var(--pa-4);
+  --pb: var(--pb-4);
+  --pt: var(--pt-4);
+}
+
+.panel-head {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin: 0;
+  padding: 10px 16px;
+  background: linear-gradient(90deg, var(--pa), var(--pb));
+  color: var(--pt);
+}
+
+.panel-head .section-title {
+  margin: 0;
+  color: inherit;
+}
+
+.panel-head .btn {
+  background: color-mix(in srgb, var(--pt) 16%, transparent);
+  border-color: color-mix(in srgb, var(--pt) 55%, transparent);
+  color: var(--pt);
+}
+
+.panel-head .btn:hover {
+  background: color-mix(in srgb, var(--pt) 28%, transparent);
+  border-color: var(--pt);
+}
+
+.panel-head .btn-primary {
+  background: var(--pt);
+  border-color: transparent;
+  color: var(--pa);
+}
+
+.panel-head .btn-primary:hover {
+  background: var(--pt);
+  border-color: transparent;
+}
+
+.panel-body {
+  padding: 12px 16px 16px;
+}
+
+.panel .progress-bar-track {
+  background: color-mix(in srgb, var(--pa) 20%, var(--surface));
+}
+
+.panel .progress-bar-fill {
+  background: linear-gradient(90deg, var(--pa), var(--pb));
+}
+
+.dash-cell.editing .dash-cell-inner > .card.panel {
+  padding-top: 30px;
+}
+
+/* Glow and edge touches that belong to particular themes. */
+:root[data-theme="midnight"] .card.panel,
+:root[data-theme="aurora"] .card.panel {
+  box-shadow: 0 0 18px color-mix(in srgb, var(--pa) 40%, transparent);
+}
+
+:root[data-theme="gotham"] .card.panel {
+  box-shadow: 0 0 14px rgba(255, 210, 31, 0.1);
+}
+
+:root[data-theme="contrast"] .card.panel {
+  border: 2px solid var(--pa);
+}
+
+:root[data-theme="contrast"] .card {
+  border-width: 2px;
+}
+
+/* Settings > Theme picker: a grid of small previews. */
+.theme-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 12px;
+  margin-bottom: 22px;
+}
+
+.theme-tile {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 6px;
+  border: 2px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  cursor: pointer;
+  text-align: left;
+}
+
+.theme-tile:hover {
+  border-color: var(--primary);
+}
+
+.theme-tile.selected {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--primary) 35%, transparent);
+}
+
+.theme-tile-label {
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.theme-preview {
+  display: flex;
+  height: 58px;
+  border-radius: 6px;
+  overflow: hidden;
+  border: 1px solid rgba(128, 128, 128, 0.35);
+}
+
+.theme-preview-side {
+  width: 22%;
+}
+
+.theme-preview-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.theme-preview-banner {
+  height: 16px;
+}
+
+.theme-preview-dots {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+  padding: 0 5px;
+}
+
+.theme-preview-dots span {
+  height: 9px;
+  border-radius: 3px;
+}
+
+/* On the yellow banner the yellow tiles would melt into it, so outline them. */
+:root[data-theme="contrast"] .stat-tile {
+  box-shadow: 0 0 0 2px #000, 0 0 0 4px #fff;
 }

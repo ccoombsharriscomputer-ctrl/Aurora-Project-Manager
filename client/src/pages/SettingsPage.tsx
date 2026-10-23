@@ -21,6 +21,31 @@ const ACCENT_SWATCH_COLOR: Record<AccentColor, string> = {
   GRAPHITE: "#475569",
 };
 
+// Only these follow the accent color; the named themes bring their own colors.
+const ACCENT_THEMES: ThemeMode[] = ["SYSTEM", "LIGHT", "DARK"];
+
+// Each theme's little preview in the picker: page color, sidebar strip, banner, and four panel dots.
+// (The real colors live in index.css; these only have to look like them.)
+const THEME_PREVIEWS: { mode: ThemeMode; page: string; side: string; banner: string; dots: string[] }[] = [
+  { mode: "SYSTEM", page: "linear-gradient(135deg, #f1f3fa 50%, #12151c 50%)", side: "#3457d5", banner: "#7c3aed", dots: ["#3457d5", "#10b981", "#f59e0b", "#7c3aed"] },
+  { mode: "LIGHT", page: "#f1f3fa", side: "#2b3a8f", banner: "linear-gradient(90deg, #3457d5, #7c3aed)", dots: ["#4f46e5", "#10b981", "#f59e0b", "#7c3aed"] },
+  { mode: "DARK", page: "#12151c", side: "#1d2554", banner: "linear-gradient(90deg, #3457d5, #7c3aed)", dots: ["#4f46e5", "#10b981", "#f59e0b", "#7c3aed"] },
+  { mode: "MIDNIGHT", page: "linear-gradient(135deg, #0f1230, #241553)", side: "#1c1f5c", banner: "linear-gradient(90deg, #6366f1, #a855f7)", dots: ["#6366f1", "#0891b2", "#db2777", "#d97706"] },
+  { mode: "AURORA", page: "linear-gradient(135deg, #06151f, #1a0b3b)", side: "#0d3b3f", banner: "linear-gradient(90deg, #10b981, #8b5cf6)", dots: ["#059669", "#0891b2", "#7c3aed", "#db2777"] },
+  { mode: "SUNSET", page: "#fff4ec", side: "#d44a1c", banner: "linear-gradient(90deg, #f97316, #db2777)", dots: ["#ea580c", "#e11d48", "#db2777", "#d97706"] },
+  { mode: "OCEAN", page: "#eaf7fb", side: "#0e7490", banner: "linear-gradient(90deg, #0891b2, #2563eb)", dots: ["#0891b2", "#2563eb", "#0d9488", "#0284c7"] },
+  { mode: "FOREST", page: "#eef6ef", side: "#14532d", banner: "linear-gradient(90deg, #15803d, #0d9488)", dots: ["#15803d", "#4d7c0f", "#0f766e", "#a16207"] },
+  { mode: "PASTEL", page: "#faf7ff", side: "#8b6bea", banner: "linear-gradient(90deg, #a78bfa, #f9a8d4)", dots: ["#c4b5fd", "#86efac", "#fcd34d", "#f9a8d4"] },
+  { mode: "SLATE", page: "#f1f5f9", side: "#334155", banner: "linear-gradient(90deg, #475569, #64748b)", dots: ["#475569", "#475569", "#475569", "#475569"] },
+  { mode: "CONTRAST", page: "#000", side: "#000", banner: "#ffd400", dots: ["#ffd400", "#00e5ff", "#ffd400", "#00e5ff"] },
+  { mode: "GOTHAM", page: "#0b0d10", side: "#1b1f27", banner: "linear-gradient(90deg, #1f2530, #ffd21f)", dots: ["#ffd21f", "#3b4658", "#6f84a0", "#e0a800"] },
+];
+
+// "MIDNIGHT" -> "settings.themeMidnight", matching the translation keys.
+function themeLabelKey(mode: ThemeMode) {
+  return `settings.theme${mode.charAt(0)}${mode.slice(1).toLowerCase()}`;
+}
+
 function ChangePasswordCard() {
   const { t } = useTranslation();
   const [currentPassword, setCurrentPassword] = useState("");
@@ -120,19 +145,36 @@ export function SettingsPage() {
         <h1>{t("settings.title")}</h1>
       </div>
 
-      <div className="card" style={{ maxWidth: 480, marginBottom: 20 }}>
+      <div className="card" style={{ maxWidth: 560, marginBottom: 20 }}>
         <div className="section-title">{t("settings.theme")}</div>
-        <div className="gap-8" style={{ marginBottom: 20 }}>
-          {(["SYSTEM", "LIGHT", "DARK"] as ThemeMode[]).map((mode) => (
-            <label key={mode} className="gap-8" style={{ margin: 0, cursor: "pointer" }}>
-              <input type="radio" name="theme" checked={theme === mode} onChange={() => setTheme(mode)} />
-              <span>{t(`settings.theme${mode.charAt(0)}${mode.slice(1).toLowerCase()}`)}</span>
-            </label>
+        <div className="theme-grid">
+          {THEME_PREVIEWS.map((p) => (
+            <button
+              key={p.mode}
+              type="button"
+              className={`theme-tile${theme === p.mode ? " selected" : ""}`}
+              onClick={() => setTheme(p.mode)}
+              aria-pressed={theme === p.mode}
+            >
+              <span className="theme-preview" style={{ background: p.page }}>
+                <span className="theme-preview-side" style={{ background: p.side }} />
+                <span className="theme-preview-main">
+                  <span className="theme-preview-banner" style={{ background: p.banner }} />
+                  <span className="theme-preview-dots">
+                    {p.dots.map((c, i) => (
+                      <span key={i} style={{ background: c }} />
+                    ))}
+                  </span>
+                </span>
+              </span>
+              <span className="theme-tile-label">{t(themeLabelKey(p.mode))}</span>
+            </button>
           ))}
         </div>
 
         <div className="section-title">{t("settings.accentColor")}</div>
-        <div className="gap-8" style={{ marginBottom: 20, flexWrap: "wrap" }}>
+        {!ACCENT_THEMES.includes(theme) && <p className="muted">{t("settings.themeHasOwnColors")}</p>}
+        <div className="gap-8" style={{ marginBottom: 20, flexWrap: "wrap", opacity: ACCENT_THEMES.includes(theme) ? 1 : 0.4 }}>
           {ACCENT_COLORS.map((color) => (
             <button
               key={color}

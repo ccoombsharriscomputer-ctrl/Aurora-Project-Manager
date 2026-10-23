@@ -86,7 +86,7 @@ const dashboardWidgetEntrySchema = z.union([
 ]);
 
 const updateMeSchema = z.object({
-  theme: z.enum(["LIGHT", "DARK", "SYSTEM"]).optional(),
+  theme: z.enum(["LIGHT", "DARK", "SYSTEM", "MIDNIGHT", "AURORA", "SUNSET", "OCEAN", "FOREST", "PASTEL", "SLATE", "CONTRAST", "GOTHAM"]).optional(),
   accentColor: z.enum(["BLUE", "GREEN", "PURPLE", "ORANGE", "RED", "TEAL", "INDIGO", "PINK", "CYAN", "GOLD", "LIME", "GRAPHITE"]).optional(),
   locale: z.enum(["EN", "ES", "FR_CA"]).optional(),
   // null resets to the app default (every widget this role can see, default order); an

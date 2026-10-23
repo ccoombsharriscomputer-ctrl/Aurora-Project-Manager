@@ -168,8 +168,8 @@ export function DeadlinesCalendar({
   const todayKey = toDateKey(new Date());
 
   return (
-    <div className="card">
-      <div className="calendar-toolbar">
+    <div className="card panel panel-1">
+      <div className="calendar-toolbar panel-head">
         <div className="section-title" style={{ marginBottom: 0 }}>
           {t("calendar.title")}
         </div>
@@ -198,78 +198,80 @@ export function DeadlinesCalendar({
         </div>
       </div>
 
-      {isLoading ? (
-        <p className="muted">{t("calendar.loadingCalendar")}</p>
-      ) : view === "day" ? (
-        <div className="calendar-day-list">
-          {(entriesByDay.get(toDateKey(cursor)) ?? []).map((entry) =>
-            entry.kind === "followUp" ? (
-              <div className="calendar-day-list-item" key={`followup-${entry.id}`}>
-                <span className="badge badge-admin">{t("calendar.followUp")}</span>
-                <Link to={followUpLink(entry)} className={entry.completedAt ? "calendar-resolved-text" : undefined}>
-                  {entry.taskTitle ?? entry.project?.name ?? t("calendar.followUp")}
-                </Link>
-                {entry.taskTitle && entry.project?.name && <span className="muted">{entry.project.name}</span>}
-                {(user?.id === entry.user.id || user?.role === "ADMIN") && (
-                  <button
-                    className="btn btn-sm"
-                    onClick={() => setFollowUpCompleted.mutate({ id: entry.id, completed: !entry.completedAt })}
-                    disabled={setFollowUpCompleted.isPending}
-                  >
-                    {entry.completedAt ? t("calendar.reopen") : t("calendar.markComplete")}
-                  </button>
-                )}
-              </div>
-            ) : (
-              <div className="calendar-day-list-item" key={entry.id}>
-                <span className={`badge priority-${entry.priority}`}>{priorityLabel(t, entry.priority)}</span>
-                {(entry.status === "DONE" || entry.status === "NA") && (
-                  <span className="badge">{statusLabel(t, entry.status)}</span>
-                )}
-                <Link to={`/tasks/${entry.id}`} className={entry.status === "DONE" ? "calendar-resolved-text" : entry.status === "NA" ? "calendar-na-text" : undefined}>
-                  {entry.title}
-                </Link>
-                {entry.project?.name && <span className="muted">{entry.project.name}</span>}
-              </div>
-            )
-          )}
-          {(entriesByDay.get(toDateKey(cursor)) ?? []).length === 0 && (
-            <p className="muted">{t("calendar.noDeadlines")}</p>
-          )}
-        </div>
-      ) : (
-        <div className="calendar-scroll">
-          <div className="calendar-grid">
-            {weekdayLabels.map((wd) => (
-              <div className="calendar-weekday" key={wd}>
-                {wd}
-              </div>
-            ))}
-            {days.map((day) => {
-              const key = toDateKey(day);
-              const dayEntries = entriesByDay.get(key) ?? [];
-              const cap = view === "week" ? undefined : VISIBLE_TASKS_PER_DAY;
-              const visible = cap ? dayEntries.slice(0, cap) : dayEntries;
-              const hiddenCount = dayEntries.length - visible.length;
-              const isOutside = view === "month" && day.getMonth() !== cursor.getMonth();
-              const isToday = key === todayKey;
-              return (
-                <div className={`calendar-day${isOutside ? " outside" : ""}${view === "week" ? " week-cell" : ""}`} key={key}>
-                  <div className={`calendar-day-number${isToday ? " today" : ""}`}>{day.getDate()}</div>
-                  <div className="calendar-day-tasks">
-                    {visible.map((entry) => (
-                      <EntryPill entry={entry} key={entry.kind === "followUp" ? `followup-${entry.id}` : entry.id} />
-                    ))}
-                    {hiddenCount > 0 && (
-                      <span className="calendar-more muted">{t("calendar.moreCount", { count: hiddenCount })}</span>
-                    )}
-                  </div>
+      <div className="panel-body">
+        {isLoading ? (
+          <p className="muted">{t("calendar.loadingCalendar")}</p>
+        ) : view === "day" ? (
+          <div className="calendar-day-list">
+            {(entriesByDay.get(toDateKey(cursor)) ?? []).map((entry) =>
+              entry.kind === "followUp" ? (
+                <div className="calendar-day-list-item" key={`followup-${entry.id}`}>
+                  <span className="badge badge-admin">{t("calendar.followUp")}</span>
+                  <Link to={followUpLink(entry)} className={entry.completedAt ? "calendar-resolved-text" : undefined}>
+                    {entry.taskTitle ?? entry.project?.name ?? t("calendar.followUp")}
+                  </Link>
+                  {entry.taskTitle && entry.project?.name && <span className="muted">{entry.project.name}</span>}
+                  {(user?.id === entry.user.id || user?.role === "ADMIN") && (
+                    <button
+                      className="btn btn-sm"
+                      onClick={() => setFollowUpCompleted.mutate({ id: entry.id, completed: !entry.completedAt })}
+                      disabled={setFollowUpCompleted.isPending}
+                    >
+                      {entry.completedAt ? t("calendar.reopen") : t("calendar.markComplete")}
+                    </button>
+                  )}
                 </div>
-              );
-            })}
+              ) : (
+                <div className="calendar-day-list-item" key={entry.id}>
+                  <span className={`badge priority-${entry.priority}`}>{priorityLabel(t, entry.priority)}</span>
+                  {(entry.status === "DONE" || entry.status === "NA") && (
+                    <span className="badge">{statusLabel(t, entry.status)}</span>
+                  )}
+                  <Link to={`/tasks/${entry.id}`} className={entry.status === "DONE" ? "calendar-resolved-text" : entry.status === "NA" ? "calendar-na-text" : undefined}>
+                    {entry.title}
+                  </Link>
+                  {entry.project?.name && <span className="muted">{entry.project.name}</span>}
+                </div>
+              )
+            )}
+            {(entriesByDay.get(toDateKey(cursor)) ?? []).length === 0 && (
+              <p className="muted">{t("calendar.noDeadlines")}</p>
+            )}
           </div>
-        </div>
-      )}
+        ) : (
+          <div className="calendar-scroll">
+            <div className="calendar-grid">
+              {weekdayLabels.map((wd) => (
+                <div className="calendar-weekday" key={wd}>
+                  {wd}
+                </div>
+              ))}
+              {days.map((day) => {
+                const key = toDateKey(day);
+                const dayEntries = entriesByDay.get(key) ?? [];
+                const cap = view === "week" ? undefined : VISIBLE_TASKS_PER_DAY;
+                const visible = cap ? dayEntries.slice(0, cap) : dayEntries;
+                const hiddenCount = dayEntries.length - visible.length;
+                const isOutside = view === "month" && day.getMonth() !== cursor.getMonth();
+                const isToday = key === todayKey;
+                return (
+                  <div className={`calendar-day${isOutside ? " outside" : ""}${view === "week" ? " week-cell" : ""}`} key={key}>
+                    <div className={`calendar-day-number${isToday ? " today" : ""}`}>{day.getDate()}</div>
+                    <div className="calendar-day-tasks">
+                      {visible.map((entry) => (
+                        <EntryPill entry={entry} key={entry.kind === "followUp" ? `followup-${entry.id}` : entry.id} />
+                      ))}
+                      {hiddenCount > 0 && (
+                        <span className="calendar-more muted">{t("calendar.moreCount", { count: hiddenCount })}</span>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

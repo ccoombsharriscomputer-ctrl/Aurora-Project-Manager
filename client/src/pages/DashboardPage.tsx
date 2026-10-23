@@ -79,26 +79,26 @@ function RecentActivity({ activities, size }: { activities: Activity[]; size: Da
   const visible = expanded ? activities : activities.slice(0, collapsedCount);
 
   return (
-    <div className="card">
-      <div className="flex-between">
-        <div className="section-title" style={{ marginBottom: 0 }}>
-          {t("dashboard.recentActivity")}
-        </div>
+    <div className="card panel panel-3">
+      <div className="panel-head">
+        <div className="section-title">{t("dashboard.recentActivity")}</div>
         {activities.length > collapsedCount && (
           <button className="btn btn-sm" onClick={() => setExpanded((v) => !v)}>
             {expanded ? t("dashboard.showLess") : t("dashboard.showMore")}
           </button>
         )}
       </div>
-      {activities.length === 0 && <p className="muted">{t("dashboard.noActivityYet")}</p>}
-      <ul className="activity-list">
-        {visible.map((a) => (
-          <li className="activity-item" key={a.id}>
-            <div>{a.message}</div>
-            <div className="meta">{formatRelativeTime(a.createdAt)}</div>
-          </li>
-        ))}
-      </ul>
+      <div className="panel-body">
+        {activities.length === 0 && <p className="muted">{t("dashboard.noActivityYet")}</p>}
+        <ul className="activity-list">
+          {visible.map((a) => (
+            <li className="activity-item" key={a.id}>
+              <div>{a.message}</div>
+              <div className="meta">{formatRelativeTime(a.createdAt)}</div>
+            </li>
+          ))}
+        </ul>
+      </div>
     </div>
   );
 }
@@ -122,31 +122,31 @@ function ProjectProgress({
   const visible = expanded ? projects : projects.slice(0, collapsedCount);
 
   return (
-    <div className="card">
-      <div className="flex-between">
-        <div className="section-title" style={{ marginBottom: 0 }}>
-          {title}
-        </div>
+    <div className="card panel panel-4">
+      <div className="panel-head">
+        <div className="section-title">{title}</div>
         {projects.length > collapsedCount && (
           <button className="btn btn-sm" onClick={() => setExpanded((v) => !v)}>
             {expanded ? t("dashboard.showLess") : t("dashboard.showMore")}
           </button>
         )}
       </div>
-      {projects.length === 0 && <p className="muted">{emptyMessage}</p>}
-      {visible.map((p) => (
-        <div className="progress-row" key={p.id}>
-          <div className="progress-row-top">
-            <Link to={`/projects/${p.id}`}>{p.name}</Link>
-            <span className="muted">
-              {t("dashboard.tasksCount", { done: p.doneTasks, total: p.totalTasks })} · {p.percent}%
-            </span>
+      <div className="panel-body">
+        {projects.length === 0 && <p className="muted">{emptyMessage}</p>}
+        {visible.map((p) => (
+          <div className="progress-row" key={p.id}>
+            <div className="progress-row-top">
+              <Link to={`/projects/${p.id}`}>{p.name}</Link>
+              <span className="muted">
+                {t("dashboard.tasksCount", { done: p.doneTasks, total: p.totalTasks })} · {p.percent}%
+              </span>
+            </div>
+            <div className="progress-bar-track">
+              <div className="progress-bar-fill" style={{ width: `${p.percent}%` }} />
+            </div>
           </div>
-          <div className="progress-bar-track">
-            <div className="progress-bar-fill" style={{ width: `${p.percent}%` }} />
-          </div>
-        </div>
-      ))}
+        ))}
+      </div>
     </div>
   );
 }
@@ -158,26 +158,26 @@ function MyTasks({ tasks, size }: { tasks: DashboardSummary["myTasks"]; size: Da
   const visible = expanded ? tasks : tasks.slice(0, collapsedCount);
 
   return (
-    <div className="card">
-      <div className="flex-between">
-        <div className="section-title" style={{ marginBottom: 0 }}>
-          {t("dashboard.myTasks")}
-        </div>
+    <div className="card panel panel-2">
+      <div className="panel-head">
+        <div className="section-title">{t("dashboard.myTasks")}</div>
         {tasks.length > collapsedCount && (
           <button className="btn btn-sm" onClick={() => setExpanded((v) => !v)}>
             {expanded ? t("dashboard.showLess") : t("dashboard.showMore")}
           </button>
         )}
       </div>
-      {tasks.length === 0 && <p className="muted">{t("dashboard.nothingAssigned")}</p>}
-      {visible.map((task) => (
-        <div className="task-list-item" key={task.id}>
-          <Link to={`/tasks/${task.id}`}>
-            {task.project?.name} - {task.subProject?.name || task.subProject?.checklistItem.name} - {task.title}
-          </Link>
-          <span className="muted">{formatDueDate(task.dueDate)}</span>
-        </div>
-      ))}
+      <div className="panel-body">
+        {tasks.length === 0 && <p className="muted">{t("dashboard.nothingAssigned")}</p>}
+        {visible.map((task) => (
+          <div className="task-list-item" key={task.id}>
+            <Link to={`/tasks/${task.id}`}>
+              {task.project?.name} - {task.subProject?.name || task.subProject?.checklistItem.name} - {task.title}
+            </Link>
+            <span className="muted">{formatDueDate(task.dueDate)}</span>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

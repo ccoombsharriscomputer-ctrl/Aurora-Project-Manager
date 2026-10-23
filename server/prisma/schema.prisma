@@ -69,6 +69,15 @@ enum ThemeMode {
   LIGHT
   DARK
   SYSTEM
+  MIDNIGHT
+  AURORA
+  SUNSET
+  OCEAN
+  FOREST
+  PASTEL
+  SLATE
+  CONTRAST
+  GOTHAM
 }
 
 enum AccentColor {
