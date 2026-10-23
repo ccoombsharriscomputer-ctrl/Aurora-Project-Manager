@@ -150,7 +150,7 @@ export function SettingsPage() {
         <h1>{t("settings.title")}</h1>
       </div>
 
-      <div className="card" style={{ maxWidth: 560, marginBottom: 20 }}>
+      <div className="card" style={{ maxWidth: 980, marginBottom: 20 }}>
         <div className="section-title">{t("settings.theme")}</div>
         <div className="theme-grid">
           {THEME_PREVIEWS.map((p) => (
