@@ -400,6 +400,165 @@
   color-scheme: dark;
 }
 
+:root[data-theme="metropolis"] {
+  --bg: #eef4ff;
+  --surface: #ffffff;
+  --border: #d4e0f5;
+  --text: #0f1f3d;
+  --muted: #5a6b8c;
+  --todo-bg: #e6eefc;
+  --progress-bg: #fff6d6;
+  --done-bg: #e1f5e8;
+  --shadow: 0 6px 20px rgba(11, 61, 145, 0.12);
+  --accent-color: #1d4ed8;
+  --accent-end: #3b82f6;
+  --primary: #1d4ed8;
+  --primary-hover: #1e40af;
+  --banner-bg: linear-gradient(110deg, #0b3d91 0%, #1d4ed8 70%, #dc2626 100%);
+  --sidebar-bg: linear-gradient(180deg, #0b3d91, #071c4d);
+  --pa-1: #1d4ed8;
+  --pb-1: #2563eb;
+  --pa-2: #dc2626;
+  --pb-2: #ef4444;
+  --pa-3: #facc15;
+  --pb-3: #f59e0b;
+  --pa-4: #0b3d91;
+  --pb-4: #1e40af;
+  --pt-3: #3b2a00;
+}
+
+/* A thin yellow strip under the banner, like the S-shield's trim. */
+:root[data-theme="metropolis"] .page-header:not(.page-header-plain) {
+  box-shadow: inset 0 -4px 0 #facc15;
+}
+
+:root[data-theme="empire"] {
+  --bg: #08080a;
+  --surface: #141418;
+  --border: #2b2b33;
+  --text: #ececf0;
+  --muted: #9a9aa6;
+  --success: #4ade80;
+  --warning: #fbbf24;
+  --danger: #ff5a5a;
+  --todo-bg: #1c1c22;
+  --progress-bg: #3a2410;
+  --done-bg: #14301e;
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.5), 0 4px 14px rgba(0, 0, 0, 0.45);
+  --accent-color: #c1121f;
+  --accent-end: #e11d2e;
+  --primary: #ff6b6b;
+  --primary-hover: #ff9a9a;
+  --banner-bg: linear-gradient(110deg, #1a1a20 0%, #0a0a0c 55%, #7f0d15 100%);
+  --sidebar-bg: linear-gradient(180deg, #16161b, #050506);
+  --pa-1: #c1121f;
+  --pb-1: #e11d2e;
+  --pa-2: #3a3a45;
+  --pb-2: #23232b;
+  --pa-3: #7a0c13;
+  --pb-3: #a3141f;
+  --pa-4: #5a5a68;
+  --pb-4: #3c3c48;
+  --panel-tint: 10%;
+  color-scheme: dark;
+}
+
+:root[data-theme="tatooine"] {
+  --bg: #fbf3e4;
+  --surface: #fffdf8;
+  --border: #ecd9b8;
+  --text: #3b2a14;
+  --muted: #8a7355;
+  --todo-bg: #f6ead2;
+  --progress-bg: #fff0cf;
+  --done-bg: #e8f1dc;
+  --shadow: 0 6px 20px rgba(120, 80, 20, 0.12);
+  --accent-color: #c2410c;
+  --accent-end: #f59e0b;
+  --primary: #b45309;
+  --primary-hover: #92400e;
+  --banner-bg: linear-gradient(110deg, #92400e 0%, #d97706 60%, #f59e0b 100%);
+  --sidebar-bg: linear-gradient(180deg, #8a5a2b, #4a2f14);
+  --pa-1: #b45309;
+  --pb-1: #d97706;
+  --pa-2: #a16207;
+  --pb-2: #ca8a04;
+  --pa-3: #c2410c;
+  --pb-3: #ea580c;
+  --pa-4: #78350f;
+  --pb-4: #92400e;
+}
+
+:root[data-theme="hoth"] {
+  --bg: #f0f6fb;
+  --surface: #ffffff;
+  --border: #d3e2ee;
+  --text: #12263a;
+  --muted: #5c7389;
+  --todo-bg: #e7f0f8;
+  --progress-bg: #fff4e0;
+  --done-bg: #e1f4ec;
+  --shadow: 0 6px 20px rgba(40, 80, 120, 0.1);
+  --accent-color: #0369a1;
+  --accent-end: #38bdf8;
+  --primary: #0369a1;
+  --primary-hover: #075985;
+  --banner-bg: linear-gradient(110deg, #0c4a6e 0%, #0284c7 60%, #7dd3fc 100%);
+  --sidebar-bg: linear-gradient(180deg, #1e3a5f, #0f2238);
+  --pa-1: #0369a1;
+  --pb-1: #0284c7;
+  --pa-2: #475569;
+  --pb-2: #64748b;
+  --pa-3: #0e7490;
+  --pb-3: #06b6d4;
+  --pa-4: #1e3a5f;
+  --pb-4: #2c5282;
+}
+
+:root[data-theme="galaxy"] {
+  --bg: #05060f;
+  --page-bg: radial-gradient(1.5px 1.5px at 12% 18%, rgba(255, 255, 255, 0.8), transparent),
+    radial-gradient(1px 1px at 78% 32%, rgba(255, 255, 255, 0.7), transparent),
+    radial-gradient(1.5px 1.5px at 44% 72%, rgba(255, 255, 255, 0.6), transparent),
+    radial-gradient(1px 1px at 90% 85%, rgba(255, 255, 255, 0.7), transparent),
+    radial-gradient(1px 1px at 28% 55%, rgba(255, 255, 255, 0.5), transparent),
+    radial-gradient(1px 1px at 63% 12%, rgba(255, 255, 255, 0.6), transparent),
+    linear-gradient(135deg, #05060f, #0d1230);
+  --surface: #0e1124;
+  --border: #232a52;
+  --text: #eaf0ff;
+  --muted: #94a0cc;
+  --success: #4ade80;
+  --warning: #fbbf24;
+  --danger: #fb7185;
+  --todo-bg: #171c3a;
+  --progress-bg: #33301a;
+  --done-bg: #123a2c;
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.5), 0 4px 14px rgba(0, 0, 0, 0.4);
+  --accent-color: #2563eb;
+  --accent-end: #38bdf8;
+  --primary: #7dd3fc;
+  --primary-hover: #bae6fd;
+  --banner-bg: linear-gradient(100deg, #070a1f 0%, #1e40af 55%, #0ea5e9 100%);
+  --sidebar-bg: linear-gradient(180deg, #0b1030, #03040a);
+  --pa-1: #2563eb;
+  --pb-1: #3b82f6;
+  --pa-2: #16a34a;
+  --pb-2: #22c55e;
+  --pa-3: #dc2626;
+  --pb-3: #ef4444;
+  --pa-4: #7e22ce;
+  --pb-4: #a855f7;
+  --panel-tint: 14%;
+  color-scheme: dark;
+}
+
+/* Saber glow on the dark Star Wars panels. */
+:root[data-theme="empire"] .card.panel,
+:root[data-theme="galaxy"] .card.panel {
+  box-shadow: 0 0 16px color-mix(in srgb, var(--pa) 40%, transparent);
+}
+
 * {
   box-sizing: border-box;
 }

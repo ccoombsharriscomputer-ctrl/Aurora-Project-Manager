@@ -39,6 +39,11 @@ const THEME_PREVIEWS: { mode: ThemeMode; page: string; side: string; banner: str
   { mode: "SLATE", page: "#f1f5f9", side: "#334155", banner: "linear-gradient(90deg, #475569, #64748b)", dots: ["#475569", "#475569", "#475569", "#475569"] },
   { mode: "CONTRAST", page: "#000", side: "#000", banner: "#ffd400", dots: ["#ffd400", "#00e5ff", "#ffd400", "#00e5ff"] },
   { mode: "GOTHAM", page: "#0b0d10", side: "#1b1f27", banner: "linear-gradient(90deg, #1f2530, #ffd21f)", dots: ["#ffd21f", "#3b4658", "#6f84a0", "#e0a800"] },
+  { mode: "METROPOLIS", page: "#eef4ff", side: "#0b3d91", banner: "linear-gradient(90deg, #0b3d91, #1d4ed8 70%, #dc2626)", dots: ["#1d4ed8", "#dc2626", "#facc15", "#0b3d91"] },
+  { mode: "EMPIRE", page: "#08080a", side: "#16161b", banner: "linear-gradient(90deg, #1a1a20, #7f0d15)", dots: ["#c1121f", "#3a3a45", "#7a0c13", "#5a5a68"] },
+  { mode: "TATOOINE", page: "#fbf3e4", side: "#6b4423", banner: "linear-gradient(90deg, #92400e, #f59e0b)", dots: ["#b45309", "#a16207", "#c2410c", "#78350f"] },
+  { mode: "HOTH", page: "#f0f6fb", side: "#1e3a5f", banner: "linear-gradient(90deg, #0c4a6e, #7dd3fc)", dots: ["#0369a1", "#475569", "#0e7490", "#1e3a5f"] },
+  { mode: "GALAXY", page: "linear-gradient(135deg, #05060f, #0d1230)", side: "#0b1030", banner: "linear-gradient(90deg, #070a1f, #1e40af, #0ea5e9)", dots: ["#2563eb", "#16a34a", "#dc2626", "#7e22ce"] },
 ];
 
 // "MIDNIGHT" -> "settings.themeMidnight", matching the translation keys.

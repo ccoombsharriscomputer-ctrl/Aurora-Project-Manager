@@ -78,6 +78,11 @@ enum ThemeMode {
   SLATE
   CONTRAST
   GOTHAM
+  METROPOLIS
+  EMPIRE
+  TATOOINE
+  HOTH
+  GALAXY
 }
 
 enum AccentColor {
