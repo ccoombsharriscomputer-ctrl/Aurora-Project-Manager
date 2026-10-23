@@ -1981,3 +1981,23 @@ label {
     box-shadow: 0 0 0 8px transparent;
   }
 }
+
+.assistant-voicebar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border-bottom: 1px solid var(--border);
+  background: var(--todo-bg);
+}
+
+.assistant-voicebar label {
+  margin: 0;
+  flex-shrink: 0;
+}
+
+.assistant-voicebar select {
+  min-width: 0;
+  padding: 4px 8px;
+  font-size: 13px;
+}

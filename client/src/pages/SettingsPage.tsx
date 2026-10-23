@@ -127,22 +127,35 @@ function ChangePasswordCard() {
 export function SettingsPage() {
   const { t } = useTranslation();
   const { user, updateUser } = useAuth();
-  const [theme, setTheme] = useState<ThemeMode>(user!.theme);
-  const [accentColor, setAccentColor] = useState<AccentColor>(user!.accentColor);
-  const [locale, setLocale] = useState<Locale>(user!.locale);
+  const { theme, accentColor, locale } = user!;
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
 
   const save = useMutation({
-    mutationFn: () => api.patch<CurrentUser>("/auth/me", { theme, accentColor, locale }),
+    mutationFn: (patch: { theme?: ThemeMode; accentColor?: AccentColor; locale?: Locale }) =>
+      api.patch<CurrentUser>("/auth/me", patch),
     onSuccess: (updated) => {
       updateUser(updated);
       setError(null);
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
     },
-    onError: (err) => setError(extractErrorMessage(err)),
   });
+
+  // Every choice here applies the moment you make it: the screen changes right away, and the
+  // change is saved in the background. If saving fails, the screen goes back to what it was.
+  function applyChoice(patch: { theme?: ThemeMode; accentColor?: AccentColor; locale?: Locale }) {
+    const previous = user!;
+    updateUser({ ...previous, ...patch });
+    setError(null);
+    setSaved(false);
+    save.mutate(patch, {
+      onError: (err) => {
+        updateUser(previous);
+        setError(extractErrorMessage(err));
+      },
+    });
+  }
 
   return (
     <div>
@@ -158,7 +171,7 @@ export function SettingsPage() {
               key={p.mode}
               type="button"
               className={`theme-tile${theme === p.mode ? " selected" : ""}`}
-              onClick={() => setTheme(p.mode)}
+              onClick={() => applyChoice({ theme: p.mode })}
               aria-pressed={theme === p.mode}
             >
               <span className="theme-preview" style={{ background: p.page }}>
@@ -184,7 +197,7 @@ export function SettingsPage() {
             <button
               key={color}
               type="button"
-              onClick={() => setAccentColor(color)}
+              onClick={() => applyChoice({ accentColor: color })}
               title={t(`settings.accent${color.charAt(0)}${color.slice(1).toLowerCase()}`)}
               style={{
                 width: 32,
@@ -204,7 +217,7 @@ export function SettingsPage() {
           {/* Language names are always shown in their own language, regardless of the
               currently active UI language, so a user can find their language even if
               the app is currently displaying one they don't read. */}
-          <select value={locale} onChange={(e) => setLocale(e.target.value as Locale)}>
+          <select value={locale} onChange={(e) => applyChoice({ locale: e.target.value as Locale })}>
             <option value="EN">English</option>
             <option value="ES">Español</option>
             <option value="FR_CA">Français (Canada)</option>
@@ -212,11 +225,8 @@ export function SettingsPage() {
         </div>
 
         {error && <div className="error-text">{error}</div>}
-        <div className="gap-8" style={{ marginTop: 12 }}>
-          <button className="btn btn-primary" onClick={() => save.mutate()} disabled={save.isPending}>
-            {t("common.save")}
-          </button>
-          {saved && <span className="muted">{t("settings.saved")}</span>}
+        <div className="muted" style={{ minHeight: 20 }}>
+          {saved && t("settings.saved")}
         </div>
       </div>
 

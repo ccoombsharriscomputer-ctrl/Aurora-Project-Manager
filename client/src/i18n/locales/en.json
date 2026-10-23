@@ -483,7 +483,10 @@
     "speakOn": "Read answers aloud",
     "speakOff": "Stop reading answers aloud",
     "micBlocked": "Microphone access is blocked. Allow it in your browser's site settings, then try again.",
-    "micError": "Couldn't hear that. Try again, or type your question."
+    "micError": "Couldn't hear that. Try again, or type your question.",
+    "voice": "Voice",
+    "voiceDefault": "Default voice",
+    "voiceSample": "Hello, I'm Jarvis. How can I help?"
   },
   "customerPicker": {
     "placeholder": "Search customers…",

@@ -35,6 +35,23 @@ function speechLang(appLang: string): string {
 }
 
 const SPEAK_KEY = "aurora-jarvis-speak";
+const VOICE_KEY = "aurora-jarvis-voice";
+
+function readVoicePreference(): string {
+  try {
+    return localStorage.getItem(VOICE_KEY) ?? "";
+  } catch {
+    return "";
+  }
+}
+
+// The voices on offer are whatever this browser and computer have installed (Edge, for one, ships
+// very natural ones). Show the ones in the app's language first; fall back to all if there are none.
+function voicesFor(all: SpeechSynthesisVoice[], appLang: string): SpeechSynthesisVoice[] {
+  const base = speechLang(appLang).slice(0, 2);
+  const matching = all.filter((v) => v.lang.toLowerCase().startsWith(base));
+  return (matching.length > 0 ? matching : all).slice().sort((a, b) => a.name.localeCompare(b.name));
+}
 
 function readSpeakPreference(): boolean {
   try {
@@ -60,6 +77,8 @@ export function AssistantPanel() {
   const [error, setError] = useState<string | null>(null);
   const [listening, setListening] = useState(false);
   const [speakReplies, setSpeakReplies] = useState(readSpeakPreference);
+  const [voiceName, setVoiceName] = useState(readVoicePreference);
+  const [allVoices, setAllVoices] = useState<SpeechSynthesisVoice[]>([]);
   const endRef = useRef<HTMLDivElement>(null);
   const recognitionRef = useRef<Recognition | null>(null);
   const spokenTranscriptRef = useRef("");
@@ -74,6 +93,16 @@ export function AssistantPanel() {
   useEffect(() => {
     endRef.current?.scrollIntoView({ block: "end" });
   }, [messages, pending, open]);
+
+  // Browsers load their voice list a moment after the page does, and announce it with this event.
+  useEffect(() => {
+    const synth = window.speechSynthesis;
+    if (!synth) return;
+    const load = () => setAllVoices(synth.getVoices());
+    load();
+    synth.addEventListener?.("voiceschanged", load);
+    return () => synth.removeEventListener?.("voiceschanged", load);
+  }, []);
 
   // Closing the chat (or leaving the page) stops listening and talking.
   useEffect(() => {
@@ -94,13 +123,35 @@ export function AssistantPanel() {
   const canListen = getRecognitionClass() !== null;
   const canSpeak = typeof window !== "undefined" && "speechSynthesis" in window;
 
-  function speak(text: string) {
+  const voices = voicesFor(allVoices, i18n.language);
+
+  function speak(text: string, name: string = voiceName) {
     if (!canSpeak) return;
     window.speechSynthesis.cancel();
     // Bullet dashes would be read out as "dash"; drop them.
     const utterance = new SpeechSynthesisUtterance(text.replace(/^\s*-\s+/gm, ""));
-    utterance.lang = speechLang(i18n.language);
+    const voice = name ? allVoices.find((v) => v.name === name) : undefined;
+    if (voice) {
+      try {
+        utterance.voice = voice;
+      } catch {
+        // A voice that has gone away since the list loaded; the language below still applies.
+      }
+      utterance.lang = voice.lang;
+    } else {
+      utterance.lang = speechLang(i18n.language);
+    }
     window.speechSynthesis.speak(utterance);
+  }
+
+  function chooseVoice(name: string) {
+    setVoiceName(name);
+    try {
+      localStorage.setItem(VOICE_KEY, name);
+    } catch {
+      // Choice just won't be remembered.
+    }
+    speak(t("assistant.voiceSample"), name);
   }
 
   async function send(text: string) {
@@ -235,6 +286,20 @@ export function AssistantPanel() {
           </button>
         </div>
       </div>
+
+      {speakReplies && voices.length > 0 && (
+        <div className="assistant-voicebar">
+          <label htmlFor="assistant-voice">{t("assistant.voice")}</label>
+          <select id="assistant-voice" value={voiceName} onChange={(e) => chooseVoice(e.target.value)}>
+            <option value="">{t("assistant.voiceDefault")}</option>
+            {voices.map((v) => (
+              <option key={v.name} value={v.name}>
+                {v.name}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
 
       <div className="assistant-messages">
         {messages.length === 0 && (

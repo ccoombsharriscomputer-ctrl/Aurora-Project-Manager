@@ -483,7 +483,10 @@
     "speakOn": "Leer las respuestas en voz alta",
     "speakOff": "Dejar de leer las respuestas en voz alta",
     "micBlocked": "El acceso al micrófono está bloqueado. Permítelo en la configuración del sitio de tu navegador y vuelve a intentarlo.",
-    "micError": "No pude oírte. Inténtalo de nuevo o escribe tu pregunta."
+    "micError": "No pude oírte. Inténtalo de nuevo o escribe tu pregunta.",
+    "voice": "Voz",
+    "voiceDefault": "Voz predeterminada",
+    "voiceSample": "Hola, soy Jarvis. ¿En qué puedo ayudarte?"
   },
   "customerPicker": {
     "placeholder": "Buscar clientes…",
