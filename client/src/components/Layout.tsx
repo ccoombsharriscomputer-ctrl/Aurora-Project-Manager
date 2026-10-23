@@ -4,6 +4,7 @@ import { useAuth } from "../context/AuthContext";
 import { OpenTabsProvider } from "../context/OpenTabsContext";
 import { SoftwareLineSwitcher } from "./SoftwareLineSwitcher";
 import { ProjectTabBar } from "./ProjectTabBar";
+import { AssistantPanel } from "./AssistantPanel";
 
 const HELP_URL = "/help.html";
 
@@ -67,6 +68,7 @@ export function Layout() {
           </div>
         </main>
       </div>
+      <AssistantPanel />
     </OpenTabsProvider>
   );
 }

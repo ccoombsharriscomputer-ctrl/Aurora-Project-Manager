@@ -455,6 +455,19 @@
     "confirmNewPassword": "Confirmer le nouveau mot de passe",
     "passwordsDoNotMatch": "Le nouveau mot de passe et la confirmation ne correspondent pas"
   },
+  "assistant": {
+    "title": "Demander à Jarvis",
+    "open": "Ouvrir l'assistant",
+    "close": "Fermer",
+    "clear": "Nouvelle conversation",
+    "send": "Envoyer",
+    "thinking": "Je cherche…",
+    "placeholder": "Posez une question sur vos projets, tâches ou heures",
+    "intro": "Je peux consulter vos projets, tâches, heures et suivis, et les résumer. Je peux seulement lire, jamais rien modifier.",
+    "suggestOverdue": "Qu'est-ce qui est en retard?",
+    "suggestWeek": "Résume ma semaine",
+    "suggestBehind": "Quels projets sont en retard?"
+  },
   "customerPicker": {
     "placeholder": "Rechercher des clients…",
     "loading": "Chargement des clients…",

@@ -455,6 +455,19 @@
     "confirmNewPassword": "Confirm new password",
     "passwordsDoNotMatch": "New password and confirmation don't match"
   },
+  "assistant": {
+    "title": "Ask Jarvis",
+    "open": "Open the helper",
+    "close": "Close",
+    "clear": "New chat",
+    "send": "Send",
+    "thinking": "Looking that up…",
+    "placeholder": "Ask about your projects, tasks or hours",
+    "intro": "I can look up your projects, tasks, hours and follow-ups, and summarize them. I can only read, never change anything.",
+    "suggestOverdue": "What is overdue?",
+    "suggestWeek": "Summarize my week",
+    "suggestBehind": "Which projects are behind?"
+  },
   "customerPicker": {
     "placeholder": "Search customers…",
     "loading": "Loading customers…",

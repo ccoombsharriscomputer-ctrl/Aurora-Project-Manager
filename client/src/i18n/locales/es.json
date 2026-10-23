@@ -455,6 +455,19 @@
     "confirmNewPassword": "Confirmar nueva contraseña",
     "passwordsDoNotMatch": "La nueva contraseña y la confirmación no coinciden"
   },
+  "assistant": {
+    "title": "Pregunta a Jarvis",
+    "open": "Abrir el asistente",
+    "close": "Cerrar",
+    "clear": "Nuevo chat",
+    "send": "Enviar",
+    "thinking": "Buscando…",
+    "placeholder": "Pregunta sobre tus proyectos, tareas u horas",
+    "intro": "Puedo consultar tus proyectos, tareas, horas y seguimientos, y resumirlos. Solo puedo leer, nunca cambio nada.",
+    "suggestOverdue": "¿Qué está atrasado?",
+    "suggestWeek": "Resume mi semana",
+    "suggestBehind": "¿Qué proyectos van atrasados?"
+  },
   "customerPicker": {
     "placeholder": "Buscar clientes…",
     "loading": "Cargando clientes…",
