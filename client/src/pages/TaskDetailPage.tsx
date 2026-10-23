@@ -8,9 +8,12 @@ import { extractErrorMessage, useAuth } from "../context/AuthContext";
 import { useOpenTabs } from "../context/OpenTabsContext";
 import { formatDate, formatMinutes, formatRelativeTime } from "../utils/format";
 import { useActiveTimer } from "../hooks/useActiveTimer";
+import { LinkifiedText } from "../components/LinkifiedText";
 import { clearTaskCommentDraft, loadTaskCommentDraft, saveTaskCommentDraft } from "../utils/taskCommentDraft";
 
 const COLLAPSED_COUNT = 3;
+const MAX_FILE_BYTES = 25 * 1024 * 1024;
+const MAX_COMMENT_FILES = 10;
 
 interface FeedItem {
   id: string;
@@ -22,6 +25,7 @@ interface FeedItem {
   running: boolean;
   actionType: string | null;
   isPublic: boolean;
+  attachments: { id: string; originalName: string; size: number }[];
 }
 
 function statusLabel(t: (key: string) => string, status: TaskStatus): string {
@@ -44,6 +48,7 @@ export function TaskDetailPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const commentFilesInputRef = useRef<HTMLInputElement>(null);
 
   const { data: task, isLoading } = useQuery({
     queryKey: ["task", taskId],
@@ -86,6 +91,9 @@ export function TaskDetailPage() {
   const [followUpDate, setFollowUpDate] = useState(
     () => (taskId && loadTaskCommentDraft(taskId)?.followUpDate) || ""
   );
+  // Files chosen for the comment being written. Not part of the saved draft: a File can't be
+  // stored in localStorage, so these are lost if the page is left before posting.
+  const [commentFiles, setCommentFiles] = useState<File[]>([]);
   const [expanded, setExpanded] = useState(false);
 
   // Keeps the draft current as the user types/toggles anything in the form — cheap enough to
@@ -172,17 +180,26 @@ export function TaskDetailPage() {
   });
 
   const addComment = useMutation({
-    mutationFn: () =>
-      api.post(`/tasks/${taskId}/comments`, {
+    mutationFn: () => {
+      const fields = {
         body: commentBody,
         hours: commentHours ? Number(commentHours) : undefined,
         date: commentHours ? commentDate : undefined,
         actionTypeId: actionTypeId || undefined,
         isPublic,
         followUpDate: followUpDate || undefined,
-      }),
+      };
+      if (commentFiles.length === 0) return api.post(`/tasks/${taskId}/comments`, fields);
+      const form = new FormData();
+      for (const [key, value] of Object.entries(fields)) {
+        if (value !== undefined) form.append(key, String(value));
+      }
+      for (const file of commentFiles) form.append("files", file);
+      return api.postForm(`/tasks/${taskId}/comments`, form);
+    },
     onSuccess: () => {
       setCommentBody("");
+      setCommentFiles([]);
       setCommentError(null);
       setCommentHours("");
       setActionTypeId("");
@@ -257,6 +274,7 @@ export function TaskDetailPage() {
       running: false,
       actionType: c.teamSupportActionType,
       isPublic: c.teamSupportIsPublic,
+      attachments: c.attachments ?? [],
     })),
     ...task.timeEntries.map((entry) => ({
       id: `time-${entry.id}`,
@@ -268,6 +286,7 @@ export function TaskDetailPage() {
       running: !entry.endedAt,
       actionType: null,
       isPublic: false,
+      attachments: [],
     })),
   ].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
@@ -367,7 +386,24 @@ export function TaskDetailPage() {
                     </button>
                   )}
                 </div>
-                {item.body && <div>{item.body}</div>}
+                {item.body && (
+                  <div style={{ whiteSpace: "pre-wrap" }}>
+                    <LinkifiedText text={item.body} />
+                  </div>
+                )}
+                {item.attachments.length > 0 && (
+                  <div style={{ marginTop: 6 }}>
+                    {item.attachments.map((a) => (
+                      <div key={a.id}>
+                        📎{" "}
+                        <a href={`/api/attachments/${a.id}`} target="_blank" rel="noopener noreferrer">
+                          {a.originalName}
+                        </a>{" "}
+                        <span className="muted">({(a.size / 1024).toFixed(0)} KB)</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             ))}
             {feedItems.length === 0 && <p className="muted">{t("taskDetail.noCommentsYet")}</p>}
@@ -430,6 +466,49 @@ export function TaskDetailPage() {
                     </div>
                   </div>
                 )}
+                <div style={{ marginTop: 8 }}>
+                  <button type="button" className="btn btn-sm" onClick={() => commentFilesInputRef.current?.click()}>
+                    {t("taskDetail.attachFiles")}
+                  </button>
+                  <input
+                    ref={commentFilesInputRef}
+                    type="file"
+                    multiple
+                    style={{ display: "none" }}
+                    onChange={(e) => {
+                      const picked = Array.from(e.target.files ?? []);
+                      e.target.value = "";
+                      const tooBig = picked.find((f) => f.size > MAX_FILE_BYTES);
+                      if (tooBig) {
+                        setCommentError(t("taskDetail.fileTooLarge", { name: tooBig.name }));
+                        return;
+                      }
+                      if (commentFiles.length + picked.length > MAX_COMMENT_FILES) {
+                        setCommentError(t("taskDetail.tooManyFiles", { max: MAX_COMMENT_FILES }));
+                        return;
+                      }
+                      setCommentError(null);
+                      setCommentFiles((prev) => [...prev, ...picked]);
+                    }}
+                  />
+                  {commentFiles.map((f, i) => (
+                    <div key={`${f.name}-${i}`} style={{ fontSize: 13, marginTop: 4 }}>
+                      📎 {f.name} <span className="muted">({(f.size / 1024).toFixed(0)} KB)</span>{" "}
+                      <button
+                        type="button"
+                        className="remove-link"
+                        onClick={() => setCommentFiles((prev) => prev.filter((_, j) => j !== i))}
+                      >
+                        {t("projectDetail.remove")}
+                      </button>
+                    </div>
+                  ))}
+                  {project?.teamSupportTicketNumber && commentFiles.length > 0 && (
+                    <div className="muted" style={{ fontSize: 12, marginTop: 4 }}>
+                      {t("taskDetail.filesGoToTeamSupport")}
+                    </div>
+                  )}
+                </div>
                 {commentError && <div className="error-text">{commentError}</div>}
                 <button className="btn btn-primary btn-sm" type="submit" disabled={addComment.isPending} style={{ marginTop: 8 }}>
                   {t("taskDetail.postUpdate")}

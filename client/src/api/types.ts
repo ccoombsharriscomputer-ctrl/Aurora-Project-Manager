@@ -303,6 +303,7 @@ export interface Comment {
   teamSupportActionType: string | null;
   teamSupportIsPublic: boolean;
   timeEntry: { id: string; durationMinutes: number | null } | null;
+  attachments: { id: string; originalName: string; size: number }[];
 }
 
 export interface TeamSupportActionType {

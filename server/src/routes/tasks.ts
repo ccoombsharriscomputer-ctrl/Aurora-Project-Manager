@@ -1,9 +1,10 @@
-import { Router } from "express";
+import { Router, type NextFunction, type Request, type Response } from "express";
 import { z } from "zod";
 import { prisma } from "../lib/prisma";
 import { blockReadOnly, effectiveSoftwareLineId, requireAuth } from "../middleware/auth";
 import { logActivity } from "../lib/activity";
 import { emitUpdate } from "../lib/realtime";
+import multer from "multer";
 import { upload } from "../lib/upload";
 import { storage } from "../lib/storage";
 import { loadTaskInScope, userHasLineAccess } from "../lib/scope";
@@ -31,6 +32,7 @@ router.get("/:id", async (req, res) => {
         include: {
           author: { select: { id: true, name: true } },
           timeEntry: { select: { id: true, durationMinutes: true } },
+          attachments: { orderBy: { createdAt: "asc" }, select: { id: true, originalName: true, size: true } },
         },
       },
       attachments: {
@@ -202,6 +204,7 @@ router.get("/:id/comments", async (req, res) => {
     include: {
       author: { select: { id: true, name: true } },
       timeEntry: { select: { id: true, durationMinutes: true } },
+      attachments: { orderBy: { createdAt: "asc" }, select: { id: true, originalName: true, size: true } },
     },
   });
   res.json(comments);
@@ -222,7 +225,37 @@ const commentSchema = z.object({
     .optional(),
 });
 
-router.post("/:id/comments", blockReadOnly, async (req, res) => {
+// A comment with files arrives as multipart/form-data (every field a string); one without
+// still arrives as plain JSON. Both end up in req.body in the shape commentSchema expects.
+const MAX_COMMENT_FILES = 10;
+const commentFilesUpload = upload.array("files", MAX_COMMENT_FILES);
+
+function parseCommentUpload(req: Request, res: Response, next: NextFunction) {
+  if (!req.is("multipart/form-data")) return next();
+  commentFilesUpload(req, res, (err) => {
+    if (err) {
+      if (err instanceof multer.MulterError && err.code === "LIMIT_FILE_SIZE") {
+        return res.status(400).json({ error: "Each file must be 25 MB or smaller" });
+      }
+      if (err instanceof multer.MulterError && err.code === "LIMIT_UNEXPECTED_FILE") {
+        return res.status(400).json({ error: `You can attach up to ${MAX_COMMENT_FILES} files to one comment` });
+      }
+      return next(err);
+    }
+    const body = req.body as Record<string, string | undefined>;
+    req.body = {
+      body: body.body,
+      hours: body.hours ? Number(body.hours) : undefined,
+      date: body.date || undefined,
+      actionTypeId: body.actionTypeId || undefined,
+      isPublic: body.isPublic === "true",
+      followUpDate: body.followUpDate || undefined,
+    };
+    next();
+  });
+}
+
+router.post("/:id/comments", blockReadOnly, parseCommentUpload, async (req, res) => {
   const task = await loadTaskInScope(req.params.id, effectiveSoftwareLineId(req.user!));
   if (!task) {
     return res.status(404).json({ error: "Task not found" });
@@ -247,6 +280,8 @@ router.post("/:id/comments", blockReadOnly, async (req, res) => {
     }
   }
 
+  const files = (req.files as Express.Multer.File[] | undefined) ?? [];
+
   const comment = await prisma.comment.create({
     data: {
       taskId: task.id,
@@ -260,6 +295,27 @@ router.post("/:id/comments", blockReadOnly, async (req, res) => {
       timeEntry: { select: { id: true, durationMinutes: true } },
     },
   });
+
+  // Each file is also an ordinary task attachment (same storage, same download links), just
+  // tied to this comment so it shows under it.
+  const attachments = [];
+  for (const file of files) {
+    const storedFilename = await storage.save(file.buffer, file.originalname, file.mimetype);
+    attachments.push(
+      await prisma.attachment.create({
+        data: {
+          taskId: task.id,
+          commentId: comment.id,
+          uploaderId: req.user!.id,
+          storedFilename,
+          originalName: file.originalname,
+          mimeType: file.mimetype,
+          size: file.size,
+        },
+        select: { id: true, originalName: true, size: true },
+      })
+    );
+  }
 
   await logActivity({
     type: "COMMENT_ADDED",
@@ -311,6 +367,7 @@ router.post("/:id/comments", blockReadOnly, async (req, res) => {
         creatorId: req.user!.teamSupportUserId,
         actionTypeId: actionType?.id,
         isPublic: parsed.data.isPublic ?? false,
+        files: files.map((f) => ({ name: f.originalname, mimeType: f.mimetype, buffer: f.buffer })),
       }
     );
   }
@@ -341,7 +398,7 @@ router.post("/:id/comments", blockReadOnly, async (req, res) => {
   emitUpdate({ scope: "task", taskId: task.id });
   emitUpdate({ scope: "dashboard" });
 
-  res.status(201).json({ comment, timeEntry, followUp });
+  res.status(201).json({ comment: { ...comment, attachments }, timeEntry, followUp });
 });
 
 // Aurora-only — never touches whatever note this comment may have synced to TeamSupport,
@@ -353,7 +410,7 @@ router.delete("/:id/comments/:commentId", blockReadOnly, async (req, res) => {
   }
   const comment = await prisma.comment.findUnique({
     where: { id: req.params.commentId },
-    include: { timeEntry: true },
+    include: { timeEntry: true, attachments: true },
   });
   if (!comment || comment.taskId !== task.id) {
     return res.status(404).json({ error: "Comment not found" });
@@ -365,6 +422,10 @@ router.delete("/:id/comments/:commentId", blockReadOnly, async (req, res) => {
     await prisma.timeEntry.delete({ where: { id: comment.timeEntry.id } });
   }
   await prisma.comment.delete({ where: { id: comment.id } });
+  // The database rows go with the comment; the stored files need removing by hand.
+  for (const attachment of comment.attachments) {
+    await storage.delete(attachment.storedFilename);
+  }
 
   await logActivity({
     type: "COMMENT_DELETED",

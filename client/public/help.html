@@ -955,6 +955,11 @@
             When they appear, Action type and Hours become required, marked with a small red
             <span class="badge" style="background:var(--danger-soft); color:var(--danger); text-transform:none; letter-spacing:0; font-family:inherit;">* required</span>,
             so a comment can't be posted without them.</li>
+          <li><strong>Links and files in comments:</strong> a web address typed or pasted into a comment (starting
+            with <em>https://</em>, <em>http://</em> or <em>www.</em>) becomes a clickable link. Click <em>Attach
+            files</em> under the comment box to add up to 10 files (25&nbsp;MB each) to the comment; they show
+            under it once it's posted, and also appear in the task's Attachments list. On a project with a
+            TeamSupport ticket # set, the links and the files go to the ticket's note too.</li>
           <li>Each comment carries its own <em>Remove</em> link, for people who can write to the task. Deleting a
             comment also removes any hours logged with it, but only in Aurora — it never reaches back into
             TeamSupport to undo a note that already synced there.</li>
@@ -1027,7 +1032,8 @@
           also added to the linked ticket as a note, headed "Via <em>[Software line]</em> Project Manager" (e.g.
           "Via TRIO Project Manager"), followed by a line naming the sub-project and task the update came from
           (e.g. "Data Conversion — Validate converted employee records"), then the comment text itself; any logged
-          hours ride along in the ticket's own time-tracking field rather than as extra text. This happens
+          hours ride along in the ticket's own time-tracking field rather than as extra text. Web addresses in the
+          comment arrive as clickable links, and any files attached to the comment are attached to the note. This happens
           automatically; there's nothing extra to click. If TeamSupport is slow, unreachable, or not configured,
           your comment still saves in Aurora normally — the sync fails quietly in the background rather than
           blocking your update.

@@ -143,6 +143,14 @@ export interface PostTicketActionOptions {
   creatorId?: string | null;
   actionTypeId?: string | null;
   isPublic?: boolean;
+  // Files to attach to the note once it exists (see postTicketActionAttachment).
+  files?: TicketActionFile[];
+}
+
+export interface TicketActionFile {
+  name: string;
+  mimeType: string;
+  buffer: Buffer;
 }
 
 // Posts a new ticket action (TeamSupport's term for a note/comment on a ticket) via
@@ -159,7 +167,7 @@ export async function postTicketAction(
   ticketNumber: string,
   description: string,
   options: PostTicketActionOptions = {}
-): Promise<void> {
+): Promise<string | null> {
   const { hours, creatorId, actionTypeId, isPublic = false } = options;
   const action: Record<string, unknown> = { Description: description, IsVisibleOnPortal: isPublic };
   if (hours) {
@@ -172,17 +180,54 @@ export async function postTicketAction(
     action.ActionTypeID = Number(actionTypeId);
   }
 
-  await teamSupportRequest(`/api/json/tickets/${encodeURIComponent(ticketNumber)}/actions`, {
+  const raw = await teamSupportRequest(`/api/json/tickets/${encodeURIComponent(ticketNumber)}/actions`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ Action: action }),
   });
+  // The response wraps the new action as { Action: { ActionID, ... } } (confirmed live
+  // 2026-10-23) — that ID is what a file attachment needs to hang off.
+  const created = (raw && typeof raw === "object" && "Action" in raw ? (raw as { Action: unknown }).Action : raw) as
+    | Record<string, unknown>
+    | null;
+  const id = created?.ActionID ?? created?.ID;
+  return id != null ? String(id) : null;
+}
+
+// Attaches one file to an existing ticket action: multipart upload to
+// POST Tickets/{ticket}/Actions/{action}/Attachments.
+export async function postTicketActionAttachment(
+  ticketNumber: string,
+  actionId: string,
+  file: TicketActionFile
+): Promise<void> {
+  const form = new FormData();
+  form.append("file", new Blob([new Uint8Array(file.buffer)], { type: file.mimeType }), file.name);
+  await teamSupportRequest(
+    `/api/json/tickets/${encodeURIComponent(ticketNumber)}/actions/${encodeURIComponent(actionId)}/attachments`,
+    { method: "POST", body: form }
+  );
 }
 
 // TeamSupport renders Action descriptions as HTML, so a plain "\n" collapses away like any
 // other whitespace in a browser — real line breaks need <br> tags instead.
 function toHtmlLines(text: string): string {
-  return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\n/g, "<br>");
+  const escaped = text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  return linkifyEscapedHtml(escaped).replace(/\n/g, "<br>");
+}
+
+// Turns pasted web addresses (https://..., http://..., www....) into clickable links. Runs on
+// text that has already been HTML-escaped, so the address can go straight into href and the
+// link text. Trailing punctuation (a full stop or closing bracket right after the address)
+// stays outside the link.
+function linkifyEscapedHtml(escaped: string): string {
+  return escaped.replace(/(https?:\/\/|www\.)[^\s<]+/gi, (match) => {
+    const trailing = match.match(/(?:[.,;:!?)\]]|&gt;|&quot;)+$/)?.[0] ?? "";
+    const url = trailing ? match.slice(0, -trailing.length) : match;
+    if (!url || /^(https?:\/\/|www\.)$/i.test(url)) return match;
+    const href = /^www\./i.test(url) ? `http://${url}` : url;
+    return `<a href="${href}">${url}</a>${trailing}`;
+  });
 }
 
 // The sub-project + task line shown to TeamSupport right below the "Via <line> Project
@@ -211,9 +256,24 @@ export function syncTaskUpdateToTeamSupport(
   options: PostTicketActionOptions = {}
 ) {
   const description = `Via ${productLineName} Project Manager<br>${toHtmlLines(taskContext)}<br><br>${toHtmlLines(body)}`;
-  postTicketAction(ticketNumber, description, options).catch((err) => {
-    console.error(`[teamSupport] failed to sync update to ticket ${ticketNumber}: ${err instanceof Error ? err.message : err}`);
-  });
+  postTicketAction(ticketNumber, description, options)
+    .then(async (actionId) => {
+      const files = options.files ?? [];
+      if (files.length === 0) return;
+      if (!actionId) {
+        console.error(`[teamSupport] note posted to ticket ${ticketNumber} but no action ID came back — ${files.length} file(s) not attached`);
+        return;
+      }
+      // One at a time and independent: one bad file shouldn't stop the others.
+      for (const file of files) {
+        await postTicketActionAttachment(ticketNumber, actionId, file).catch((err) => {
+          console.error(`[teamSupport] failed to attach "${file.name}" to ticket ${ticketNumber}: ${err instanceof Error ? err.message : err}`);
+        });
+      }
+    })
+    .catch((err) => {
+      console.error(`[teamSupport] failed to sync update to ticket ${ticketNumber}: ${err instanceof Error ? err.message : err}`);
+    });
 }
 
 // IDs for tickets the APM creates, captured from TeamSupport's own property lists (Harris

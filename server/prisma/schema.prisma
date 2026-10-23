@@ -359,12 +359,17 @@ model Comment {
   createdAt DateTime @default(now())
 
   timeEntry TimeEntry?
+  // Files attached to this comment when it was posted. They also carry the comment's taskId,
+  // so they show in the task's Attachments card as well.
+  attachments Attachment[]
 }
 
 model Attachment {
   id             String   @id @default(cuid())
   taskId         String?
   task           Task?    @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  commentId      String?
+  comment        Comment? @relation(fields: [commentId], references: [id], onDelete: Cascade)
   projectId      String?
   project        Project? @relation(fields: [projectId], references: [id], onDelete: Cascade)
   uploaderId     String
