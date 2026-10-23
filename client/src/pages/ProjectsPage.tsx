@@ -99,6 +99,7 @@ export function ProjectsPage() {
   const otherUsers = (users ?? []).filter((u) => u.id !== user?.id);
   const filteredProjects = (projects ?? []).filter(
     (p) =>
+      (!showArchived || p.archivedAt) &&
       (!filterProjectTypeId || p.projectType.id === filterProjectTypeId) &&
       (!filterAssigneeId || p.assignee?.id === filterAssigneeId)
   );
@@ -454,7 +455,7 @@ export function ProjectsPage() {
       {isLoading && <p className="muted">{t("projects.loadingProjects")}</p>}
       {!isLoading && projects?.length === 0 && <p className="muted">{t("projects.noProjectsYet")}</p>}
       {!isLoading && (projects?.length ?? 0) > 0 && filteredProjects.length === 0 && (
-        <p className="muted">{t("projects.noProjectsMatchFilter")}</p>
+        <p className="muted">{t(showArchived ? "projects.noArchivedProjects" : "projects.noProjectsMatchFilter")}</p>
       )}
 
       {view === "grid" ? (
