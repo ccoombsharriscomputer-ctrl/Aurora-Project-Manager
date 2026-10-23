@@ -249,38 +249,39 @@ export function defaultTicketGroup(softwareLineName: string): { id: string; name
 
 // The choices in TeamSupport's custom "Nature" dropdown on tickets. There is no API for a
 // custom field's options, so this is every value found on the existing PS Projects tickets
-// (2026-10-22, most-used first) — if TeamSupport admins add or rename an option, update here.
+// (2026-10-22), kept in alphabetical order so the dropdown is easy to scan — if TeamSupport
+// admins add or rename an option, update here and keep it sorted.
 // TeamSupport accepts any text for it without checking, so a stale list can only hide a new
 // option, never break ticket creation.
 export const TICKET_NATURES = [
-  "Implementation",
-  "Upgrade",
-  "Other",
-  "Hosting Installation",
-  "Consulting and Training",
-  "Non-Billable Time",
-  "Post Go-Live Support",
-  "LAN Installation",
-  "DeliveryPoint Installation",
-  "Procedural",
-  "Installation/Configuration",
-  "TCP Installation",
-  "Discovery and Testing",
-  "Data Extraction Service",
-  "Hardware/Network Issue",
-  "Training",
-  "Assistance to PS",
   "Administration",
-  "Data Conversion Issue",
+  "Assistance to PS",
   "Bug",
-  "Data Issue",
-  "Training/Procedural",
-  "Performance Issue",
-  "Enhancement",
-  "Customer Relationship",
   "Client Involvement",
+  "Consulting and Training",
+  "Customer Relationship",
+  "Data Conversion Issue",
+  "Data Extraction Service",
+  "Data Issue",
+  "DeliveryPoint Installation",
+  "Discovery and Testing",
+  "Enhancement",
   "Gov Window Implementation/Support",
+  "Hardware/Network Issue",
+  "Hosting Installation",
+  "Implementation",
+  "Installation/Configuration",
+  "LAN Installation",
+  "Non-Billable Time",
+  "Other",
+  "Performance Issue",
+  "Post Go-Live Support",
+  "Procedural",
   "Server Migration",
+  "TCP Installation",
+  "Training",
+  "Training/Procedural",
+  "Upgrade",
 ] as const;
 
 export interface CreateTicketOptions {
