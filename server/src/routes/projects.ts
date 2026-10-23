@@ -8,7 +8,7 @@ import { emitUpdate } from "../lib/realtime";
 import { upload } from "../lib/upload";
 import { storage } from "../lib/storage";
 import { loadProjectInScope, userHasLineAccess } from "../lib/scope";
-import { extractProjectDetailsFromContract, extractTextFromPdf } from "../lib/contractExtraction";
+import { countPdfPages, extractProjectDetailsFromContract, MAX_CONTRACT_PAGES } from "../lib/contractExtraction";
 import {
   createTicket,
   defaultTicketGroup,
@@ -230,16 +230,14 @@ router.post("/parse-contract", blockReadOnly, parseContractUpload.single("file")
     return res.status(400).json({ error: "Please upload a PDF file" });
   }
 
-  let contractText: string;
+  let pageCount: number;
   try {
-    contractText = await extractTextFromPdf(req.file.buffer);
+    pageCount = await countPdfPages(req.file.buffer);
   } catch {
     return res.status(400).json({ error: "Could not read this PDF — it may be corrupted." });
   }
-  if (contractText.length < 50) {
-    return res
-      .status(400)
-      .json({ error: "This PDF doesn't seem to contain readable text — it may be a scanned image without text." });
+  if (pageCount > MAX_CONTRACT_PAGES) {
+    return res.status(400).json({ error: "This PDF has " + pageCount + " pages — the limit is " + MAX_CONTRACT_PAGES + "." });
   }
 
   const lineId = effectiveSoftwareLineId(req.user!);
@@ -249,7 +247,7 @@ router.post("/parse-contract", blockReadOnly, parseContractUpload.single("file")
   ]);
 
   try {
-    const extracted = await extractProjectDetailsFromContract(contractText, projectTypes, products);
+    const extracted = await extractProjectDetailsFromContract(req.file.buffer, projectTypes, products);
     res.json(extracted);
   } catch (err) {
     if (err instanceof Error && err.message === "ANTHROPIC_API_KEY is not configured") {

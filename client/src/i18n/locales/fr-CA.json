@@ -138,7 +138,7 @@
   "projects": {
     "newProject": "Nouveau projet",
     "fillFromContract": "Créer à partir d'un contrat (PDF)",
-    "fillFromContractHint": "Téléversez un contrat signé et Aurora suggérera des valeurs ci-dessous à l'aide de Claude (Anthropic) — vérifiez tout avant de créer. Le texte du contrat est envoyé à Claude pour extraire ces suggestions; il n'est ni enregistré ni joint au projet.",
+    "fillFromContractHint": "Téléversez un contrat signé et Aurora suggérera des valeurs ci-dessous à l'aide de Claude (Anthropic) — vérifiez tout avant de créer. Le PDF du contrat est envoyé à Claude pour extraire ces suggestions, et les pages numérisées sont lues aussi; il n'est ni enregistré ni joint au projet.",
     "uploadContract": "Téléverser le PDF",
     "extractingContract": "Lecture du contrat…",
     "projectType": "Type de projet",

@@ -2,13 +2,17 @@ import Anthropic from "@anthropic-ai/sdk";
 import { PDFParse } from "pdf-parse";
 import type { ChecklistItem, ProjectType } from "@prisma/client";
 
-const MAX_CONTRACT_CHARS = 20000;
+// Claude reads PDFs up to 100 pages.
+export const MAX_CONTRACT_PAGES = 100;
 
-export async function extractTextFromPdf(buffer: Buffer): Promise<string> {
+// Opens the PDF just far enough to confirm it's a real one and count its pages (throws if it's
+// corrupted). The contract itself goes to Claude as the PDF, not as extracted text, so scanned
+// pages and tables that are really pictures get read too.
+export async function countPdfPages(buffer: Buffer): Promise<number> {
   const parser = new PDFParse({ data: buffer });
   try {
-    const result = await parser.getText();
-    return result.text.trim();
+    const info = await parser.getInfo();
+    return info.total;
   } finally {
     await parser.destroy();
   }
@@ -78,10 +82,7 @@ function nullIfEmpty(value: string): string | null {
   return trimmed.length > 0 ? trimmed : null;
 }
 
-function buildPrompt(contractText: string, projectTypes: ProjectType[], products: ChecklistItem[]): string {
-  const truncated =
-    contractText.length > MAX_CONTRACT_CHARS ? `${contractText.slice(0, MAX_CONTRACT_CHARS)}\n...[truncated]` : contractText;
-
+function buildPrompt(projectTypes: ProjectType[], products: ChecklistItem[]): string {
   return `You are helping an implementation team at Harris Computer set up a new project in Aurora, their project management tool, from a signed customer contract.
 
 Existing project types in this software line (pick the single best match, or none):
@@ -92,12 +93,7 @@ ${products.map((p) => `- ${p.name}`).join("\n") || "(none configured yet)"}
 
 Project names in this app typically follow the pattern "Customer Name — Engagement Description", for example "Lakeview Township — Payroll Go-Live" or "Millbrook County — Utility Billing".
 
-Read the contract text below and extract the project details using the extracted_project_details tool. Only choose a project type name and product names that are an exact match to the lists above — never invent new ones. Only fill in a TeamSupport ticket number if one is explicitly written in the text.
-
-Contract text:
-"""
-${truncated}
-"""`;
+Read the attached contract (a PDF that may include scanned pages) and extract the project details using the extracted_project_details tool. Only choose a project type name and product names that are an exact match to the lists above — never invent new ones. Only fill in a TeamSupport ticket number if one is explicitly written in the contract.`;
 }
 
 // Claude only sees the catalog *names*, since that's what it can reason about from contract
@@ -105,7 +101,7 @@ ${truncated}
 // anything that doesn't exactly match) happens here, so a hallucinated name can never end up
 // as a phantom projectTypeId/checklistItemId sent to the client.
 export async function extractProjectDetailsFromContract(
-  contractText: string,
+  pdf: Buffer,
   projectTypes: ProjectType[],
   products: ChecklistItem[]
 ): Promise<ExtractedProjectDetails> {
@@ -114,13 +110,21 @@ export async function extractProjectDetailsFromContract(
     throw new Error("ANTHROPIC_API_KEY is not configured");
   }
 
-  const client = new Anthropic({ apiKey, timeout: 45_000 });
+  const client = new Anthropic({ apiKey, timeout: 90_000 });
   const message = await client.messages.create({
     model: "claude-sonnet-5",
     max_tokens: 1500,
     tools: [EXTRACTION_TOOL],
     tool_choice: { type: "tool", name: "extracted_project_details" },
-    messages: [{ role: "user", content: buildPrompt(contractText, projectTypes, products) }],
+    messages: [
+      {
+        role: "user",
+        content: [
+          { type: "document", source: { type: "base64", media_type: "application/pdf", data: pdf.toString("base64") } },
+          { type: "text", text: buildPrompt(projectTypes, products) },
+        ],
+      },
+    ],
   });
 
   const toolUse = message.content.find((block): block is Anthropic.ToolUseBlock => block.type === "tool_use");
