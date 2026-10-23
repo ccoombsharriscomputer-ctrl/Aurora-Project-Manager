@@ -9,18 +9,61 @@ interface ChatMessage {
   content: string;
 }
 
+// Just the parts of the browser's speech-to-text we use (it isn't in TypeScript's built-in types).
+interface Recognition {
+  lang: string;
+  interimResults: boolean;
+  continuous: boolean;
+  onresult: ((e: { results: ArrayLike<ArrayLike<{ transcript: string }> & { isFinal: boolean }> }) => void) | null;
+  onerror: ((e: { error: string }) => void) | null;
+  onend: (() => void) | null;
+  start(): void;
+  stop(): void;
+  abort(): void;
+}
+
+function getRecognitionClass(): (new () => Recognition) | null {
+  const w = window as unknown as { SpeechRecognition?: new () => Recognition; webkitSpeechRecognition?: new () => Recognition };
+  return w.SpeechRecognition ?? w.webkitSpeechRecognition ?? null;
+}
+
+// The speech language follows the app's language setting.
+function speechLang(appLang: string): string {
+  if (appLang.startsWith("es")) return "es-ES";
+  if (appLang.startsWith("fr")) return "fr-CA";
+  return "en-US";
+}
+
+const SPEAK_KEY = "aurora-jarvis-speak";
+
+function readSpeakPreference(): boolean {
+  try {
+    return localStorage.getItem(SPEAK_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
 // The in-app helper: a round button bottom-right that opens a small chat. It only reads data
 // (the server gives Claude read-only lookups), so it's open to every role. It's hidden until the
 // server has an API key, except for admins, who see it with a setup message so they know it exists.
+// You can talk to it (the mic button, using the browser's own speech recognition) and have it read
+// answers aloud (the speaker button) — both are browser features, so they only show up where the
+// browser supports them, and neither needs anything on the server.
 export function AssistantPanel() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { user } = useAuth();
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [listening, setListening] = useState(false);
+  const [speakReplies, setSpeakReplies] = useState(readSpeakPreference);
   const endRef = useRef<HTMLDivElement>(null);
+  const recognitionRef = useRef<Recognition | null>(null);
+  const spokenTranscriptRef = useRef("");
+  const sendRef = useRef<(text: string) => void>(() => {});
 
   const { data: status } = useQuery({
     queryKey: ["assistant-status"],
@@ -32,11 +75,38 @@ export function AssistantPanel() {
     endRef.current?.scrollIntoView({ block: "end" });
   }, [messages, pending, open]);
 
+  // Closing the chat (or leaving the page) stops listening and talking.
+  useEffect(() => {
+    if (open) return;
+    recognitionRef.current?.abort();
+    window.speechSynthesis?.cancel();
+  }, [open]);
+  useEffect(
+    () => () => {
+      recognitionRef.current?.abort();
+      window.speechSynthesis?.cancel();
+    },
+    []
+  );
+
   if (!status || (!status.enabled && user?.role !== "ADMIN")) return null;
+
+  const canListen = getRecognitionClass() !== null;
+  const canSpeak = typeof window !== "undefined" && "speechSynthesis" in window;
+
+  function speak(text: string) {
+    if (!canSpeak) return;
+    window.speechSynthesis.cancel();
+    // Bullet dashes would be read out as "dash"; drop them.
+    const utterance = new SpeechSynthesisUtterance(text.replace(/^\s*-\s+/gm, ""));
+    utterance.lang = speechLang(i18n.language);
+    window.speechSynthesis.speak(utterance);
+  }
 
   async function send(text: string) {
     const question = text.trim();
     if (!question || pending) return;
+    window.speechSynthesis?.cancel();
     const next: ChatMessage[] = [...messages, { role: "user", content: question }];
     setMessages(next);
     setInput("");
@@ -46,10 +116,69 @@ export function AssistantPanel() {
       // The server is stateless, so each question carries the recent conversation with it.
       const { reply } = await api.post<{ reply: string }>("/assistant/chat", { messages: next.slice(-20) });
       setMessages([...next, { role: "assistant", content: reply }]);
+      if (speakReplies) speak(reply);
     } catch (err) {
+      // Take the unanswered question back out of the chat and into the box, so retrying (or asking
+      // something else) doesn't leave two questions in a row for Jarvis to answer at once.
+      setMessages(messages);
+      setInput(question);
       setError(extractErrorMessage(err));
     } finally {
       setPending(false);
+    }
+  }
+  sendRef.current = send;
+
+  function toggleListening() {
+    if (listening) {
+      recognitionRef.current?.stop();
+      return;
+    }
+    const Recognition = getRecognitionClass();
+    if (!Recognition || pending) return;
+    window.speechSynthesis?.cancel();
+    setError(null);
+    spokenTranscriptRef.current = "";
+    const recognition = new Recognition();
+    recognition.lang = speechLang(i18n.language);
+    recognition.interimResults = true;
+    recognition.continuous = false;
+    recognition.onresult = (e) => {
+      let transcript = "";
+      for (let i = 0; i < e.results.length; i++) transcript += e.results[i][0].transcript;
+      spokenTranscriptRef.current = transcript;
+      setInput(transcript);
+    };
+    recognition.onerror = (e) => {
+      if (e.error === "not-allowed" || e.error === "service-not-allowed") setError(t("assistant.micBlocked"));
+      else if (e.error !== "aborted" && e.error !== "no-speech") setError(t("assistant.micError"));
+    };
+    recognition.onend = () => {
+      setListening(false);
+      recognitionRef.current = null;
+      // Stopped talking: send what was heard, like pressing Send.
+      const heard = spokenTranscriptRef.current.trim();
+      spokenTranscriptRef.current = "";
+      if (heard) sendRef.current(heard);
+    };
+    recognitionRef.current = recognition;
+    setListening(true);
+    try {
+      recognition.start();
+    } catch {
+      setListening(false);
+      recognitionRef.current = null;
+    }
+  }
+
+  function toggleSpeakReplies() {
+    const next = !speakReplies;
+    setSpeakReplies(next);
+    if (!next) window.speechSynthesis?.cancel();
+    try {
+      localStorage.setItem(SPEAK_KEY, next ? "1" : "0");
+    } catch {
+      // Preference just won't be remembered.
     }
   }
 
@@ -76,11 +205,24 @@ export function AssistantPanel() {
       <div className="assistant-head">
         <span>✦ {t("assistant.title")}</span>
         <div className="gap-8">
+          {canSpeak && (
+            <button
+              type="button"
+              className="btn btn-sm"
+              onClick={toggleSpeakReplies}
+              aria-pressed={speakReplies}
+              title={speakReplies ? t("assistant.speakOff") : t("assistant.speakOn")}
+              aria-label={speakReplies ? t("assistant.speakOff") : t("assistant.speakOn")}
+            >
+              {speakReplies ? "🔊" : "🔇"}
+            </button>
+          )}
           {messages.length > 0 && (
             <button
               type="button"
               className="btn btn-sm"
               onClick={() => {
+                window.speechSynthesis?.cancel();
                 setMessages([]);
                 setError(null);
               }}
@@ -120,10 +262,23 @@ export function AssistantPanel() {
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={onKeyDown}
-          placeholder={t("assistant.placeholder")}
+          placeholder={listening ? t("assistant.listening") : t("assistant.placeholder")}
           rows={2}
           maxLength={4000}
         />
+        {canListen && (
+          <button
+            type="button"
+            className={`assistant-mic${listening ? " listening" : ""}`}
+            onClick={toggleListening}
+            disabled={pending}
+            aria-pressed={listening}
+            title={listening ? t("assistant.stopTalking") : t("assistant.talk")}
+            aria-label={listening ? t("assistant.stopTalking") : t("assistant.talk")}
+          >
+            🎙
+          </button>
+        )}
         <button type="button" className="btn btn-primary" onClick={() => send(input)} disabled={pending || !input.trim()}>
           {t("assistant.send")}
         </button>

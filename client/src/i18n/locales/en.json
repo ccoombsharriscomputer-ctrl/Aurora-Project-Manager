@@ -472,7 +472,14 @@
     "intro": "I can look up your projects, tasks, hours and follow-ups, and summarize them. I can only read, never change anything.",
     "suggestOverdue": "What is overdue?",
     "suggestWeek": "Summarize my week",
-    "suggestBehind": "Which projects are behind?"
+    "suggestBehind": "Which projects are behind?",
+    "talk": "Talk to Jarvis",
+    "stopTalking": "Stop listening",
+    "listening": "Listening…",
+    "speakOn": "Read answers aloud",
+    "speakOff": "Stop reading answers aloud",
+    "micBlocked": "Microphone access is blocked. Allow it in your browser's site settings, then try again.",
+    "micError": "Couldn't hear that. Try again, or type your question."
   },
   "customerPicker": {
     "placeholder": "Search customers…",

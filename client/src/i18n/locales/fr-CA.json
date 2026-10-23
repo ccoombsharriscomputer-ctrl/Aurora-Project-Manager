@@ -472,7 +472,14 @@
     "intro": "Je peux consulter vos projets, tâches, heures et suivis, et les résumer. Je peux seulement lire, jamais rien modifier.",
     "suggestOverdue": "Qu'est-ce qui est en retard?",
     "suggestWeek": "Résume ma semaine",
-    "suggestBehind": "Quels projets sont en retard?"
+    "suggestBehind": "Quels projets sont en retard?",
+    "talk": "Parler à Jarvis",
+    "stopTalking": "Arrêter l'écoute",
+    "listening": "J'écoute…",
+    "speakOn": "Lire les réponses à voix haute",
+    "speakOff": "Arrêter la lecture des réponses à voix haute",
+    "micBlocked": "L'accès au microphone est bloqué. Autorisez-le dans les paramètres du site de votre navigateur, puis réessayez.",
+    "micError": "Je n'ai pas bien entendu. Réessayez ou écrivez votre question."
   },
   "customerPicker": {
     "placeholder": "Rechercher des clients…",

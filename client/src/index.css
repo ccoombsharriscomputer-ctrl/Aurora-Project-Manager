@@ -1944,3 +1944,40 @@ label {
   min-height: 0;
   resize: none;
 }
+
+.assistant-mic {
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  background: var(--surface);
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.assistant-mic:hover:not(:disabled) {
+  border-color: var(--primary);
+}
+
+.assistant-mic:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.assistant-mic.listening {
+  border-color: var(--danger);
+  background: color-mix(in srgb, var(--danger) 18%, var(--surface));
+  animation: assistant-pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes assistant-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--danger) 55%, transparent);
+  }
+  50% {
+    box-shadow: 0 0 0 8px transparent;
+  }
+}
