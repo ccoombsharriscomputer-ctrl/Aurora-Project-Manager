@@ -346,32 +346,24 @@ export function ContractLinesCard({ projectId }: { projectId: string }) {
           <span className="section-title" style={{ marginBottom: 0 }}>
             {t("contractLines.title")}
           </span>
-          {!open && (
-            <span className="contract-lines-summary">
-              {hourLines.length > 0 ? (
-                <>
-                  <span style={usedTotal > soldTotal ? { color: "var(--danger)" } : undefined}>
-                    {t("contractLines.summary", { used: hoursText(usedTotal), sold: hoursText(soldTotal) })}
-                  </span>
-                  <span className="contract-lines-mini-bar">
-                    <HoursBar used={usedTotal} sold={soldTotal} />
-                  </span>
-                </>
-              ) : (
-                <span className="muted">{allLines.length === 0 ? t("contractLines.none") : t("contractLines.noHoursYet")}</span>
-              )}
-              {allLines.length > 0 && <span className="muted">· {money.format(totalAmount)}</span>}
+          {!open && allLines.length > 0 && (
+            <span className="contract-lines-summary muted">
+              {t("contractLines.linesCount", { count: allLines.length })} · {money.format(totalAmount)}
             </span>
           )}
         </button>
-        {open && canWrite && editing === null && (
-          <button className="btn btn-sm" onClick={() => setEditing("new")}>
+        {canWrite && editing === null && (
+          <button
+            className="btn btn-sm"
+            onClick={() => {
+              if (!open) toggleOpen();
+              setEditing("new");
+            }}
+          >
             {t("contractLines.addLine")}
           </button>
         )}
       </div>
-      {open && (
-        <>
       {allLines.length === 0 && editing === null && (
         <p className="muted" style={{ marginTop: 12 }}>
           {t("contractLines.none")}
@@ -401,6 +393,8 @@ export function ContractLinesCard({ projectId }: { projectId: string }) {
           <HoursBar used={usedTotal} sold={soldTotal} />
         </div>
       )}
+      {open && (
+        <>
       {allLines.length > 0 && (
         <div style={{ overflowX: "auto" }}>
           <table className="table" style={{ marginTop: 14 }}>

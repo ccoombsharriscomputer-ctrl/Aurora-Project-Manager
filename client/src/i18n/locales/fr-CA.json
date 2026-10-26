@@ -244,6 +244,7 @@
     "hoursOf": "{{used}} de {{sold}} h · {{left}} restantes",
     "hoursOver": "{{used}} de {{sold}} h · {{over}} de trop",
     "conversionHint": "Laissées vides sur une nouvelle ligne de conversion, les heures sont calculées à 200 $ l’heure.",
+    "linesCount": "{{count}} lignes",
     "summary": "{{used}} de {{sold}} h utilisées",
     "noHoursYet": "Aucune heure suivie",
     "expand": "Afficher les lignes du contrat",
@@ -258,7 +259,7 @@
     "none": "Aucune ligne de contrat pour l’instant.",
     "total": "Total",
     "confirmRemove": "Supprimer la ligne de contrat « {{name}} »? Le temps déjà consigné reste sur ses commentaires.",
-    "hint": "Les heures consignées dans un commentaire sont imputées à la ligne du produit de la tâche et du type d’action (Formation sur une tâche Budgetary compte pour Budgetary Training), ou à la ligne choisie dans le commentaire.",
+    "hint": "Les heures consignées dans un commentaire sont imputées à la ligne qui correspond au sous-projet de la tâche (son produit) et à la tâche elle-même, ou à la ligne choisie dans le commentaire.",
     "pickLine": "Ligne de contrat",
     "autoMatch": "Associer automatiquement",
     "categories": {

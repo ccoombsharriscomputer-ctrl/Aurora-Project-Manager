@@ -244,6 +244,7 @@
     "hoursOf": "{{used}} of {{sold}} h · {{left}} left",
     "hoursOver": "{{used}} of {{sold}} h · {{over}} over",
     "conversionHint": "Left blank on a new conversion line, hours are worked out at $200 an hour.",
+    "linesCount": "{{count}} lines",
     "summary": "{{used}} of {{sold}} h used",
     "noHoursYet": "No hours tracked",
     "expand": "Show contract lines",
@@ -258,7 +259,7 @@
     "none": "No contract lines yet.",
     "total": "Total",
     "confirmRemove": "Remove the contract line \"{{name}}\"? Time already logged stays on its comments.",
-    "hint": "Hours logged on a comment count against the line for that task's product and action type (Training on a Budgetary task counts against Budgetary Training), or the line you pick on the comment.",
+    "hint": "Hours logged on a comment count against the line that fits the task's sub-project (its product) and the task itself, or the line you pick on the comment.",
     "pickLine": "Contract line",
     "autoMatch": "Match automatically",
     "categories": {
