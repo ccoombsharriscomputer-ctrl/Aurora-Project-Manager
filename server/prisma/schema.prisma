@@ -241,6 +241,26 @@ model Project {
   activities Activity[]
   attachments Attachment[]
   followUps  FollowUp[]
+  contractLines ContractLine[]
+}
+
+// One billable services line from the project's contract (training, installation, project
+// management...) — not license or maintenance lines, which have no time to log. `category` is one
+// of the names in lib/contractCategories.ts; `hours` is what was sold (null when the contract
+// doesn't say, e.g. a flat-fee PM line); hours used come from the time entries pointing here.
+model ContractLine {
+  id              String         @id @default(cuid())
+  projectId       String
+  project         Project        @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  checklistItemId String?
+  checklistItem   ChecklistItem? @relation(fields: [checklistItemId], references: [id], onDelete: SetNull)
+  category        String
+  description     String
+  hours           Float?
+  amount          Float?
+  createdAt       DateTime       @default(now())
+
+  timeEntries TimeEntry[]
 }
 
 model ProjectType {
@@ -273,6 +293,7 @@ model ChecklistItem {
 
   subProjects   SubProject[]
   taskTemplates TaskTemplate[]
+  contractLines ContractLine[]
 }
 
 model TaskTemplate {
@@ -392,6 +413,10 @@ model TimeEntry {
   // have no comment of their own.
   commentId       String?   @unique
   comment         Comment?  @relation(fields: [commentId], references: [id], onDelete: SetNull)
+  // The contract line this time counts against, if any (chosen on the comment form, or matched
+  // automatically from the task's product + the comment's action type).
+  contractLineId  String?
+  contractLine    ContractLine? @relation(fields: [contractLineId], references: [id], onDelete: SetNull)
   startedAt       DateTime
   endedAt         DateTime?
   durationMinutes Int?

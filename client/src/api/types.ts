@@ -494,7 +494,23 @@ export interface ExtractedProjectDetails {
   teamSupportTicketNumber: string | null;
   projectTypeId: string | null;
   checklistItemIds: string[];
+  contractLines: ContractLineDraft[];
   notes: string | null;
+}
+
+// A billable services line from a contract (not yet saved when it comes from reading a contract).
+export interface ContractLineDraft {
+  category: string;
+  description: string;
+  checklistItemId: string | null;
+  hours: number | null;
+  amount: number | null;
+}
+
+export interface ContractLine extends ContractLineDraft {
+  id: string;
+  checklistItem: { id: string; name: string } | null;
+  hoursUsed: number;
 }
 
 export interface TeamSupportTicket {

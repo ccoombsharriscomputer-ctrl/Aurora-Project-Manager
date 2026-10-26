@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type KeyboardEvent } from "react";
+import { createPortal } from "react-dom";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { api } from "../api/client";
@@ -61,13 +62,14 @@ function readSpeakPreference(): boolean {
   }
 }
 
-// The in-app helper: a round button bottom-right that opens a small chat. It only reads data
+// The in-app helper: a button in the left menu (just above the user's name) that opens a small chat
+// bottom-right. The button is drawn into launcherSlot, an empty spot Layout leaves in the sidebar. It only reads data
 // (the server gives Claude read-only lookups), so it's open to every role. It's hidden until the
 // server has an API key, except for admins, who see it with a setup message so they know it exists.
 // You can talk to it (the mic button, using the browser's own speech recognition) and have it read
 // answers aloud (the speaker button) — both are browser features, so they only show up where the
 // browser supports them, and neither needs anything on the server.
-export function AssistantPanel() {
+export function AssistantPanel({ launcherSlot }: { launcherSlot: HTMLElement | null }) {
   const { t, i18n } = useTranslation();
   const { user } = useAuth();
   const [open, setOpen] = useState(false);
@@ -241,11 +243,13 @@ export function AssistantPanel() {
   }
 
   if (!open) {
-    return (
+    if (!launcherSlot) return null;
+    return createPortal(
       <button type="button" className="assistant-fab" onClick={() => setOpen(true)} title={t("assistant.open")}>
         <span aria-hidden="true">✦</span>
         <span>{t("assistant.title")}</span>
-      </button>
+      </button>,
+      launcherSlot
     );
   }
 

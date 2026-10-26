@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { NavLink, Outlet } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "../context/AuthContext";
@@ -11,6 +12,8 @@ const HELP_URL = "/help.html";
 export function Layout() {
   const { t } = useTranslation();
   const { user, logout } = useAuth();
+  // Where the Ask Jarvis button is drawn: an empty spot in the sidebar, just above the user's name.
+  const [assistantSlot, setAssistantSlot] = useState<HTMLElement | null>(null);
 
   return (
     <OpenTabsProvider>
@@ -53,6 +56,7 @@ export function Layout() {
           <a href={HELP_URL} target="_blank" rel="noopener noreferrer" className="sidebar-link">
             {t("layout.help")}
           </a>
+          <div className="sidebar-assistant-slot" ref={setAssistantSlot} />
           <div className="sidebar-footer">
             <div>{user?.name}</div>
             <div>{user?.email}</div>
@@ -68,7 +72,7 @@ export function Layout() {
           </div>
         </main>
       </div>
-      <AssistantPanel />
+      <AssistantPanel launcherSlot={assistantSlot} />
     </OpenTabsProvider>
   );
 }

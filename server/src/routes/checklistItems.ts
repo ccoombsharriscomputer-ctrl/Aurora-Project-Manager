@@ -34,6 +34,10 @@ router.post("/", requireProjectTypeManager, async (req, res) => {
       description: parsed.data.description,
       softwareLineId: effectiveSoftwareLineId(req.user!),
       createdById: req.user!.id,
+      // Every product starts with a Project Management task, so time spent managing it has somewhere to go.
+      taskTemplates: {
+        create: { title: "Project Management", order: 0, createdById: req.user!.id },
+      },
     },
   });
 

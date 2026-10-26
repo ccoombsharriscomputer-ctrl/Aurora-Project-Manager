@@ -1,6 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { PDFParse } from "pdf-parse";
 import type { ChecklistItem, ProjectType } from "@prisma/client";
+import { CONTRACT_CATEGORIES, isContractCategory } from "./contractCategories";
 
 // Claude reads PDFs up to 100 pages.
 export const MAX_CONTRACT_PAGES = 100;
@@ -18,12 +19,21 @@ export async function countPdfPages(buffer: Buffer): Promise<number> {
   }
 }
 
+export interface ExtractedContractLine {
+  category: string;
+  description: string;
+  checklistItemId: string | null;
+  hours: number | null;
+  amount: number | null;
+}
+
 export interface ExtractedProjectDetails {
   name: string | null;
   description: string | null;
   teamSupportTicketNumber: string | null;
   projectTypeId: string | null;
   checklistItemIds: string[];
+  contractLines: ExtractedContractLine[];
   notes: string | null;
 }
 
@@ -33,6 +43,13 @@ interface RawExtraction {
   teamSupportTicketNumber: string;
   projectTypeName: string;
   productNames: string[];
+  contractLines?: {
+    productName: string;
+    category: string;
+    description: string;
+    hours: number;
+    amount: number;
+  }[];
   notes: string;
 }
 
@@ -67,13 +84,45 @@ const EXTRACTION_TOOL: Anthropic.Tool = {
         description:
           "Every name from the provided product list, exactly as given, that this contract's scope includes. Empty array if none clearly apply.",
       },
+      contractLines: {
+        type: "array",
+        description:
+          "One entry per billable SERVICES line in the contract's pricing table (training, installation, project management, data conversion, go-live...). Skip license, maintenance and subscription lines, and skip any line that is $0 or marked no charge.",
+        items: {
+          type: "object",
+          properties: {
+            productName: {
+              type: "string",
+              description:
+                "The name from the provided product list, exactly as given, that this line belongs to (e.g. the line 'Budgetary Training - 10 Hours' belongs to the product 'Budgetary'). Empty string if none fits.",
+            },
+            category: {
+              type: "string",
+              enum: [...CONTRACT_CATEGORIES],
+              description:
+                "The kind of service. Any line described as a combination of installation, implementation, setup, configuration and/or PM (e.g. 'Budgetary Installation, Implementation, Setup, Config, PM') is 'Project Management'. A line for installing and configuring software on its own is 'Installation'.",
+            },
+            description: { type: "string", description: "The line's description from the contract, as written." },
+            hours: {
+              type: "number",
+              description:
+                "Hours sold: from the description (e.g. 'Training - 10 Hours' is 10) or, for an hourly line, the quantity. 0 if the contract doesn't say.",
+            },
+            amount: {
+              type: "number",
+              description: "The line's total price in dollars (quantity times unit price), as a plain number.",
+            },
+          },
+          required: ["productName", "category", "description", "hours", "amount"],
+        },
+      },
       notes: {
         type: "string",
         description:
           "Anything worth double-checking before creating the project — an uncertain match, missing info, or ambiguity. Empty string if nothing stands out.",
       },
     },
-    required: ["name", "description", "teamSupportTicketNumber", "projectTypeName", "productNames", "notes"],
+    required: ["name", "description", "teamSupportTicketNumber", "projectTypeName", "productNames", "contractLines", "notes"],
   },
 };
 
@@ -93,7 +142,9 @@ ${products.map((p) => `- ${p.name}`).join("\n") || "(none configured yet)"}
 
 Project names in this app typically follow the pattern "Customer Name — Engagement Description", for example "Lakeview Township — Payroll Go-Live" or "Millbrook County — Utility Billing".
 
-Read the attached contract (a PDF that may include scanned pages) and extract the project details using the extracted_project_details tool. Only choose a project type name and product names that are an exact match to the lists above — never invent new ones. Only fill in a TeamSupport ticket number if one is explicitly written in the contract.`;
+Read the attached contract (a PDF that may include scanned pages) and extract the project details using the extracted_project_details tool. Only choose a project type name and product names that are an exact match to the lists above — never invent new ones. Only fill in a TeamSupport ticket number if one is explicitly written in the contract.
+
+Also list the contract's billable services lines in contractLines — read them from the pricing table. Only services count: leave out license, maintenance and subscription lines, and any line priced at $0 or marked no charge.`;
 }
 
 // Claude only sees the catalog *names*, since that's what it can reason about from contract
@@ -112,8 +163,8 @@ export async function extractProjectDetailsFromContract(
 
   const client = new Anthropic({ apiKey, timeout: 90_000 });
   const message = await client.messages.create({
-    model: "claude-sonnet-5",
-    max_tokens: 1500,
+    model: process.env.CONTRACT_MODEL || "claude-sonnet-5",
+    max_tokens: 4000,
     tools: [EXTRACTION_TOOL],
     tool_choice: { type: "tool", name: "extracted_project_details" },
     messages: [
@@ -147,12 +198,29 @@ export async function extractProjectDetailsFromContract(
     notesParts.push(`Claude suggested a project type ("${raw.projectTypeName.trim()}") that isn't in your catalog — pick one manually.`);
   }
 
+  const contractLines: ExtractedContractLine[] = (raw.contractLines ?? [])
+    .filter((line) => Number(line.amount) > 0)
+    .map((line) => {
+      const product = nullIfEmpty(line.productName)
+        ? products.find((p) => p.name.toLowerCase() === line.productName.trim().toLowerCase())
+        : undefined;
+      const hours = Number(line.hours);
+      return {
+        category: isContractCategory(line.category) ? line.category : "Other",
+        description: line.description.trim(),
+        checklistItemId: product?.id ?? null,
+        hours: hours > 0 ? hours : null,
+        amount: Math.round(Number(line.amount) * 100) / 100,
+      };
+    });
+
   return {
     name: nullIfEmpty(raw.name),
     description: nullIfEmpty(raw.description),
     teamSupportTicketNumber: nullIfEmpty(raw.teamSupportTicketNumber),
     projectTypeId: matchedType?.id ?? null,
     checklistItemIds: matchedProductIds,
+    contractLines,
     notes: notesParts.length > 0 ? notesParts.join(" ") : null,
   };
 }

@@ -859,6 +859,30 @@
         </ul>
       </div>
 
+      <h3 id="contract-lines">Contract lines — tracking the hours you sold</h3>
+      <div class="measure">
+        <p>
+          A project can carry a <strong>Contract lines</strong> table: one row for each billable <em>services</em>
+          line in the customer's contract (training, installation, project management, data conversion, go-live...).
+          Each row has a product, a category, a description, the <strong>hours sold</strong> (if the contract gives
+          them), and the <strong>amount</strong> in dollars. License and maintenance lines aren't tracked &mdash; there's
+          no time to log on them &mdash; and neither are lines at $0 or marked no charge.
+        </p>
+        <ul>
+          <li><strong>From a contract.</strong> On the <em>New project</em> form, <em>Upload contract</em> reads the
+            PDF and fills in the lines for you. A line like "Training - 10 Hours" becomes 10 hours of Training, and a
+            line like "Installation, Implementation, Setup, Config, PM" is filed under Project Management. Check
+            them over &mdash; use <em>Edit</em> or <em>Remove</em> on any row, or <em>+ Add line</em> &mdash; because they're
+            saved along with the project when you click <em>Create project</em>.</li>
+          <li><strong>By hand.</strong> On any project, the Contract lines card has <em>+ Add line</em>, <em>Edit</em> and
+            <em>Remove</em>. Projects created before this existed start with none.</li>
+          <li><strong>Hours used and left.</strong> Hours you log on a task comment count against a line. Aurora picks the line
+            for you: the one for that task's product in the matching category &mdash; so Training logged on a
+            Budgetary task counts against Budgetary Training. If you'd rather choose, the comment form shows a
+            <em>Contract line</em> dropdown once you've typed hours. Hours left turns red when a line goes over.</li>
+        </ul>
+      </div>
+
       <h3 id="copy-project">Copying a project</h3>
       <div class="measure">
         <p>
@@ -1037,7 +1061,7 @@
           "Via TRIO Project Manager"), followed by a line naming the sub-project and task the update came from
           (e.g. "Data Conversion — Validate converted employee records"), then the comment text itself; any logged
           hours ride along in the ticket's own time-tracking field rather than as extra text. Web addresses in the
-          comment arrive as clickable links, and any files attached to the comment are attached to the note. This happens
+          comment arrive as clickable links, any files attached to the comment are attached to the note, and pictures up to 2&nbsp;MB also appear inside the note's text. This happens
           automatically; there's nothing extra to click. If TeamSupport is slow, unreachable, or not configured,
           your comment still saves in Aurora normally — the sync fails quietly in the background rather than
           blocking your update.
@@ -1187,7 +1211,7 @@
       <p class="section-sub">Ask a question in plain English and get an answer from your own project data.</p>
       <div class="measure">
         <p>
-          The round <strong>Ask Jarvis</strong> button at the bottom-right of every page opens a small chat. Type a
+          The <strong>Ask Jarvis</strong> button in the left menu, just above your name, opens a small chat in the bottom-right corner. Type a
           question, or tap one of the suggestions, and Jarvis looks the answer up in Aurora for you. It is open to
           every role, including Read Only.
         </p>
@@ -1299,6 +1323,12 @@
           and priority in an inline form, the same way editing a product itself works. Neither one reaches back into
           projects that already picked up a copy of that task: editing only changes the template for tasks created
           from it going forward, and deleting only stops it from being added to new projects.
+        </p>
+        <p>
+          Every product comes with a standard <strong>Project Management</strong> task, so there's always a place to
+          log project management time. It's added automatically to new products and has been added to the existing
+          ones; it works like any other standard task, so you can edit or delete it. Projects that already existed keep the
+          tasks they have &mdash; it appears on projects created from now on.
         </p>
         <p>
           Drag a standard to-do task up or down within the <em>Manage tasks</em> list to reorder it. This order is

@@ -8,6 +8,7 @@ import { emitUpdate } from "../lib/realtime";
 import { upload } from "../lib/upload";
 import { storage } from "../lib/storage";
 import { loadProjectInScope, userHasLineAccess } from "../lib/scope";
+import { contractLineSchema } from "./contractLines";
 import { countPdfPages, extractProjectDetailsFromContract, MAX_CONTRACT_PAGES } from "../lib/contractExtraction";
 import {
   createTicket,
@@ -80,6 +81,8 @@ const createSchema = z.object({
   checklistItemIds: z.array(z.string().min(1)).optional(),
   memberIds: z.array(z.string().min(1)).optional(),
   assigneeId: z.string().min(1).optional(),
+  // Billable services lines from the contract (filled in by "Create from a contract", reviewed by the user).
+  contractLines: z.array(contractLineSchema).max(100).optional(),
 });
 
 router.post("/", blockReadOnly, async (req, res) => {
@@ -165,6 +168,26 @@ router.post("/", blockReadOnly, async (req, res) => {
       members: { include: { user: { select: { id: true, name: true, email: true } } } },
     },
   });
+
+  const requestedLines = parsed.data.contractLines ?? [];
+  if (requestedLines.length > 0) {
+    const lineProductIds = [...new Set(requestedLines.map((l) => l.checklistItemId).filter((id): id is string => !!id))];
+    const validProducts = lineProductIds.length
+      ? await prisma.checklistItem.findMany({ where: { id: { in: lineProductIds }, softwareLineId: lineId }, select: { id: true } })
+      : [];
+    const validProductIds = new Set(validProducts.map((p) => p.id));
+    await prisma.contractLine.createMany({
+      data: requestedLines.map((l) => ({
+        projectId: project.id,
+        category: l.category,
+        description: l.description,
+        // A product that isn't in this line's catalog is dropped rather than failing the whole create.
+        checklistItemId: l.checklistItemId && validProductIds.has(l.checklistItemId) ? l.checklistItemId : null,
+        hours: l.hours ?? null,
+        amount: l.amount ?? null,
+      })),
+    });
+  }
 
   if (checklistItems.length > 0) {
     const taskTemplates = await prisma.taskTemplate.findMany({

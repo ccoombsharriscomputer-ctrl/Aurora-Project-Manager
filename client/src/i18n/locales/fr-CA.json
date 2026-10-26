@@ -230,6 +230,36 @@
     "loadingTasks": "Chargement des tâches…",
     "naReasonPrompt": "Pourquoi cette tâche est-elle N/D?"
   },
+  "contractLines": {
+    "title": "Lignes du contrat",
+    "draftHint": "Services facturables lus dans le contrat. Corrigez ou supprimez ce qui est erroné; ils sont enregistrés avec le projet. Les lignes de licence et de maintenance ne sont pas suivies.",
+    "product": "Produit",
+    "noProduct": "Aucun produit",
+    "category": "Catégorie",
+    "description": "Description",
+    "hoursSold": "Heures vendues",
+    "hoursUsed": "Heures utilisées",
+    "hoursLeft": "Heures restantes",
+    "amount": "Montant",
+    "add": "Ajouter la ligne",
+    "addLine": "+ Ajouter une ligne",
+    "edit": "Modifier",
+    "none": "Aucune ligne de contrat pour l’instant.",
+    "total": "Total",
+    "confirmRemove": "Supprimer la ligne de contrat « {{name}} »? Le temps déjà consigné reste sur ses commentaires.",
+    "hint": "Les heures consignées dans un commentaire sont imputées à la ligne du produit de la tâche et du type d’action (Formation sur une tâche Budgetary compte pour Budgetary Training), ou à la ligne choisie dans le commentaire.",
+    "pickLine": "Ligne de contrat",
+    "autoMatch": "Associer automatiquement",
+    "categories": {
+      "Project Management": "Gestion de projet",
+      "Installation": "Installation",
+      "Data Conversion": "Conversion de données",
+      "Training": "Formation",
+      "Go Live": "Mise en service",
+      "Support": "Soutien",
+      "Other": "Autre"
+    }
+  },
   "taskDetail": {
     "loadingTask": "Chargement de la tâche…",
     "confirmDeleteTask": "Supprimer cette tâche? Cette action est irréversible.",

@@ -3,7 +3,8 @@ import { Link } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { api } from "../api/client";
-import type { ChecklistItem, ExtractedProjectDetails, Project, ProjectType, TeamSupportCustomer, UserSummary } from "../api/types";
+import type { ChecklistItem, ContractLineDraft, ExtractedProjectDetails, Project, ProjectType, TeamSupportCustomer, UserSummary } from "../api/types";
+import { ContractLinesDraftEditor } from "../components/ContractLines";
 import { TeamSupportCustomerPicker } from "../components/TeamSupportCustomerPicker";
 import { TicketOptionsPanel, type TicketChoices } from "../components/TicketOptionsPanel";
 import { extractErrorMessage, useAuth } from "../context/AuthContext";
@@ -87,6 +88,7 @@ export function ProjectsPage() {
   const [customer, setCustomer] = useState<TeamSupportCustomer | null>(null);
   const [projectTypeId, setProjectTypeId] = useState("");
   const [checklistItemIds, setChecklistItemIds] = useState<string[]>([]);
+  const [contractLines, setContractLines] = useState<ContractLineDraft[]>([]);
   const [memberIds, setMemberIds] = useState<string[]>([]);
   const [assigneeId, setAssigneeId] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -166,6 +168,7 @@ export function ProjectsPage() {
         teamSupportCustomerName: customer?.name,
         projectTypeId,
         checklistItemIds,
+        contractLines,
         memberIds,
         assigneeId: assigneeId || undefined,
       }),
@@ -179,6 +182,7 @@ export function ProjectsPage() {
       setShowTicketOptions(false);
       setProjectTypeId("");
       setChecklistItemIds([]);
+      setContractLines([]);
       setMemberIds([]);
       setAssigneeId("");
       setShowForm(false);
@@ -217,6 +221,7 @@ export function ProjectsPage() {
       if (result.teamSupportTicketNumber) setTeamSupportTicketNumber(result.teamSupportTicketNumber);
       if (result.projectTypeId) setProjectTypeId(result.projectTypeId);
       if (result.checklistItemIds.length > 0) setChecklistItemIds(result.checklistItemIds);
+      setContractLines(result.contractLines ?? []);
       setContractNotes(result.notes);
       setContractError(null);
     },
@@ -397,6 +402,7 @@ export function ProjectsPage() {
               {t("projects.assignProjectHint")}
             </p>
           </div>
+          <ContractLinesDraftEditor lines={contractLines} products={activeProducts} onChange={setContractLines} />
           <div className="field">
             <label htmlFor="description">{t("common.description")}</label>
             <textarea id="description" value={description} onChange={(e) => setDescription(e.target.value)} />

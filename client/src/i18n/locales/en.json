@@ -230,6 +230,36 @@
     "loadingTasks": "Loading tasks…",
     "naReasonPrompt": "Why is this task N/A?"
   },
+  "contractLines": {
+    "title": "Contract lines",
+    "draftHint": "Billable services read from the contract. Fix or remove anything that's wrong; these are saved with the project. License and maintenance lines aren't tracked.",
+    "product": "Product",
+    "noProduct": "No product",
+    "category": "Category",
+    "description": "Description",
+    "hoursSold": "Hours sold",
+    "hoursUsed": "Hours used",
+    "hoursLeft": "Hours left",
+    "amount": "Amount",
+    "add": "Add line",
+    "addLine": "+ Add line",
+    "edit": "Edit",
+    "none": "No contract lines yet.",
+    "total": "Total",
+    "confirmRemove": "Remove the contract line \"{{name}}\"? Time already logged stays on its comments.",
+    "hint": "Hours logged on a comment count against the line for that task's product and action type (Training on a Budgetary task counts against Budgetary Training), or the line you pick on the comment.",
+    "pickLine": "Contract line",
+    "autoMatch": "Match automatically",
+    "categories": {
+      "Project Management": "Project Management",
+      "Installation": "Installation",
+      "Data Conversion": "Data Conversion",
+      "Training": "Training",
+      "Go Live": "Go Live",
+      "Support": "Support",
+      "Other": "Other"
+    }
+  },
   "taskDetail": {
     "loadingTask": "Loading task…",
     "confirmDeleteTask": "Delete this task? This cannot be undone.",

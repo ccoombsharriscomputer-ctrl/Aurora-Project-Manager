@@ -8,6 +8,7 @@ import multer from "multer";
 import { upload } from "../lib/upload";
 import { storage } from "../lib/storage";
 import { loadTaskInScope, userHasLineAccess } from "../lib/scope";
+import { contractCategoryForActionType } from "../lib/contractCategories";
 import { PS_ACTION_TYPES, syncTaskUpdateToTeamSupport, teamSupportTaskContext } from "../lib/teamSupport";
 import { formatHours } from "../lib/format";
 import { notifyTaskAssigned } from "../lib/email";
@@ -223,7 +224,30 @@ const commentSchema = z.object({
     .string()
     .regex(/^\d{4}-\d{2}-\d{2}$/, "Follow-up date must be in YYYY-MM-DD format")
     .optional(),
+  // The contract line this time counts against; left out means match one automatically.
+  contractLineId: z.string().min(1).optional(),
 });
+
+// Which contract line a comment's hours count against: the one picked on the form, or else the
+// project's line for this task's product in the category its action type belongs to (a Training
+// comment on a Budgetary task goes to the Budgetary Training line). No match means no line.
+async function pickContractLine(
+  task: { projectId: string; subProject: { checklistItemId: string } },
+  requestedId: string | undefined,
+  actionTypeName: string | undefined
+): Promise<string | null> {
+  if (requestedId) {
+    const picked = await prisma.contractLine.findUnique({ where: { id: requestedId } });
+    return picked && picked.projectId === task.projectId ? picked.id : null;
+  }
+  const category = contractCategoryForActionType(actionTypeName);
+  if (!category) return null;
+  const lines = await prisma.contractLine.findMany({ where: { projectId: task.projectId, category } });
+  const forProduct = lines.filter((l) => l.checklistItemId === task.subProject.checklistItemId);
+  if (forProduct.length > 0) return forProduct[0].id;
+  const noProduct = lines.filter((l) => l.checklistItemId === null);
+  return noProduct.length === 1 ? noProduct[0].id : null;
+}
 
 // A comment with files arrives as multipart/form-data (every field a string); one without
 // still arrives as plain JSON. Both end up in req.body in the shape commentSchema expects.
@@ -250,6 +274,7 @@ function parseCommentUpload(req: Request, res: Response, next: NextFunction) {
       actionTypeId: body.actionTypeId || undefined,
       isPublic: body.isPublic === "true",
       followUpDate: body.followUpDate || undefined,
+      contractLineId: body.contractLineId || undefined,
     };
     next();
   });
@@ -332,6 +357,7 @@ router.post("/:id/comments", blockReadOnly, parseCommentUpload, async (req, res)
     const dateStr = parsed.data.date ?? new Date().toISOString().slice(0, 10);
     const startedAt = new Date(`${dateStr}T12:00:00.000Z`);
     const endedAt = new Date(startedAt.getTime() + durationMinutes * 60000);
+    const contractLineId = await pickContractLine(task, parsed.data.contractLineId, actionType?.name);
 
     timeEntry = await prisma.timeEntry.create({
       data: {
@@ -342,6 +368,7 @@ router.post("/:id/comments", blockReadOnly, parseCommentUpload, async (req, res)
         durationMinutes,
         note: parsed.data.body,
         commentId: comment.id,
+        contractLineId,
       },
       include: { user: { select: { id: true, name: true } } },
     });

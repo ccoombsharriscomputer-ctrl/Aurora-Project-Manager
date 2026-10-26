@@ -230,6 +230,36 @@
     "loadingTasks": "Cargando tareas…",
     "naReasonPrompt": "¿Por qué esta tarea es N/D?"
   },
+  "contractLines": {
+    "title": "Líneas del contrato",
+    "draftHint": "Servicios facturables leídos del contrato. Corrija o elimine lo que esté mal; se guardan con el proyecto. Las líneas de licencia y mantenimiento no se registran.",
+    "product": "Producto",
+    "noProduct": "Sin producto",
+    "category": "Categoría",
+    "description": "Descripción",
+    "hoursSold": "Horas vendidas",
+    "hoursUsed": "Horas usadas",
+    "hoursLeft": "Horas restantes",
+    "amount": "Importe",
+    "add": "Agregar línea",
+    "addLine": "+ Agregar línea",
+    "edit": "Editar",
+    "none": "Aún no hay líneas de contrato.",
+    "total": "Total",
+    "confirmRemove": "¿Eliminar la línea de contrato \"{{name}}\"? El tiempo ya registrado permanece en sus comentarios.",
+    "hint": "Las horas registradas en un comentario cuentan contra la línea del producto de la tarea y el tipo de acción (Capacitación en una tarea de Budgetary cuenta contra Budgetary Training), o la línea que elija en el comentario.",
+    "pickLine": "Línea de contrato",
+    "autoMatch": "Asignar automáticamente",
+    "categories": {
+      "Project Management": "Gestión de proyecto",
+      "Installation": "Instalación",
+      "Data Conversion": "Conversión de datos",
+      "Training": "Capacitación",
+      "Go Live": "Puesta en marcha",
+      "Support": "Soporte",
+      "Other": "Otro"
+    }
+  },
   "taskDetail": {
     "loadingTask": "Cargando tarea…",
     "confirmDeleteTask": "¿Eliminar esta tarea? Esta acción no se puede deshacer.",

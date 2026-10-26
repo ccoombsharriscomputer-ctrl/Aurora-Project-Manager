@@ -3,7 +3,7 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { api } from "../api/client";
-import type { Project, TaskDetail, TaskPriority, TaskStatus, TeamSupportActionType, UserSummary } from "../api/types";
+import type { ContractLine, Project, TaskDetail, TaskPriority, TaskStatus, TeamSupportActionType, UserSummary } from "../api/types";
 import { extractErrorMessage, useAuth } from "../context/AuthContext";
 import { useOpenTabs } from "../context/OpenTabsContext";
 import { formatDate, formatMinutes, formatRelativeTime } from "../utils/format";
@@ -92,6 +92,12 @@ export function TaskDetailPage() {
     enabled: !!project?.teamSupportTicketNumber,
   });
 
+  const { data: contractLines } = useQuery({
+    queryKey: ["contract-lines", task?.project.id],
+    queryFn: () => api.get<ContractLine[]>(`/projects/${task!.project.id}/contract-lines`),
+    enabled: !!task,
+  });
+
   const { activeTimer, stop } = useActiveTimer();
 
   // Restored from a per-task draft if one exists — see utils/taskCommentDraft.ts for why:
@@ -113,6 +119,7 @@ export function TaskDetailPage() {
   // Files chosen for the comment being written. Not part of the saved draft: a File can't be
   // stored in localStorage, so these are lost if the page is left before posting.
   const [commentFiles, setCommentFiles] = useState<File[]>([]);
+  const [contractLineId, setContractLineId] = useState("");
   const [expanded, setExpanded] = useState(false);
 
   // Shared by the Attach files button, pasting a screenshot, and dragging files onto the box.
@@ -239,6 +246,7 @@ export function TaskDetailPage() {
         actionTypeId: actionTypeId || undefined,
         isPublic,
         followUpDate: followUpDate || undefined,
+        contractLineId: contractLineId || undefined,
       };
       if (commentFiles.length === 0) return api.post(`/tasks/${taskId}/comments`, fields);
       const form = new FormData();
@@ -250,6 +258,7 @@ export function TaskDetailPage() {
     },
     onSuccess: () => {
       setCommentBody("");
+      setContractLineId("");
       setCommentFiles([]);
       setCommentError(null);
       setCommentHours("");
@@ -511,6 +520,20 @@ export function TaskDetailPage() {
                     />
                   </div>
                 </div>
+                {commentHours && (contractLines ?? []).length > 0 && (
+                  <div className="field" style={{ marginTop: 8 }}>
+                    <label>{t("contractLines.pickLine")}</label>
+                    <select value={contractLineId} onChange={(e) => setContractLineId(e.target.value)}>
+                      <option value="">{t("contractLines.autoMatch")}</option>
+                      {(contractLines ?? []).map((l) => (
+                        <option key={l.id} value={l.id}>
+                          {l.checklistItem ? `${l.checklistItem.name} — ` : ""}
+                          {l.description}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
                 <div className="field" style={{ marginTop: 8, maxWidth: 200 }}>
                   <label>{t("taskDetail.followUpDate")}</label>
                   <input type="date" value={followUpDate} onChange={(e) => setFollowUpDate(e.target.value)} />
