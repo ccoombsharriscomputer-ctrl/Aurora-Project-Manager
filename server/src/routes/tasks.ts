@@ -32,7 +32,7 @@ router.get("/:id", async (req, res) => {
         include: {
           author: { select: { id: true, name: true } },
           timeEntry: { select: { id: true, durationMinutes: true } },
-          attachments: { orderBy: { createdAt: "asc" }, select: { id: true, originalName: true, size: true } },
+          attachments: { orderBy: { createdAt: "asc" }, select: { id: true, originalName: true, size: true, mimeType: true } },
         },
       },
       attachments: {
@@ -204,7 +204,7 @@ router.get("/:id/comments", async (req, res) => {
     include: {
       author: { select: { id: true, name: true } },
       timeEntry: { select: { id: true, durationMinutes: true } },
-      attachments: { orderBy: { createdAt: "asc" }, select: { id: true, originalName: true, size: true } },
+      attachments: { orderBy: { createdAt: "asc" }, select: { id: true, originalName: true, size: true, mimeType: true } },
     },
   });
   res.json(comments);
@@ -312,7 +312,7 @@ router.post("/:id/comments", blockReadOnly, parseCommentUpload, async (req, res)
           mimeType: file.mimetype,
           size: file.size,
         },
-        select: { id: true, originalName: true, size: true },
+        select: { id: true, originalName: true, size: true, mimeType: true },
       })
     );
   }

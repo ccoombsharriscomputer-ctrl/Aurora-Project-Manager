@@ -230,6 +230,27 @@ function linkifyEscapedHtml(escaped: string): string {
   });
 }
 
+// Pictures go into the note itself (as embedded images) as well as being attached as files.
+// TeamSupport's own pasted-image web addresses can't be created through its API, but it
+// displays a picture embedded directly in the note text (confirmed live 2026-10-26). That makes
+// the note itself bigger, so only reasonably sized pictures are embedded — anything over the
+// caps still arrives as an attachment, same as any other file.
+const INLINE_IMAGE_TYPES = new Set(["image/png", "image/jpeg", "image/gif", "image/webp"]);
+const MAX_INLINE_IMAGE_BYTES = 2 * 1024 * 1024;
+const MAX_INLINE_TOTAL_BYTES = 5 * 1024 * 1024;
+
+function inlineImagesHtml(files: TicketActionFile[]): string {
+  let total = 0;
+  let html = "";
+  for (const file of files) {
+    if (!INLINE_IMAGE_TYPES.has(file.mimeType) || file.buffer.length > MAX_INLINE_IMAGE_BYTES) continue;
+    if (total + file.buffer.length > MAX_INLINE_TOTAL_BYTES) continue;
+    total += file.buffer.length;
+    html += `<br><br><img src="data:${file.mimeType};base64,${file.buffer.toString("base64")}" alt="${toHtmlLines(file.name).replace(/"/g, "&quot;")}">`;
+  }
+  return html;
+}
+
 // The sub-project + task line shown to TeamSupport right below the "Via <line> Project
 // Manager" header — same name fallback (the sub-project's own name, else its product's) used
 // everywhere else this app displays a sub-project.
@@ -255,7 +276,7 @@ export function syncTaskUpdateToTeamSupport(
   taskContext: string,
   options: PostTicketActionOptions = {}
 ) {
-  const description = `Via ${productLineName} Project Manager<br>${toHtmlLines(taskContext)}<br><br>${toHtmlLines(body)}`;
+  const description = `Via ${productLineName} Project Manager<br>${toHtmlLines(taskContext)}<br><br>${toHtmlLines(body)}${inlineImagesHtml(options.files ?? [])}`;
   postTicketAction(ticketNumber, description, options)
     .then(async (actionId) => {
       const files = options.files ?? [];

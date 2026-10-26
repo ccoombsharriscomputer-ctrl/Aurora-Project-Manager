@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type ClipboardEvent, type DragEvent, type FormEvent } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
@@ -25,7 +25,7 @@ interface FeedItem {
   running: boolean;
   actionType: string | null;
   isPublic: boolean;
-  attachments: { id: string; originalName: string; size: number }[];
+  attachments: { id: string; originalName: string; size: number; mimeType: string }[];
 }
 
 function statusLabel(t: (key: string) => string, status: TaskStatus): string {
@@ -39,6 +39,25 @@ function priorityLabel(t: (key: string) => string, priority: TaskPriority): stri
   if (priority === "HIGH") return t("common.priorityHigh");
   if (priority === "LOW") return t("common.priorityLow");
   return t("common.priorityMedium");
+}
+
+// Small preview of an image waiting to be posted. The object URL is released when the
+// preview goes away (file removed, comment posted).
+function PendingImageThumb({ file }: { file: File }) {
+  const [url, setUrl] = useState<string | null>(null);
+  useEffect(() => {
+    const objectUrl = URL.createObjectURL(file);
+    setUrl(objectUrl);
+    return () => URL.revokeObjectURL(objectUrl);
+  }, [file]);
+  if (!url) return null;
+  return (
+    <img
+      src={url}
+      alt=""
+      style={{ height: 40, maxWidth: 80, objectFit: "cover", borderRadius: 4, border: "1px solid var(--border)", verticalAlign: "middle", marginRight: 8 }}
+    />
+  );
 }
 
 export function TaskDetailPage() {
@@ -95,6 +114,38 @@ export function TaskDetailPage() {
   // stored in localStorage, so these are lost if the page is left before posting.
   const [commentFiles, setCommentFiles] = useState<File[]>([]);
   const [expanded, setExpanded] = useState(false);
+
+  // Shared by the Attach files button, pasting a screenshot, and dragging files onto the box.
+  function addCommentFiles(picked: File[]) {
+    if (picked.length === 0) return;
+    const tooBig = picked.find((f) => f.size > MAX_FILE_BYTES);
+    if (tooBig) {
+      setCommentError(t("taskDetail.fileTooLarge", { name: tooBig.name }));
+      return;
+    }
+    if (commentFiles.length + picked.length > MAX_COMMENT_FILES) {
+      setCommentError(t("taskDetail.tooManyFiles", { max: MAX_COMMENT_FILES }));
+      return;
+    }
+    setCommentError(null);
+    setCommentFiles((prev) => [...prev, ...picked]);
+  }
+
+  // A pasted screenshot arrives with the generic name "image.png" — give each one its own.
+  function handleCommentPaste(e: ClipboardEvent<HTMLTextAreaElement>) {
+    const images = Array.from(e.clipboardData.files).filter((f) => f.type.startsWith("image/"));
+    if (images.length === 0) return;
+    e.preventDefault();
+    const stamp = new Date().toISOString().slice(0, 19).replace(/[-:T]/g, "");
+    addCommentFiles(
+      images.map(
+        (f, i) =>
+          new File([f], /^image\.\w+$/i.test(f.name) ? `screenshot-${stamp}-${i + 1}.${f.type.split("/")[1] || "png"}` : f.name, {
+            type: f.type,
+          })
+      )
+    );
+  }
 
   // Keeps the draft current as the user types/toggles anything in the form — cheap enough to
   // run on every keystroke, and naturally clears itself back out once every field is reset to
@@ -393,15 +444,28 @@ export function TaskDetailPage() {
                 )}
                 {item.attachments.length > 0 && (
                   <div style={{ marginTop: 6 }}>
-                    {item.attachments.map((a) => (
-                      <div key={a.id}>
-                        📎{" "}
-                        <a href={`/api/attachments/${a.id}`} target="_blank" rel="noopener noreferrer">
-                          {a.originalName}
-                        </a>{" "}
-                        <span className="muted">({(a.size / 1024).toFixed(0)} KB)</span>
-                      </div>
-                    ))}
+                    {item.attachments.map((a) =>
+                      a.mimeType.startsWith("image/") ? (
+                        <div key={a.id} style={{ marginTop: 4 }}>
+                          <a href={`/api/attachments/${a.id}`} target="_blank" rel="noopener noreferrer" title={a.originalName}>
+                            <img
+                              src={`/api/attachments/${a.id}`}
+                              alt={a.originalName}
+                              loading="lazy"
+                              style={{ maxWidth: 280, maxHeight: 200, borderRadius: 6, border: "1px solid var(--border)", display: "block" }}
+                            />
+                          </a>
+                        </div>
+                      ) : (
+                        <div key={a.id}>
+                          📎{" "}
+                          <a href={`/api/attachments/${a.id}`} target="_blank" rel="noopener noreferrer">
+                            {a.originalName}
+                          </a>{" "}
+                          <span className="muted">({(a.size / 1024).toFixed(0)} KB)</span>
+                        </div>
+                      )
+                    )}
                   </div>
                 )}
               </div>
@@ -413,6 +477,15 @@ export function TaskDetailPage() {
                   placeholder={t("taskDetail.addAComment")}
                   value={commentBody}
                   onChange={(e) => setCommentBody(e.target.value)}
+                  onPaste={handleCommentPaste}
+                  onDragOver={(e: DragEvent) => {
+                    if (e.dataTransfer.types.includes("Files")) e.preventDefault();
+                  }}
+                  onDrop={(e: DragEvent) => {
+                    if (e.dataTransfer.files.length === 0) return;
+                    e.preventDefault();
+                    addCommentFiles(Array.from(e.dataTransfer.files));
+                  }}
                 />
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginTop: 8 }}>
                   <div className="field">
@@ -478,22 +551,13 @@ export function TaskDetailPage() {
                     onChange={(e) => {
                       const picked = Array.from(e.target.files ?? []);
                       e.target.value = "";
-                      const tooBig = picked.find((f) => f.size > MAX_FILE_BYTES);
-                      if (tooBig) {
-                        setCommentError(t("taskDetail.fileTooLarge", { name: tooBig.name }));
-                        return;
-                      }
-                      if (commentFiles.length + picked.length > MAX_COMMENT_FILES) {
-                        setCommentError(t("taskDetail.tooManyFiles", { max: MAX_COMMENT_FILES }));
-                        return;
-                      }
-                      setCommentError(null);
-                      setCommentFiles((prev) => [...prev, ...picked]);
+                      addCommentFiles(picked);
                     }}
                   />
                   {commentFiles.map((f, i) => (
                     <div key={`${f.name}-${i}`} style={{ fontSize: 13, marginTop: 4 }}>
-                      📎 {f.name} <span className="muted">({(f.size / 1024).toFixed(0)} KB)</span>{" "}
+                      {f.type.startsWith("image/") ? <PendingImageThumb file={f} /> : "📎 "}
+                      {f.name} <span className="muted">({(f.size / 1024).toFixed(0)} KB)</span>{" "}
                       <button
                         type="button"
                         className="remove-link"
