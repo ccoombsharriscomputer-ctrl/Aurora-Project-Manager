@@ -4,7 +4,7 @@ import { prisma } from "../lib/prisma";
 import { blockReadOnly, effectiveSoftwareLineId, requireAuth } from "../middleware/auth";
 import { emitUpdate } from "../lib/realtime";
 import { loadProjectInScope } from "../lib/scope";
-import { CONTRACT_CATEGORIES } from "../lib/contractCategories";
+import { CONTRACT_CATEGORIES, defaultLineHours } from "../lib/contractCategories";
 
 const router = Router();
 router.use(requireAuth);
@@ -65,7 +65,8 @@ router.post("/:id/contract-lines", blockReadOnly, async (req, res) => {
       category: parsed.data.category,
       description: parsed.data.description,
       checklistItemId: parsed.data.checklistItemId ?? null,
-      hours: parsed.data.hours ?? null,
+      // A new conversion line with no hours gets them from its amount; editing a line never does.
+      hours: defaultLineHours(parsed.data.category, parsed.data.hours, parsed.data.amount),
       amount: parsed.data.amount ?? null,
     },
   });

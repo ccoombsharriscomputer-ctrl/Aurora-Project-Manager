@@ -16,6 +16,9 @@ export const CONTRACT_CATEGORIES = [
   "Other",
 ] as const;
 
+// Same rate as the server's CONVERSION_RATE_PER_HOUR (lib/contractCategories.ts).
+const CONVERSION_RATE_PER_HOUR = 200;
+
 const money = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" });
 
 function formatHoursValue(hours: number): string {
@@ -35,10 +38,12 @@ function ContractLineForm({
   submitLabel,
   error,
   pending,
+  isNew,
   onSubmit,
   onCancel,
 }: {
   initial: ContractLineDraft;
+  isNew?: boolean;
   products: ChecklistItem[];
   submitLabel: string;
   error?: string | null;
@@ -57,12 +62,19 @@ function ContractLineForm({
   function handleSubmit(e: FormEvent) {
     e.preventDefault();
     e.stopPropagation();
+    const amountValue = amount ? Number(amount) : null;
+    // A new conversion line with no hours gets them from its amount, at the conversion rate.
+    const hoursValue = hours
+      ? Number(hours)
+      : isNew && category === "Data Conversion" && amountValue
+        ? Math.round((amountValue / CONVERSION_RATE_PER_HOUR) * 100) / 100
+        : null;
     onSubmit({
       category,
       description: description.trim(),
       checklistItemId: checklistItemId || null,
-      hours: hours ? Number(hours) : null,
-      amount: amount ? Number(amount) : null,
+      hours: hoursValue,
+      amount: amountValue,
     });
   }
 
@@ -106,6 +118,7 @@ function ContractLineForm({
         <div className="field">
           <label>{t("contractLines.hoursSold")}</label>
           <input type="number" min="0.25" step="0.25" value={hours} onChange={(e) => setHours(e.target.value)} />
+          {category === "Data Conversion" && <p className="muted" style={{ fontSize: 12, marginTop: 4 }}>{t("contractLines.conversionHint")}</p>}
         </div>
         <div className="field">
           <label>{t("contractLines.amount")}</label>
@@ -209,6 +222,7 @@ export function ContractLinesDraftEditor({
       {editing === -1 ? (
         <ContractLineForm
           initial={EMPTY_LINE}
+          isNew
           products={products}
           submitLabel={t("contractLines.add")}
           onSubmit={(line) => {
@@ -226,12 +240,32 @@ export function ContractLinesDraftEditor({
   );
 }
 
-// The project page's "Contract lines" card: what was sold, what's been logged against it, and
-// what's left.
+function hoursText(n: number): string {
+  return formatHoursValue(n);
+}
+
+// Purple when on track, amber when nearly out, red when over.
+function barColor(used: number, sold: number): string {
+  if (used > sold) return "var(--danger)";
+  if (used / sold >= 0.9) return "#ba7517";
+  return "var(--accent-color)";
+}
+
+function HoursBar({ used, sold }: { used: number; sold: number }) {
+  const percent = Math.min(100, Math.round((used / sold) * 100));
+  return (
+    <div className="progress-bar-track">
+      <div className="progress-bar-fill" style={{ width: `${percent}%`, background: barColor(used, sold) }} />
+    </div>
+  );
+}
+
+// The project page's "Contract lines" card: what was sold, how many hours have been logged against
+// it, and what's left. Hours are only tracked on lines that have hours; the others just show their amount.
 export function ContractLinesCard({ projectId }: { projectId: string }) {
   const { t } = useTranslation();
-  const { canWrite } = useAuth();
   const categoryLabel = useCategoryLabel();
+  const { canWrite } = useAuth();
   const queryClient = useQueryClient();
   const [editing, setEditing] = useState<string | null>(null); // a line id, or "new"
   const [error, setError] = useState<string | null>(null);
@@ -266,10 +300,16 @@ export function ContractLinesCard({ projectId }: { projectId: string }) {
   });
 
   const allProducts = (products ?? []).filter((p) => p.active);
-  const totalAmount = (lines ?? []).reduce((sum, l) => sum + (l.amount ?? 0), 0);
+  const allLines = lines ?? [];
+  const totalAmount = allLines.reduce((sum, l) => sum + (l.amount ?? 0), 0);
+  // Only lines with hours count toward the hour totals.
+  const hourLines = allLines.filter((l) => l.hours != null);
+  const soldTotal = hourLines.reduce((sum, l) => sum + (l.hours ?? 0), 0);
+  const usedTotal = hourLines.reduce((sum, l) => sum + l.hoursUsed, 0);
+  const overCount = hourLines.filter((l) => l.hoursUsed > (l.hours ?? 0)).length;
 
   // Nothing to show on a project with no lines, unless someone can add one.
-  if ((lines ?? []).length === 0 && !canWrite) return null;
+  if (allLines.length === 0 && !canWrite) return null;
 
   return (
     <div className="card" style={{ marginBottom: 16 }}>
@@ -283,31 +323,53 @@ export function ContractLinesCard({ projectId }: { projectId: string }) {
           </button>
         )}
       </div>
-      {(lines ?? []).length === 0 && editing === null && (
+      {allLines.length === 0 && editing === null && (
         <p className="muted" style={{ marginTop: 12 }}>
           {t("contractLines.none")}
         </p>
       )}
-      {(lines ?? []).length > 0 && (
+      {hourLines.length > 0 && (
+        <div style={{ marginTop: 14 }}>
+          <div className="contract-hours-tiles">
+            <div className="contract-hours-tile">
+              <div className="label">{t("contractLines.hoursSold")}</div>
+              <div className="value">{hoursText(soldTotal)}</div>
+              <div className="note">{t("contractLines.linesWithHours", { count: hourLines.length })}</div>
+            </div>
+            <div className="contract-hours-tile">
+              <div className="label">{t("contractLines.hoursUsed")}</div>
+              <div className="value">{hoursText(usedTotal)}</div>
+              <div className="note">{t("contractLines.percentUsed", { percent: Math.round((usedTotal / soldTotal) * 100) })}</div>
+            </div>
+            <div className="contract-hours-tile">
+              <div className="label">{t("contractLines.hoursLeft")}</div>
+              <div className="value">{hoursText(soldTotal - usedTotal)}</div>
+              <div className="note" style={overCount > 0 ? { color: "var(--danger)" } : undefined}>
+                {overCount > 0 ? t("contractLines.linesOver", { count: overCount }) : " "}
+              </div>
+            </div>
+          </div>
+          <HoursBar used={usedTotal} sold={soldTotal} />
+        </div>
+      )}
+      {allLines.length > 0 && (
         <div style={{ overflowX: "auto" }}>
-          <table className="table" style={{ marginTop: 12 }}>
+          <table className="table" style={{ marginTop: 14 }}>
             <thead>
               <tr>
                 <th>{t("contractLines.product")}</th>
                 <th>{t("contractLines.category")}</th>
                 <th>{t("contractLines.description")}</th>
-                <th>{t("contractLines.hoursSold")}</th>
-                <th>{t("contractLines.hoursUsed")}</th>
-                <th>{t("contractLines.hoursLeft")}</th>
+                <th style={{ minWidth: 150 }}>{t("contractLines.hours")}</th>
                 <th>{t("contractLines.amount")}</th>
                 {canWrite && <th />}
               </tr>
             </thead>
             <tbody>
-              {(lines ?? []).map((line) =>
+              {allLines.map((line) =>
                 editing === line.id ? (
                   <tr key={line.id}>
-                    <td colSpan={8}>
+                    <td colSpan={6}>
                       <ContractLineForm
                         initial={line}
                         products={allProducts}
@@ -327,12 +389,30 @@ export function ContractLinesCard({ projectId }: { projectId: string }) {
                     <td>{line.checklistItem?.name ?? "—"}</td>
                     <td>{categoryLabel(line.category)}</td>
                     <td>{line.description}</td>
-                    <td>{line.hours != null ? formatHoursValue(line.hours) : "—"}</td>
-                    <td>{formatHoursValue(line.hoursUsed)}</td>
-                    <td
-                      style={line.hours != null && line.hoursUsed > line.hours ? { color: "var(--danger)", fontWeight: 600 } : undefined}
-                    >
-                      {line.hours != null ? formatHoursValue(line.hours - line.hoursUsed) : "—"}
+                    <td>
+                      {line.hours != null ? (
+                        <>
+                          <div
+                            className="muted"
+                            style={{ fontSize: 12, marginBottom: 4, ...(line.hoursUsed > line.hours ? { color: "var(--danger)" } : {}) }}
+                          >
+                            {line.hoursUsed > line.hours
+                              ? t("contractLines.hoursOver", {
+                                  used: hoursText(line.hoursUsed),
+                                  sold: hoursText(line.hours),
+                                  over: hoursText(line.hoursUsed - line.hours),
+                                })
+                              : t("contractLines.hoursOf", {
+                                  used: hoursText(line.hoursUsed),
+                                  sold: hoursText(line.hours),
+                                  left: hoursText(line.hours - line.hoursUsed),
+                                })}
+                          </div>
+                          <HoursBar used={line.hoursUsed} sold={line.hours} />
+                        </>
+                      ) : (
+                        "—"
+                      )}
                     </td>
                     <td>{line.amount != null ? money.format(line.amount) : "—"}</td>
                     {canWrite && (
@@ -356,7 +436,7 @@ export function ContractLinesCard({ projectId }: { projectId: string }) {
             </tbody>
             <tfoot>
               <tr>
-                <td colSpan={6} style={{ fontWeight: 600 }}>
+                <td colSpan={4} style={{ fontWeight: 600 }}>
                   {t("contractLines.total")}
                 </td>
                 <td style={{ fontWeight: 600 }}>{money.format(totalAmount)}</td>
@@ -370,6 +450,7 @@ export function ContractLinesCard({ projectId }: { projectId: string }) {
         <div style={{ marginTop: 12 }}>
           <ContractLineForm
             initial={EMPTY_LINE}
+            isNew
             products={allProducts}
             submitLabel={t("contractLines.add")}
             error={error}

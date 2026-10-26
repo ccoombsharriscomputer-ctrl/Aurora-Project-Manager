@@ -34,3 +34,21 @@ const CATEGORY_BY_ACTION_TYPE: Record<string, ContractCategory> = {
 export function contractCategoryForActionType(actionTypeName: string | null | undefined): ContractCategory | null {
   return actionTypeName ? CATEGORY_BY_ACTION_TYPE[actionTypeName] ?? null : null;
 }
+
+// Data conversion lines on a contract are priced as a flat amount rather than a stated number of
+// hours; they're worked out at this hourly rate (a $800 conversion line is 4 hours).
+export const CONVERSION_RATE_PER_HOUR = 200;
+
+// The hours to use for a line: what was given, or for a data conversion line with none, the
+// amount divided by the conversion rate. Everything else without hours stays without.
+export function defaultLineHours(
+  category: string,
+  hours: number | null | undefined,
+  amount: number | null | undefined
+): number | null {
+  if (hours != null && hours > 0) return hours;
+  if (category === "Data Conversion" && amount != null && amount > 0) {
+    return Math.round((amount / CONVERSION_RATE_PER_HOUR) * 100) / 100;
+  }
+  return null;
+}

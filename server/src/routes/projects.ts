@@ -9,6 +9,7 @@ import { upload } from "../lib/upload";
 import { storage } from "../lib/storage";
 import { loadProjectInScope, userHasLineAccess } from "../lib/scope";
 import { contractLineSchema } from "./contractLines";
+import { defaultLineHours } from "../lib/contractCategories";
 import { countPdfPages, extractProjectDetailsFromContract, MAX_CONTRACT_PAGES } from "../lib/contractExtraction";
 import {
   createTicket,
@@ -183,7 +184,7 @@ router.post("/", blockReadOnly, async (req, res) => {
         description: l.description,
         // A product that isn't in this line's catalog is dropped rather than failing the whole create.
         checklistItemId: l.checklistItemId && validProductIds.has(l.checklistItemId) ? l.checklistItemId : null,
-        hours: l.hours ?? null,
+        hours: defaultLineHours(l.category, l.hours, l.amount),
         amount: l.amount ?? null,
       })),
     });

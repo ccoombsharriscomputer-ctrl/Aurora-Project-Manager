@@ -1,7 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { PDFParse } from "pdf-parse";
 import type { ChecklistItem, ProjectType } from "@prisma/client";
-import { CONTRACT_CATEGORIES, isContractCategory } from "./contractCategories";
+import { CONTRACT_CATEGORIES, defaultLineHours, isContractCategory } from "./contractCategories";
 
 // Claude reads PDFs up to 100 pages.
 export const MAX_CONTRACT_PAGES = 100;
@@ -100,7 +100,7 @@ const EXTRACTION_TOOL: Anthropic.Tool = {
               type: "string",
               enum: [...CONTRACT_CATEGORIES],
               description:
-                "The kind of service. Any line described as a combination of installation, implementation, setup, configuration and/or PM (e.g. 'Budgetary Installation, Implementation, Setup, Config, PM') is 'Project Management'. A line for installing and configuring software on its own is 'Installation'.",
+                "The kind of service. Any line described as a combination of installation, implementation, setup, configuration and/or PM (e.g. 'Budgetary Installation, Implementation, Setup, Config, PM') is 'Project Management'. A line for installing and configuring software on its own is 'Installation'. Any line labeled conversion (e.g. 'Conversion - Chart of Accounts') is 'Data Conversion'.",
             },
             description: { type: "string", description: "The line's description from the contract, as written." },
             hours: {
@@ -204,13 +204,15 @@ export async function extractProjectDetailsFromContract(
       const product = nullIfEmpty(line.productName)
         ? products.find((p) => p.name.toLowerCase() === line.productName.trim().toLowerCase())
         : undefined;
-      const hours = Number(line.hours);
+      const category = isContractCategory(line.category) ? line.category : "Other";
+      const amount = Math.round(Number(line.amount) * 100) / 100;
       return {
-        category: isContractCategory(line.category) ? line.category : "Other",
+        category,
         description: line.description.trim(),
         checklistItemId: product?.id ?? null,
-        hours: hours > 0 ? hours : null,
-        amount: Math.round(Number(line.amount) * 100) / 100,
+        // A conversion line with no stated hours is worked out from its amount (see defaultLineHours).
+        hours: defaultLineHours(category, Number(line.hours), amount),
+        amount,
       };
     });
 

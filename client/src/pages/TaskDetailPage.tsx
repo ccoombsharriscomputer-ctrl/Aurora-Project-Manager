@@ -520,12 +520,12 @@ export function TaskDetailPage() {
                     />
                   </div>
                 </div>
-                {commentHours && (contractLines ?? []).length > 0 && (
+                {commentHours && (contractLines ?? []).some((l) => l.hours != null) && (
                   <div className="field" style={{ marginTop: 8 }}>
                     <label>{t("contractLines.pickLine")}</label>
                     <select value={contractLineId} onChange={(e) => setContractLineId(e.target.value)}>
                       <option value="">{t("contractLines.autoMatch")}</option>
-                      {(contractLines ?? []).map((l) => (
+                      {(contractLines ?? []).filter((l) => l.hours != null).map((l) => (
                         <option key={l.id} value={l.id}>
                           {l.checklistItem ? `${l.checklistItem.name} — ` : ""}
                           {l.description}

@@ -864,7 +864,7 @@
         <p>
           A project can carry a <strong>Contract lines</strong> table: one row for each billable <em>services</em>
           line in the customer's contract (training, installation, project management, data conversion, go-live...).
-          Each row has a product, a category, a description, the <strong>hours sold</strong> (if the contract gives
+          Each row has a product, a category, a description, the <strong>hours sold</strong> (when the contract gives
           them), and the <strong>amount</strong> in dollars. License and maintenance lines aren't tracked &mdash; there's
           no time to log on them &mdash; and neither are lines at $0 or marked no charge.
         </p>
@@ -876,10 +876,16 @@
             saved along with the project when you click <em>Create project</em>.</li>
           <li><strong>By hand.</strong> On any project, the Contract lines card has <em>+ Add line</em>, <em>Edit</em> and
             <em>Remove</em>. Projects created before this existed start with none.</li>
-          <li><strong>Hours used and left.</strong> Hours you log on a task comment count against a line. Aurora picks the line
-            for you: the one for that task's product in the matching category &mdash; so Training logged on a
-            Budgetary task counts against Budgetary Training. If you'd rather choose, the comment form shows a
-            <em>Contract line</em> dropdown once you've typed hours. Hours left turns red when a line goes over.</li>
+          <li><strong>Conversion lines.</strong> A line labeled conversion usually has an amount but no hours, so Aurora
+            works the hours out at <strong>$200 an hour</strong> &mdash; an $800 conversion line becomes 4 hours. This
+            also fills in the hours when you add a new conversion line by hand and leave them blank.</li>
+          <li><strong>Hours used and left.</strong> Hours are tracked only on lines that have hours; a line without
+            them (a flat-fee project management line, say) just shows its amount. The top of the card totals hours sold,
+            used and left across those lines, and each line has its own bar that fills as time is logged &mdash; amber
+            when it's nearly used up and red when it's over. Hours you log on a task comment count against a line: Aurora
+            picks the one for that task's product in the matching category, so Training logged on a Budgetary task
+            counts against Budgetary Training. If you'd rather choose, the comment form shows a
+            <em>Contract line</em> dropdown once you've typed hours.</li>
         </ul>
       </div>
 

@@ -649,6 +649,8 @@ export function ProjectDetailPage() {
       </div>
       {duplicateError && <div className="error-text">{duplicateError}</div>}
 
+      <ContractLinesCard projectId={project.id} />
+
       <div className="dashboard-grid">
         <div>
           {subProjectsLoading && <p className="muted">{t("projectDetail.loadingSubProjects")}</p>}
@@ -688,7 +690,6 @@ export function ProjectDetailPage() {
               );
             })}
           </div>
-          <ContractLinesCard projectId={project.id} />
         </div>
 
         <div>

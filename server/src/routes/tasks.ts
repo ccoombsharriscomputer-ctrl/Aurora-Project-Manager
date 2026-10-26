@@ -238,11 +238,11 @@ async function pickContractLine(
 ): Promise<string | null> {
   if (requestedId) {
     const picked = await prisma.contractLine.findUnique({ where: { id: requestedId } });
-    return picked && picked.projectId === task.projectId ? picked.id : null;
+    return picked && picked.projectId === task.projectId && picked.hours != null ? picked.id : null;
   }
   const category = contractCategoryForActionType(actionTypeName);
   if (!category) return null;
-  const lines = await prisma.contractLine.findMany({ where: { projectId: task.projectId, category } });
+  const lines = await prisma.contractLine.findMany({ where: { projectId: task.projectId, category, hours: { not: null } } });
   const forProduct = lines.filter((l) => l.checklistItemId === task.subProject.checklistItemId);
   if (forProduct.length > 0) return forProduct[0].id;
   const noProduct = lines.filter((l) => l.checklistItemId === null);
