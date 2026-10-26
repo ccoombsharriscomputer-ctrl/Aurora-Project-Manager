@@ -8,6 +8,8 @@ import { SearchablePicker } from "./SearchablePicker";
 export interface TicketChoices {
   productId?: string;
   nature?: string;
+  groupId?: string;
+  ticketTypeId?: string;
 }
 
 // The step between clicking "Create TeamSupport ticket" and the ticket actually being created:
@@ -35,6 +37,8 @@ export function TicketOptionsPanel({
   });
   const [product, setProduct] = useState<TeamSupportProductOption | null>(null);
   const [nature, setNature] = useState("");
+  const [groupId, setGroupId] = useState("");
+  const [ticketTypeId, setTicketTypeId] = useState("");
 
   const products = data?.products ?? [];
 
@@ -42,11 +46,47 @@ export function TicketOptionsPanel({
     <div className="card" style={{ marginTop: 8, maxWidth: 520 }}>
       <div className="section-title">{t("ticketOptions.title")}</div>
 
-      {data?.defaultGroupName && (
-        <div className="field">
-          <label>{t("ticketOptions.group")}</label>
-          <div>{data.defaultGroupName}</div>
-        </div>
+      {data?.routing && (
+        <>
+          <div className="field">
+            <label>{t("ticketOptions.group")}</label>
+            <div>{data.routing.groupName}</div>
+          </div>
+          <div className="field">
+            <label>{t("ticketOptions.ticketType")}</label>
+            <div>{data.routing.typeName}</div>
+          </div>
+        </>
+      )}
+      {data && !data.routing && (
+        <>
+          <div className="field">
+            <label>
+              {t("ticketOptions.group")} <span className="required-marker">{t("taskDetail.requiredMarker")}</span>
+            </label>
+            <select value={groupId} onChange={(e) => setGroupId(e.target.value)} style={{ maxWidth: 420 }}>
+              <option value="">{t("ticketOptions.chooseGroup")}</option>
+              {data.groups.map((g) => (
+                <option key={g.id} value={g.id}>
+                  {g.name}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="field">
+            <label>
+              {t("ticketOptions.ticketType")} <span className="required-marker">{t("taskDetail.requiredMarker")}</span>
+            </label>
+            <select value={ticketTypeId} onChange={(e) => setTicketTypeId(e.target.value)} style={{ maxWidth: 420 }}>
+              <option value="">{t("ticketOptions.chooseType")}</option>
+              {data.ticketTypes.map((x) => (
+                <option key={x.id} value={x.id}>
+                  {x.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        </>
       )}
 
       <div className="field">
@@ -86,8 +126,15 @@ export function TicketOptionsPanel({
         <button
           type="button"
           className="btn btn-primary"
-          disabled={pending}
-          onClick={() => onCreate({ productId: product?.id, nature: nature || undefined })}
+          disabled={pending || (!!data && !data.routing && (!groupId || !ticketTypeId))}
+          onClick={() =>
+            onCreate({
+              productId: product?.id,
+              nature: nature || undefined,
+              groupId: data && !data.routing ? groupId : undefined,
+              ticketTypeId: data && !data.routing ? ticketTypeId : undefined,
+            })
+          }
         >
           {pending ? t("projectDetail.creatingTeamSupportTicket") : t("projectDetail.createTeamSupportTicket")}
         </button>

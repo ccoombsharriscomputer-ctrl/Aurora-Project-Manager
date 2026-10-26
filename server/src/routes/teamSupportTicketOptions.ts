@@ -2,8 +2,10 @@ import { Router } from "express";
 import { prisma } from "../lib/prisma";
 import { effectiveSoftwareLineId, requireAuth } from "../middleware/auth";
 import {
-  defaultTicketGroup,
+  fetchTeamSupportGroups,
   fetchTeamSupportProducts,
+  fetchTeamSupportTicketTypes,
+  ticketRoutingForLine,
   TeamSupportNotConfiguredError,
   TeamSupportUpstreamError,
   TICKET_NATURES,
@@ -18,14 +20,20 @@ router.use(requireAuth);
 // product belongs to a line when its name starts with the line's name ("TRIO General Entry").
 router.get("/", async (req, res) => {
   try {
-    const [products, line] = await Promise.all([
+    const line = await prisma.softwareLine.findUnique({ where: { id: effectiveSoftwareLineId(req.user!) }, select: { name: true } });
+    const routing = ticketRoutingForLine(line?.name ?? "");
+    // Lines with a fixed routing show it read-only; the others get the full Group and Ticket type
+    // lists to choose from.
+    const [products, groups, ticketTypes] = await Promise.all([
       fetchTeamSupportProducts(),
-      prisma.softwareLine.findUnique({ where: { id: effectiveSoftwareLineId(req.user!) }, select: { name: true } }),
+      routing ? Promise.resolve([]) : fetchTeamSupportGroups(),
+      routing ? Promise.resolve([]) : fetchTeamSupportTicketTypes(),
     ]);
     const prefix = line?.name.trim().toLowerCase();
     res.json({
-      // Shown read-only in the panel so people can see where the ticket will go.
-      defaultGroupName: defaultTicketGroup(line?.name ?? "")?.name ?? null,
+      routing: routing ? { groupName: routing.group.name, typeName: routing.type.name } : null,
+      groups,
+      ticketTypes,
       natures: TICKET_NATURES,
       products: products.map((p) => ({ ...p, preferred: !!prefix && p.name.toLowerCase().startsWith(prefix) })),
     });

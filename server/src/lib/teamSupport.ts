@@ -319,14 +319,30 @@ export interface CreateTicketResult {
   customerSet: boolean | null;
 }
 
-// The Group every ticket created from the TRIO software line goes to ("TRIO Support", not one
-// of its L1/L2/SQL/Web lookalikes), captured from TeamSupport's group list 2026-10-22. Other
-// lines have no default and leave the group blank.
-const TRIO_SUPPORT_GROUP = { id: "30759", name: "TRIO Support" };
-
-export function defaultTicketGroup(softwareLineName: string): { id: string; name: string } | null {
-  return /^trio$/i.test(softwareLineName.trim()) ? TRIO_SUPPORT_GROUP : null;
+// Where tickets created from a software line go, for the lines that have a fixed answer: the
+// Group and the ticket Type (both from TeamSupport's own lists, captured 2026-10-22 and
+// 2026-10-27). TRIO goes to "TRIO Support" (not one of its L1/L2/SQL/Web lookalikes), Spectrum to
+// "Spectrum PS", MSI to "MSI PS", OpenWindow to "OpenWindow PS", all as "PS Projects" tickets. Every other line has no fixed
+// answer, so the person creating the ticket picks the Group and Type from TeamSupport's lists.
+export interface TicketRouting {
+  group: { id: string; name: string };
+  type: { id: string; name: string };
 }
+
+const PS_PROJECTS_TYPE = { id: NEW_TICKET_TYPE_ID, name: "PS Projects" };
+const LINE_TICKET_ROUTING: Record<string, TicketRouting> = {
+  trio: { group: { id: "30759", name: "TRIO Support" }, type: PS_PROJECTS_TYPE },
+  spectrum: { group: { id: "64951", name: "Spectrum PS" }, type: PS_PROJECTS_TYPE },
+  msi: { group: { id: "64953", name: "MSI PS" }, type: PS_PROJECTS_TYPE },
+  openwindow: { group: { id: "64952", name: "OpenWindow PS" }, type: PS_PROJECTS_TYPE },
+};
+
+export function ticketRoutingForLine(softwareLineName: string): TicketRouting | null {
+  return LINE_TICKET_ROUTING[softwareLineName.trim().toLowerCase()] ?? null;
+}
+
+// Thrown when a line with no fixed routing is asked for a ticket without a Group and Type.
+export class TicketRoutingChoiceError extends Error {}
 
 // The choices in TeamSupport's custom "Nature" dropdown on tickets. There is no API for a
 // custom field's options, so this is every value found on the existing PS Projects tickets
@@ -371,6 +387,8 @@ export interface CreateTicketOptions {
   // A TeamSupport customer (organization) ID.
   customerId?: string | null;
   groupId?: string | null;
+  // A TeamSupport ticket type ID; PS Projects when left out.
+  ticketTypeId?: string | null;
   productId?: string | null;
   nature?: string | null;
 }
@@ -382,10 +400,12 @@ export async function createTicket(
   options: CreateTicketOptions = {}
 ): Promise<CreateTicketResult> {
   const { assigneeUserId, customerId, groupId, productId, nature } = options;
+  const ticketTypeId = options.ticketTypeId || NEW_TICKET_TYPE_ID;
   const ticket: Record<string, unknown> = {
     Name: name,
-    TicketTypeID: NEW_TICKET_TYPE_ID,
-    TicketStatusID: NEW_TICKET_STATUS_ID,
+    TicketTypeID: ticketTypeId,
+    // Statuses belong to a ticket type, so the starting status has to come from the same type.
+    TicketStatusID: ticketTypeId === NEW_TICKET_TYPE_ID ? NEW_TICKET_STATUS_ID : await initialStatusIdForType(ticketTypeId),
     TicketSeverityID: NEW_TICKET_SEVERITY_ID,
   };
   if (assigneeUserId) {
@@ -611,4 +631,67 @@ export const fetchTeamSupportProducts = productList.get;
 export function warmTeamSupportLists(): void {
   customerList.warm();
   productList.warm();
+}
+
+export interface TeamSupportNamedItem {
+  id: string;
+  name: string;
+}
+
+async function loadNamedList(path: string, key: string): Promise<TeamSupportNamedItem[]> {
+  const raw = await teamSupportRequest(path);
+  const rows =
+    raw && typeof raw === "object" && Array.isArray((raw as Record<string, unknown>)[key])
+      ? ((raw as Record<string, unknown>)[key] as Record<string, unknown>[])
+      : [];
+  const items: TeamSupportNamedItem[] = [];
+  for (const row of rows) {
+    const name = decodeEntities(String(row.Name ?? "").trim());
+    if (row.ID != null && name) items.push({ id: String(row.ID), name });
+  }
+  return items.sort((a, b) => a.name.localeCompare(b.name));
+}
+
+// For the Group and Ticket type choices on lines with no fixed routing.
+const groupList = cachedList(() => loadNamedList("/api/json/groups", "Groups"), LIST_CACHE_MS, "group list");
+export const fetchTeamSupportGroups = groupList.get;
+
+const ticketTypeList = cachedList(() => loadNamedList("/api/json/properties/tickettypes", "TicketTypes"), LIST_CACHE_MS, "ticket type list");
+export const fetchTeamSupportTicketTypes = ticketTypeList.get;
+
+interface TeamSupportStatus {
+  id: string;
+  name: string;
+  typeId: string;
+  position: number;
+  closed: boolean;
+}
+
+async function loadAllStatuses(): Promise<TeamSupportStatus[]> {
+  const raw = await teamSupportRequest("/api/json/properties/ticketstatuses");
+  const rows =
+    raw && typeof raw === "object" && Array.isArray((raw as Record<string, unknown>).TicketStatuses)
+      ? ((raw as Record<string, unknown>).TicketStatuses as Record<string, unknown>[])
+      : [];
+  return rows
+    .filter((r) => r.ID != null && r.TicketTypeID != null)
+    .map((r) => ({
+      id: String(r.ID),
+      name: decodeEntities(String(r.Name ?? "")),
+      typeId: String(r.TicketTypeID),
+      position: Number(r.Position) || 0,
+      closed: String(r.IsClosed).toLowerCase() === "true",
+    }));
+}
+
+const statusList = cachedList(loadAllStatuses, LIST_CACHE_MS, "ticket status list");
+
+// The status a new ticket of the given type starts in: one of its open statuses, preferring the
+// usual starting names, else the first open one in TeamSupport's own order.
+export async function initialStatusIdForType(ticketTypeId: string): Promise<string> {
+  const open = (await statusList.get()).filter((s) => s.typeId === ticketTypeId && !s.closed).sort((a, b) => a.position - b.position);
+  const preferred = ["not started", "new", "open"];
+  const match = preferred.map((p) => open.find((s) => s.name.toLowerCase() === p)).find(Boolean) ?? open[0];
+  if (!match) throw new TeamSupportUpstreamError("That ticket type has no open starting status in TeamSupport", null);
+  return match.id;
 }

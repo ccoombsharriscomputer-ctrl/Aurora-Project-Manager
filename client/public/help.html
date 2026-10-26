@@ -1048,15 +1048,20 @@
         <p>
           If a project doesn't have a ticket yet, click <strong>Create TeamSupport ticket</strong> next to the ticket
           number field (Read Only accounts don't see it). A small panel opens where you can pick the ticket's
-          <strong>Product</strong> and <strong>Nature</strong> (both optional); click <strong>Create ticket</strong>
+          <strong>Product</strong> and <strong>Nature</strong> (both optional, and for some environments the
+          <strong>Group</strong> and <strong>Ticket type</strong> too &mdash; see below); click <strong>Create ticket</strong>
           there and Aurora creates the ticket in TeamSupport and fills in the ticket # for you. The ticket's title is the project name, and its description
-          is the project description plus a line saying who created it. It's created as a <em>PS Projects</em> ticket
-          with status <em>Not Started</em> and severity <em>Normal</em>. If the ticket is created but its description
+          is the project description plus a line saying who created it. Its severity is <em>Normal</em>, and it starts in the
+          ticket type's first open status (<em>Not Started</em> for <em>PS Projects</em> tickets). If the ticket is created but its description
           or customer can't be added, Aurora tells you so and keeps the ticket linked.
         </p>
         <p>
-          <strong>Group:</strong> tickets created in the TRIO environment go to the <em>TRIO Support</em> group
-          automatically (the panel shows it); other environments leave the group blank for now.
+          <strong>Group and Ticket type:</strong> four environments have a fixed answer, and the panel just shows it:
+          <em>TRIO</em> tickets go to the <em>TRIO Support</em> group, <em>Spectrum</em> tickets to <em>Spectrum PS</em>,
+          <em>MSI</em> tickets to <em>MSI PS</em>, and <em>OpenWindow</em> tickets to <em>OpenWindow PS</em> &mdash; all as
+          <em>PS Projects</em> tickets. In every other environment the
+          panel has <strong>Group</strong> and <strong>Ticket type</strong> dropdowns (both required, listing TeamSupport's own
+          groups and ticket types) and the Create button stays off until you've picked both.
           <strong>Product:</strong> start typing to search every TeamSupport product, or open the box empty to see your
           environment's own products (in TRIO, the ones named "TRIO …") first.
           <strong>Nature:</strong> choose from the list of options TeamSupport uses on these tickets. That list is kept

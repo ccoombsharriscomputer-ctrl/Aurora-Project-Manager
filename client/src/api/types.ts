@@ -154,7 +154,11 @@ export interface TeamSupportProductOption {
 }
 
 export interface TicketOptionsResponse {
-  defaultGroupName: string | null;
+  // Set for software lines whose tickets always go to the same Group and Type (read-only in the
+  // panel); null for the rest, which choose from `groups` and `ticketTypes`.
+  routing: { groupName: string; typeName: string } | null;
+  groups: { id: string; name: string }[];
+  ticketTypes: { id: string; name: string }[];
   natures: string[];
   products: TeamSupportProductOption[];
 }

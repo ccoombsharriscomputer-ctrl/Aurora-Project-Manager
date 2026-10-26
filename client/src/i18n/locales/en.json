@@ -540,6 +540,9 @@
   },
   "ticketOptions": {
     "title": "New TeamSupport ticket",
+    "ticketType": "Ticket type",
+    "chooseGroup": "Choose a group…",
+    "chooseType": "Choose a ticket type…",
     "group": "Group",
     "product": "Product (optional)",
     "nature": "Nature (optional)",

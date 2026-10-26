@@ -13,7 +13,10 @@ import { defaultLineHours } from "../lib/contractCategories";
 import { countPdfPages, extractProjectDetailsFromContract, MAX_CONTRACT_PAGES } from "../lib/contractExtraction";
 import {
   createTicket,
-  defaultTicketGroup,
+  fetchTeamSupportGroups,
+  fetchTeamSupportTicketTypes,
+  ticketRoutingForLine,
+  TicketRoutingChoiceError,
   fetchTicketByNumber,
   TeamSupportNotConfiguredError,
   TeamSupportTicketNotFoundError,
@@ -321,6 +324,9 @@ router.get("/:id/teamsupport-ticket", async (req, res) => {
 });
 
 function respondTeamSupportError(res: Response, err: unknown, ticketNumber?: string) {
+  if (err instanceof TicketRoutingChoiceError) {
+    return res.status(400).json({ error: err.message });
+  }
   if (err instanceof TeamSupportNotConfiguredError) {
     return res
       .status(503)
@@ -352,6 +358,8 @@ async function createTicketForUser(
     customerId?: string | null;
     productId?: string | null;
     nature?: string | null;
+    groupId?: string | null;
+    ticketTypeId?: string | null;
   }
 ) {
   const [softwareLine, assignee, creator] = await Promise.all([
@@ -364,11 +372,25 @@ async function createTicketForUser(
     .filter(Boolean)
     .join("\n\n");
 
+  // TRIO, Spectrum and MSI tickets always go to their own PS group as PS Projects; every other line
+  // has to say which Group and Ticket type (checked against TeamSupport's own lists).
+  const routing = ticketRoutingForLine(softwareLine?.name ?? "");
+  let groupId = routing?.group.id;
+  let ticketTypeId = routing?.type.id;
+  if (!routing) {
+    const [groups, types] = await Promise.all([fetchTeamSupportGroups(), fetchTeamSupportTicketTypes()]);
+    if (!ticket.groupId || !groups.some((g) => g.id === ticket.groupId) || !ticket.ticketTypeId || !types.some((t) => t.id === ticket.ticketTypeId)) {
+      throw new TicketRoutingChoiceError("Choose a group and a ticket type for this ticket.");
+    }
+    groupId = ticket.groupId;
+    ticketTypeId = ticket.ticketTypeId;
+  }
+
   return createTicket(ticket.name, description, {
     assigneeUserId: assignee?.teamSupportUserId ?? creator?.teamSupportUserId,
     customerId: ticket.customerId,
-    // Tickets from the TRIO line go to the TRIO Support group; other lines leave it blank.
-    groupId: defaultTicketGroup(softwareLine?.name ?? "")?.id,
+    groupId,
+    ticketTypeId,
     productId: ticket.productId,
     nature: ticket.nature,
   });
@@ -381,6 +403,8 @@ const createTicketSchema = z.object({
   customerId: z.string().min(1).max(50).optional(),
   productId: z.string().min(1).max(50).optional(),
   nature: z.enum(TICKET_NATURES).optional(),
+  groupId: z.string().min(1).max(50).optional(),
+  ticketTypeId: z.string().min(1).max(50).optional(),
 });
 
 // Chosen in the create-ticket panel on the project page (the new-project form sends them in the
@@ -388,6 +412,8 @@ const createTicketSchema = z.object({
 const createTicketChoicesSchema = z.object({
   productId: z.string().min(1).max(50).optional(),
   nature: z.enum(TICKET_NATURES).optional(),
+  groupId: z.string().min(1).max(50).optional(),
+  ticketTypeId: z.string().min(1).max(50).optional(),
 });
 
 // For the new-project form: creates the ticket before the project exists, so the form can

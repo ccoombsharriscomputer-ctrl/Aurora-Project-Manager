@@ -540,6 +540,9 @@
   },
   "ticketOptions": {
     "title": "Nouveau billet TeamSupport",
+    "ticketType": "Type de billet",
+    "chooseGroup": "Choisissez un groupe…",
+    "chooseType": "Choisissez un type de billet…",
     "group": "Groupe",
     "product": "Produit (facultatif)",
     "nature": "Nature (facultatif)",
