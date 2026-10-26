@@ -8,7 +8,7 @@ import multer from "multer";
 import { upload } from "../lib/upload";
 import { storage } from "../lib/storage";
 import { loadTaskInScope, userHasLineAccess } from "../lib/scope";
-import { contractCategoryForActionType } from "../lib/contractCategories";
+import { contractCategoryForActionType, contractCategoryForTaskTitle } from "../lib/contractCategories";
 import { PS_ACTION_TYPES, syncTaskUpdateToTeamSupport, teamSupportTaskContext } from "../lib/teamSupport";
 import { formatHours } from "../lib/format";
 import { notifyTaskAssigned } from "../lib/email";
@@ -229,10 +229,22 @@ const commentSchema = z.object({
 });
 
 // Which contract line a comment's hours count against: the one picked on the form, or else the
-// project's line for this task's product in the category its action type belongs to (a Training
-// comment on a Budgetary task goes to the Budgetary Training line). No match means no line.
+// best fit from where the comment was made. The sub-project's product narrows the project's lines
+// down to that product's (a line with no product is matched by its text mentioning the
+// sub-project's name); then the task's own title ("Staff Training") and the comment's action type
+// say which category; failing that, words the task title shares with a line's description. A line
+// is only chosen when it's clear — otherwise the hours just aren't tied to one, and the person can
+// pick on the form. Only lines with hours are candidates.
+function wordsOf(text: string): string[] {
+  return (text.toLowerCase().match(/[a-z]{4,}/g) ?? []).filter((w) => !["with", "and", "the", "for"].includes(w));
+}
+
 async function pickContractLine(
-  task: { projectId: string; subProject: { checklistItemId: string } },
+  task: {
+    projectId: string;
+    title: string;
+    subProject: { checklistItemId: string; name: string | null; checklistItem: { name: string } };
+  },
   requestedId: string | undefined,
   actionTypeName: string | undefined
 ): Promise<string | null> {
@@ -240,13 +252,32 @@ async function pickContractLine(
     const picked = await prisma.contractLine.findUnique({ where: { id: requestedId } });
     return picked && picked.projectId === task.projectId && picked.hours != null ? picked.id : null;
   }
-  const category = contractCategoryForActionType(actionTypeName);
-  if (!category) return null;
-  const lines = await prisma.contractLine.findMany({ where: { projectId: task.projectId, category, hours: { not: null } } });
+  const lines = await prisma.contractLine.findMany({ where: { projectId: task.projectId, hours: { not: null } } });
+  if (lines.length === 0) return null;
+
+  const productNames = [task.subProject.checklistItem.name, task.subProject.name]
+    .filter((n): n is string => !!n)
+    .map((n) => n.toLowerCase());
   const forProduct = lines.filter((l) => l.checklistItemId === task.subProject.checklistItemId);
-  if (forProduct.length > 0) return forProduct[0].id;
-  const noProduct = lines.filter((l) => l.checklistItemId === null);
-  return noProduct.length === 1 ? noProduct[0].id : null;
+  const byText = lines.filter((l) => !l.checklistItemId && productNames.some((n) => l.description.toLowerCase().includes(n)));
+  const noProduct = lines.filter((l) => !l.checklistItemId);
+  const pool = forProduct.length > 0 ? forProduct : byText.length > 0 ? byText : noProduct;
+  if (pool.length === 0) return null;
+
+  const titleWords = new Set(wordsOf(task.title));
+  const overlap = (l: { description: string }) => wordsOf(l.description).filter((w) => titleWords.has(w)).length;
+  const best = (candidates: typeof pool) =>
+    candidates.slice().sort((a, b) => overlap(b) - overlap(a))[0].id;
+
+  const categories = [contractCategoryForTaskTitle(task.title), contractCategoryForActionType(actionTypeName)];
+  for (const category of categories) {
+    if (!category) continue;
+    const inCategory = pool.filter((l) => l.category === category);
+    if (inCategory.length > 0) return best(inCategory);
+  }
+  const byWords = pool.filter((l) => overlap(l) > 0);
+  if (byWords.length > 0) return best(byWords);
+  return pool.length === 1 ? pool[0].id : null;
 }
 
 // A comment with files arrives as multipart/form-data (every field a string); one without

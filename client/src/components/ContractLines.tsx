@@ -240,6 +240,8 @@ export function ContractLinesDraftEditor({
   );
 }
 
+const OPEN_STORAGE_KEY = "aurora-contract-lines-open";
+
 function hoursText(n: number): string {
   return formatHoursValue(n);
 }
@@ -269,6 +271,23 @@ export function ContractLinesCard({ projectId }: { projectId: string }) {
   const queryClient = useQueryClient();
   const [editing, setEditing] = useState<string | null>(null); // a line id, or "new"
   const [error, setError] = useState<string | null>(null);
+  // Open or closed is remembered on this device. Starts closed, with a one-line summary in the header.
+  const [open, setOpen] = useState(() => {
+    try {
+      return localStorage.getItem(OPEN_STORAGE_KEY) === "true";
+    } catch {
+      return false;
+    }
+  });
+  function toggleOpen() {
+    const next = !open;
+    setOpen(next);
+    try {
+      localStorage.setItem(OPEN_STORAGE_KEY, String(next));
+    } catch {
+      // Remembering the choice is a nicety; the card still works without it.
+    }
+  }
 
   const { data: lines } = useQuery({
     queryKey: ["contract-lines", projectId],
@@ -314,15 +333,45 @@ export function ContractLinesCard({ projectId }: { projectId: string }) {
   return (
     <div className="card" style={{ marginBottom: 16 }}>
       <div className="flex-between">
-        <div className="section-title" style={{ marginBottom: 0 }}>
-          {t("contractLines.title")}
-        </div>
-        {canWrite && editing === null && (
+        <button
+          type="button"
+          className="contract-lines-toggle"
+          onClick={toggleOpen}
+          aria-expanded={open}
+          title={open ? t("contractLines.collapse") : t("contractLines.expand")}
+        >
+          <span aria-hidden="true" className="contract-lines-chevron">
+            {open ? "▾" : "▸"}
+          </span>
+          <span className="section-title" style={{ marginBottom: 0 }}>
+            {t("contractLines.title")}
+          </span>
+          {!open && (
+            <span className="contract-lines-summary">
+              {hourLines.length > 0 ? (
+                <>
+                  <span style={usedTotal > soldTotal ? { color: "var(--danger)" } : undefined}>
+                    {t("contractLines.summary", { used: hoursText(usedTotal), sold: hoursText(soldTotal) })}
+                  </span>
+                  <span className="contract-lines-mini-bar">
+                    <HoursBar used={usedTotal} sold={soldTotal} />
+                  </span>
+                </>
+              ) : (
+                <span className="muted">{allLines.length === 0 ? t("contractLines.none") : t("contractLines.noHoursYet")}</span>
+              )}
+              {allLines.length > 0 && <span className="muted">· {money.format(totalAmount)}</span>}
+            </span>
+          )}
+        </button>
+        {open && canWrite && editing === null && (
           <button className="btn btn-sm" onClick={() => setEditing("new")}>
             {t("contractLines.addLine")}
           </button>
         )}
       </div>
+      {open && (
+        <>
       {allLines.length === 0 && editing === null && (
         <p className="muted" style={{ marginTop: 12 }}>
           {t("contractLines.none")}
@@ -467,6 +516,8 @@ export function ContractLinesCard({ projectId }: { projectId: string }) {
       <p className="muted" style={{ fontSize: 12, marginTop: 12 }}>
         {t("contractLines.hint")}
       </p>
+        </>
+      )}
     </div>
   );
 }

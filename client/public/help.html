@@ -883,9 +883,14 @@
             them (a flat-fee project management line, say) just shows its amount. The top of the card totals hours sold,
             used and left across those lines, and each line has its own bar that fills as time is logged &mdash; amber
             when it's nearly used up and red when it's over. Hours you log on a task comment count against a line: Aurora
-            picks the one for that task's product in the matching category, so Training logged on a Budgetary task
-            counts against Budgetary Training. If you'd rather choose, the comment form shows a
-            <em>Contract line</em> dropdown once you've typed hours.</li>
+            looks at the task's sub-project (its product) and the task itself, so time logged on a
+            <em>Staff Training</em> task in the Budgetary sub-project counts against Budgetary Training. The action type
+            you pick helps when the task name doesn't say. If Aurora can't tell which line it is, the hours simply
+            aren't tied to one &mdash; the comment form shows a <em>Contract line</em> dropdown once you've typed hours,
+            so you can choose.</li>
+          <li><strong>Collapsing the card.</strong> Click the <em>Contract lines</em> heading to open or close the card.
+            Closed, it shows a one-line summary &mdash; hours used out of hours sold, a small bar, and the total
+            amount. Aurora remembers your choice on this device, and it starts closed.</li>
         </ul>
       </div>
 

@@ -52,3 +52,19 @@ export function defaultLineHours(
   }
   return null;
 }
+
+// The category a task's own title points to ("Staff Training" -> Training, "Project Management" ->
+// Project Management). The first rule that matches wins, so project management is checked first.
+const TASK_TITLE_RULES: [RegExp, ContractCategory][] = [
+  [/project management|\bpm\b/i, "Project Management"],
+  [/train/i, "Training"],
+  [/conver|data (audit|migration)/i, "Data Conversion"],
+  [/go[- ]?live/i, "Go Live"],
+  [/install|set ?up|config/i, "Installation"],
+  [/support/i, "Support"],
+];
+
+export function contractCategoryForTaskTitle(title: string | null | undefined): ContractCategory | null {
+  if (!title) return null;
+  return TASK_TITLE_RULES.find(([pattern]) => pattern.test(title))?.[1] ?? null;
+}
