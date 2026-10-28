@@ -118,7 +118,17 @@ router.get("/:id/tasks", async (req, res) => {
       _count: { select: { comments: true, attachments: true } },
     },
   });
-  res.json(tasks);
+
+  // Total time logged on each task (comment hours and Start/Stop entries alike), so the board
+  // can show it on the card without opening the task. A running timer has no duration yet and
+  // adds nothing until it's stopped.
+  const totals = await prisma.timeEntry.groupBy({
+    by: ["taskId"],
+    where: { task: { subProjectId: req.params.id } },
+    _sum: { durationMinutes: true },
+  });
+  const minutesByTask = new Map(totals.map((row) => [row.taskId, row._sum.durationMinutes ?? 0]));
+  res.json(tasks.map((task) => ({ ...task, loggedMinutes: minutesByTask.get(task.id) ?? 0 })));
 });
 
 const createTaskSchema = z.object({

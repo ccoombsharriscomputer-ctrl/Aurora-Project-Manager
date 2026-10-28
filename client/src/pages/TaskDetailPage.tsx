@@ -351,6 +351,8 @@ export function TaskDetailPage() {
   ].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
   const visibleFeedItems = expanded ? feedItems : feedItems.slice(0, COLLAPSED_COUNT);
+  // Everything shown in the feed with a duration, so the total always matches the lines below it.
+  const totalLoggedMinutes = feedItems.reduce((sum, item) => sum + (item.durationMinutes ?? 0), 0);
 
   function handleCommentSubmit(e: FormEvent) {
     e.preventDefault();
@@ -366,6 +368,9 @@ export function TaskDetailPage() {
             ← {task.subProject.name || task.subProject.checklistItem.name} ({task.project.name})
           </Link>
           <h1 style={{ marginTop: 6 }}>{task.title}</h1>
+          <p className="muted" style={{ margin: "4px 0 0" }}>
+            {t("taskDetail.hoursLogged")}: <strong>{formatMinutes(totalLoggedMinutes)}</strong>
+          </p>
         </div>
         {canWrite && (
           <button

@@ -7,7 +7,7 @@ import { api } from "../api/client";
 import type { SubProjectDetail, Task, TaskPriority, UserSummary } from "../api/types";
 import { extractErrorMessage, useAuth } from "../context/AuthContext";
 import { useOpenTabs } from "../context/OpenTabsContext";
-import { formatDueDate } from "../utils/format";
+import { formatDueDate, formatMinutes } from "../utils/format";
 
 const COLUMNS: { status: Task["status"]; labelKey: string }[] = [
   { status: "TODO", labelKey: "common.statusTodo" },
@@ -300,7 +300,14 @@ export function SubProjectDetailPage() {
                     <span>{task.assignee?.name ?? t("subProjectDetail.unassigned")}</span>
                   </div>
                   <div className="task-meta" style={{ marginTop: 6 }}>
-                    <span>{formatDueDate(task.dueDate)}</span>
+                    <span>
+                      {formatDueDate(task.dueDate)}
+                      {!!task.loggedMinutes && (
+                        <span className="muted" title={t("taskDetail.hoursLogged")} style={{ marginLeft: 8 }}>
+                          ⏱ {formatMinutes(task.loggedMinutes)}
+                        </span>
+                      )}
+                    </span>
                     {canWrite ? (
                       <select
                         value={task.status}

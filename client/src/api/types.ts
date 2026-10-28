@@ -277,6 +277,8 @@ export interface Task {
   project?: { id: string; name: string };
   subProject?: { id: string; name: string | null; checklistItem: { name: string } };
   _count?: { comments: number; attachments: number };
+  // Total time logged on the task, in minutes (sent with a sub-project's task list).
+  loggedMinutes?: number;
 }
 
 export interface FollowUpItem {

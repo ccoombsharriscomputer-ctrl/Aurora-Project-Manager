@@ -275,6 +275,7 @@
     }
   },
   "taskDetail": {
+    "hoursLogged": "Horas registradas",
     "loadingTask": "Cargando tarea…",
     "confirmDeleteTask": "¿Eliminar esta tarea? Esta acción no se puede deshacer.",
     "confirmDeleteComment": "¿Eliminar este comentario y el tiempo registrado con él? Esto solo lo elimina de Aurora — no afecta nada ya sincronizado con TeamSupport. Esta acción no se puede deshacer.",

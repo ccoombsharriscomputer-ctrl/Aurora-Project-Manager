@@ -275,6 +275,7 @@
     }
   },
   "taskDetail": {
+    "hoursLogged": "Heures consignées",
     "loadingTask": "Chargement de la tâche…",
     "confirmDeleteTask": "Supprimer cette tâche? Cette action est irréversible.",
     "confirmDeleteComment": "Supprimer ce commentaire et le temps enregistré avec lui? Cela le retire seulement d'Aurora — sans toucher à quoi que ce soit déjà synchronisé avec TeamSupport. Cette action est irréversible.",

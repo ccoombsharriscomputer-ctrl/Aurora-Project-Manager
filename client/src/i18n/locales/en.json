@@ -275,6 +275,7 @@
     }
   },
   "taskDetail": {
+    "hoursLogged": "Hours logged",
     "loadingTask": "Loading task…",
     "confirmDeleteTask": "Delete this task? This cannot be undone.",
     "confirmDeleteComment": "Delete this comment and any time logged with it? This only removes it from Aurora — it won't touch anything already synced to TeamSupport. This cannot be undone.",
