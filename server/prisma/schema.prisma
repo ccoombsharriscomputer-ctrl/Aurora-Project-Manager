@@ -547,6 +547,9 @@ model FixPlaybook {
   title         String
   // Words or phrases looked for in a ticket's title (whole words, any case).
   matchPhrases  String[]
+  // Product line (lib/fixPlaybooks.ts PRODUCT_LINES id, e.g. "trio"), worked out from the
+  // ticket's product name; null = every line.
+  productLine   String?
   // Only for tickets whose product name contains one of these; empty = any product.
   products      String[]
   // One step per line.

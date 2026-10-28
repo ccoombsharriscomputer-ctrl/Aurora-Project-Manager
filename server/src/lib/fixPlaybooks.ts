@@ -8,9 +8,36 @@ import { fetchTicketHistory, searchTickets, type TicketHistoryEntry, type Ticket
 // by admins (routes/fixPlaybooks.ts). Ticket Finder shows the active ones matching a ticket and
 // its AI research uses them as evidence. Drafting one with AI only reads TeamSupport.
 
+// Product lines, told apart by how TeamSupport product names start ("TRIO Cash Receipting",
+// "SF - Payroll", "Spectrum - FLEXIBILL"...). A playbook set to a line only matches that
+// line's tickets. Products starting any other way belong to no line, so only playbooks for
+// every line match them.
+export const PRODUCT_LINES: { id: string; name: string; pattern: RegExp }[] = [
+  { id: "trio", name: "TRIO", pattern: /^TRIO\b/i },
+  { id: "smartfusion", name: "SmartFusion", pattern: /^(SF\s*-|SmartFusion\b)/i },
+  { id: "spectrum", name: "Spectrum", pattern: /^Spectrum\b/i },
+  { id: "openwindow", name: "Open Window", pattern: /^Open\s?Window\b/i },
+  { id: "aplus", name: "A+", pattern: /^A\+/ },
+  { id: "ics", name: "ICS", pattern: /^ICS\b/i },
+  { id: "msi", name: "MSI", pattern: /^MSI\b/i },
+  { id: "munismart", name: "MuniSmart", pattern: /^MuniSmart\b/i },
+  { id: "printmail", name: "Print & Mail", pattern: /^PM\s*-/i },
+];
+
+export function productLineOf(product: string | null): string | null {
+  const p = (product ?? "").trim();
+  return PRODUCT_LINES.find((l) => l.pattern.test(p))?.id ?? null;
+}
+
+export function productLineName(id: string | null): string | null {
+  return PRODUCT_LINES.find((l) => l.id === id)?.name ?? null;
+}
+
 export interface MatchedPlaybook {
   id: string;
   title: string;
+  // Display name ("TRIO"), or null for a playbook that covers every line.
+  productLine: string | null;
   steps: string;
   matchedPhrases: string[];
   updatedAt: string;
@@ -22,12 +49,13 @@ function normalize(text: string): string {
 }
 
 // Phrases found as whole words in the title, or [] when the playbook doesn't fit this ticket
-// (no phrase found, or the ticket's product isn't one the playbook is limited to).
+// (no phrase found, or the ticket's product line or product isn't one the playbook is for).
 export function playbookMatch(
-  playbook: { matchPhrases: string[]; products: string[] },
+  playbook: { productLine: string | null; matchPhrases: string[]; products: string[] },
   title: string,
   product: string | null
 ): string[] {
+  if (playbook.productLine && productLineOf(product) !== playbook.productLine) return [];
   if (playbook.products.length) {
     const p = (product ?? "").toLowerCase();
     if (!playbook.products.some((want) => want.trim() && p.includes(want.trim().toLowerCase()))) return [];
@@ -41,7 +69,10 @@ export function playbookMatch(
 
 // Active playbooks are read at most once a minute; edits clear this straight away.
 const ACTIVE_CACHE_MS = 60 * 1000;
-let activeCache: { at: number; rows: Promise<{ id: string; title: string; steps: string; matchPhrases: string[]; products: string[]; updatedAt: Date }[]> } | null = null;
+let activeCache: {
+  at: number;
+  rows: Promise<{ id: string; title: string; steps: string; productLine: string | null; matchPhrases: string[]; products: string[]; updatedAt: Date }[]>;
+} | null = null;
 
 export function forgetActivePlaybooks(): void {
   activeCache = null;
@@ -51,7 +82,7 @@ export async function findMatchingPlaybooks(title: string, product: string | nul
   if (!activeCache || Date.now() - activeCache.at >= ACTIVE_CACHE_MS) {
     const rows = prisma.fixPlaybook.findMany({
       where: { active: true },
-      select: { id: true, title: true, steps: true, matchPhrases: true, products: true, updatedAt: true },
+      select: { id: true, title: true, steps: true, productLine: true, matchPhrases: true, products: true, updatedAt: true },
       orderBy: { title: "asc" },
     });
     activeCache = { at: Date.now(), rows };
@@ -63,7 +94,14 @@ export async function findMatchingPlaybooks(title: string, product: string | nul
     .filter(({ p, matched }) => matched.length > 0 && p.steps.trim() !== "")
     // More phrases found = more likely to be the right one.
     .sort((a, b) => b.matched.length - a.matched.length)
-    .map(({ p, matched }) => ({ id: p.id, title: p.title, steps: p.steps, matchedPhrases: matched, updatedAt: p.updatedAt.toISOString() }));
+    .map(({ p, matched }) => ({
+      id: p.id,
+      title: p.title,
+      productLine: productLineName(p.productLine),
+      steps: p.steps,
+      matchedPhrases: matched,
+      updatedAt: p.updatedAt.toISOString(),
+    }));
 }
 
 // ---- AI draft: steps written from how matching closed tickets were actually fixed ----
@@ -130,7 +168,7 @@ Rules:
 - Plain text only: no markdown, no bullet characters, no numbering inside the steps.`;
 
 function draftPrompt(
-  playbook: { title: string; matchPhrases: string[]; products: string[] },
+  playbook: { title: string; productLine: string | null; matchPhrases: string[]; products: string[] },
   tickets: { row: TicketSearchRow; notes: TicketHistoryEntry[] }[]
 ): string {
   const items = tickets.map(({ row, notes }) => {
@@ -145,13 +183,13 @@ function draftPrompt(
       `Last notes (oldest first):\n${text}\n</ticket>`;
   });
   return (
-    `Playbook: ${playbook.title}\nMatched on title words: ${playbook.matchPhrases.join(", ") || "none"}\n` +
+    `Playbook: ${playbook.title}\nProduct line: ${productLineName(playbook.productLine) ?? "all lines"}\nMatched on title words: ${playbook.matchPhrases.join(", ") || "none"}\n` +
     `Products: ${playbook.products.join(", ") || "any"}\n\n${items.join("\n\n")}\n\nDraft the playbook steps.`
   );
 }
 
 // Closed tickets from the last year whose titles match the playbook, newest first.
-async function ticketsForDraft(playbook: { matchPhrases: string[]; products: string[] }): Promise<TicketSearchRow[]> {
+async function ticketsForDraft(playbook: { productLine: string | null; matchPhrases: string[]; products: string[] }): Promise<TicketSearchRow[]> {
   const phrases = playbook.matchPhrases
     .map((p) => p.trim())
     .filter((p) => normalize(p).length >= 3)
@@ -182,7 +220,7 @@ async function draftPlaybook(playbookId: string): Promise<PlaybookDraft> {
 
   const rows = await ticketsForDraft(playbook);
   if (rows.length === 0) {
-    throw new TicketAiFailedError("No closed tickets from the last year matched these words and products, so there's nothing to draft from.");
+    throw new TicketAiFailedError("No closed tickets from the last year matched these words, product line and products, so there's nothing to draft from.");
   }
   const tickets = await Promise.all(
     rows.map(async (row) => ({

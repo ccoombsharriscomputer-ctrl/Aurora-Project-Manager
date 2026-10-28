@@ -2,12 +2,17 @@ import { Router } from "express";
 import { z } from "zod";
 import { prisma } from "../lib/prisma";
 import { requireAdmin, requireAuth } from "../middleware/auth";
-import { findDraftJob, forgetActivePlaybooks, forgetDraftJob, startDraftJob } from "../lib/fixPlaybooks";
+import { findDraftJob, forgetActivePlaybooks, forgetDraftJob, PRODUCT_LINES, startDraftJob } from "../lib/fixPlaybooks";
 import { sendAiError } from "./ticketSearch";
 
 // Admin page for the fix playbooks Ticket Finder shows next to matching tickets.
 const router = Router();
 router.use(requireAuth, requireAdmin);
+
+// The product lines a playbook can be limited to, for the page's dropdowns.
+router.get("/product-lines", (_req, res) => {
+  res.json(PRODUCT_LINES.map((l) => ({ id: l.id, name: l.name })));
+});
 
 router.get("/", async (_req, res) => {
   res.json(await prisma.fixPlaybook.findMany({ orderBy: { title: "asc" } }));
@@ -25,6 +30,12 @@ const cleanList = (max: number) =>
 
 const playbookSchema = z.object({
   title: z.string().trim().min(1, "Give the playbook a title").max(200),
+  // null = every product line.
+  productLine: z
+    .string()
+    .refine((id) => PRODUCT_LINES.some((l) => l.id === id), "Unknown product line")
+    .nullable()
+    .default(null),
   matchPhrases: cleanList(40),
   products: cleanList(20),
   steps: z.string().max(10_000),

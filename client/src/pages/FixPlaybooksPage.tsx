@@ -9,6 +9,7 @@ import { formatDate } from "../utils/format";
 interface FixPlaybook {
   id: string;
   title: string;
+  productLine: string | null;
   matchPhrases: string[];
   products: string[];
   steps: string;
@@ -16,6 +17,21 @@ interface FixPlaybook {
   sourceTickets: string[];
   updatedByName: string | null;
   updatedAt: string;
+}
+
+interface ProductLine {
+  id: string;
+  name: string;
+}
+
+// The lines come from the server, which uses the same list to tell a ticket's line from its
+// product name.
+function useProductLines() {
+  return useQuery({
+    queryKey: ["fix-playbooks", "product-lines"],
+    queryFn: () => api.get<ProductLine[]>("/fix-playbooks/product-lines"),
+    staleTime: Infinity,
+  }).data ?? [];
 }
 
 interface PlaybookDraft {
@@ -32,11 +48,21 @@ const splitList = (text: string) => text.split(",").map((s) => s.trim()).filter(
 const DRAFT_POLL_MS = 4000;
 const DRAFT_GIVE_UP_MS = 6 * 60 * 1000;
 
-function PlaybookForm({ playbook, onDone }: { playbook: FixPlaybook | null; onDone: () => void }) {
+function PlaybookForm({
+  playbook,
+  defaultLine,
+  onDone,
+}: {
+  playbook: FixPlaybook | null;
+  defaultLine: string | null;
+  onDone: () => void;
+}) {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
+  const productLines = useProductLines();
   const [savedId, setSavedId] = useState<string | null>(playbook?.id ?? null);
   const [title, setTitle] = useState(playbook?.title ?? "");
+  const [productLine, setProductLine] = useState<string | null>(playbook ? playbook.productLine : defaultLine);
   const [phrases, setPhrases] = useState(playbook?.matchPhrases.join(", ") ?? "");
   const [products, setProducts] = useState(playbook?.products.join(", ") ?? "");
   const [steps, setSteps] = useState(playbook?.steps ?? "");
@@ -53,6 +79,7 @@ function PlaybookForm({ playbook, onDone }: { playbook: FixPlaybook | null; onDo
 
   const body = (overrides: Partial<FixPlaybook> = {}) => ({
     title,
+    productLine,
     matchPhrases: splitList(phrases),
     products: splitList(products),
     steps,
@@ -141,6 +168,18 @@ function PlaybookForm({ playbook, onDone }: { playbook: FixPlaybook | null; onDo
         <input type="text" required value={title} onChange={(e) => setTitle(e.target.value)} placeholder={t("fixPlaybooks.titlePlaceholder")} />
       </div>
       <div className="field">
+        <label>{t("fixPlaybooks.productLine")}</label>
+        <select value={productLine ?? ""} onChange={(e) => setProductLine(e.target.value || null)}>
+          <option value="">{t("fixPlaybooks.allLines")}</option>
+          {productLines.map((l) => (
+            <option key={l.id} value={l.id}>
+              {l.name}
+            </option>
+          ))}
+        </select>
+        <div className="muted" style={{ fontSize: 12, marginTop: 4 }}>{t("fixPlaybooks.productLineHelp")}</div>
+      </div>
+      <div className="field">
         <label>{t("fixPlaybooks.matchWords")}</label>
         <input type="text" value={phrases} onChange={(e) => setPhrases(e.target.value)} placeholder={t("fixPlaybooks.matchWordsPlaceholder")} />
         <div className="muted" style={{ fontSize: 12, marginTop: 4 }}>{t("fixPlaybooks.matchWordsHelp")}</div>
@@ -220,6 +259,10 @@ export function FixPlaybooksPage() {
   const { t } = useTranslation();
   // null = closed, "new" = new playbook form, otherwise the id being edited.
   const [editing, setEditing] = useState<string | null>(null);
+  // "" = every playbook, "shared" = only the ones for every line, otherwise one line's id.
+  const [lineFilter, setLineFilter] = useState("");
+  const productLines = useProductLines();
+  const lineName = (id: string | null) => (id ? productLines.find((l) => l.id === id)?.name ?? id : t("fixPlaybooks.allLines"));
   const { data: playbooks, isLoading } = useQuery({
     queryKey: ["fix-playbooks"],
     queryFn: () => api.get<FixPlaybook[]>("/fix-playbooks"),
@@ -228,6 +271,12 @@ export function FixPlaybooksPage() {
   if (isLoading || !playbooks) {
     return <div className="muted">{t("fixPlaybooks.loading")}</div>;
   }
+
+  const lineOrder = (id: string | null) => (id ? productLines.findIndex((l) => l.id === id) : -1);
+  const shown = playbooks
+    .filter((p) => !lineFilter || (lineFilter === "shared" ? !p.productLine : p.productLine === lineFilter))
+    .sort((a, b) => lineOrder(a.productLine) - lineOrder(b.productLine) || a.title.localeCompare(b.title));
+  const newLine = lineFilter && lineFilter !== "shared" ? lineFilter : null;
 
   return (
     <div>
@@ -242,12 +291,25 @@ export function FixPlaybooksPage() {
       <p className="muted" style={{ marginTop: -12, marginBottom: 20 }}>
         {t("fixPlaybooks.intro")}
       </p>
-      {editing === "new" && <PlaybookForm playbook={null} onDone={() => setEditing(null)} />}
+      <label className="gap-8" style={{ marginBottom: 12, alignItems: "center" }}>
+        <span>{t("fixPlaybooks.showLine")}</span>
+        <select value={lineFilter} onChange={(e) => setLineFilter(e.target.value)}>
+          <option value="">{t("fixPlaybooks.everyPlaybook")}</option>
+          <option value="shared">{t("fixPlaybooks.allLines")}</option>
+          {productLines.map((l) => (
+            <option key={l.id} value={l.id}>
+              {l.name}
+            </option>
+          ))}
+        </select>
+      </label>
+      {editing === "new" && <PlaybookForm playbook={null} defaultLine={newLine} onDone={() => setEditing(null)} />}
       <div className="card">
         <table className="table">
           <thead>
             <tr>
               <th>{t("fixPlaybooks.titleLabel")}</th>
+              <th>{t("fixPlaybooks.productLine")}</th>
               <th>{t("fixPlaybooks.matchWords")}</th>
               <th>{t("fixPlaybooks.products")}</th>
               <th>{t("common.status")}</th>
@@ -256,16 +318,17 @@ export function FixPlaybooksPage() {
             </tr>
           </thead>
           <tbody>
-            {playbooks.map((p) =>
+            {shown.map((p) =>
               editing === p.id ? (
                 <tr key={p.id}>
-                  <td colSpan={6}>
-                    <PlaybookForm playbook={p} onDone={() => setEditing(null)} />
+                  <td colSpan={7}>
+                    <PlaybookForm playbook={p} defaultLine={null} onDone={() => setEditing(null)} />
                   </td>
                 </tr>
               ) : (
                 <tr key={p.id}>
                   <td>{p.title}</td>
+                  <td>{lineName(p.productLine)}</td>
                   <td>{p.matchPhrases.join(", ") || "—"}</td>
                   <td>{p.products.join(", ") || t("fixPlaybooks.anyProduct")}</td>
                   <td>
@@ -287,9 +350,9 @@ export function FixPlaybooksPage() {
                 </tr>
               )
             )}
-            {playbooks.length === 0 && (
+            {shown.length === 0 && (
               <tr>
-                <td colSpan={6} className="muted">
+                <td colSpan={7} className="muted">
                   {t("fixPlaybooks.none")}
                 </td>
               </tr>

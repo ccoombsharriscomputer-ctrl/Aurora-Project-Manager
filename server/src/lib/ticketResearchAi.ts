@@ -127,7 +127,9 @@ function buildPrompt(
   const t = similar.ticket;
   const parts: string[] = [];
   if (playbooks.length) {
-    const items = playbooks.map((p) => `<playbook title="${p.title.replace(/"/g, "'")}">\n${p.steps}\n</playbook>`);
+    const items = playbooks.map(
+      (p) => `<playbook title="${p.title.replace(/"/g, "'")}" product_line="${p.productLine ?? "all"}">\n${p.steps}\n</playbook>`
+    );
     parts.push(`<playbooks>\n${items.join("\n")}\n</playbooks>`);
   }
   parts.push(

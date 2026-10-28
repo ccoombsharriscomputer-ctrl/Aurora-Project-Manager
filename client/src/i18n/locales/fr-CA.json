@@ -558,6 +558,11 @@
   },
   "fixPlaybooks": {
     "loading": "Chargement des guides…",
+    "productLine": "Gamme de produits",
+    "allLines": "Toutes les gammes",
+    "productLineHelp": "Seulement les billets dont le produit TeamSupport fait partie de cette gamme (TRIO, SF - …, Spectrum - …). Choisissez « Toutes les gammes » pour une solution qui s'applique partout.",
+    "showLine": "Afficher :",
+    "everyPlaybook": "Tous les guides",
     "newPlaybook": "Nouveau guide",
     "intro": "Solutions courtes étape par étape pour les problèmes de soutien courants. Quand le titre d'un billet contient les mots clés d'un guide, Ticket Finder affiche le guide à côté du billet et sa recherche IA utilise les étapes comme preuve. Seuls les guides activés sont affichés.",
     "titleLabel": "Problème",

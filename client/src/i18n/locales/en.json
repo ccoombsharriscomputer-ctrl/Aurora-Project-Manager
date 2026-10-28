@@ -558,6 +558,11 @@
   },
   "fixPlaybooks": {
     "loading": "Loading playbooks…",
+    "productLine": "Product line",
+    "allLines": "All product lines",
+    "productLineHelp": "Only tickets whose TeamSupport product belongs to this line (TRIO, SF - …, Spectrum - …). Pick \"All product lines\" for a fix that applies everywhere.",
+    "showLine": "Show:",
+    "everyPlaybook": "Every playbook",
     "newPlaybook": "New playbook",
     "intro": "Short step-by-step fixes for common support problems. When a ticket's title contains a playbook's match words, Ticket Finder shows the playbook next to the ticket and its AI research uses the steps as evidence. Only switched-on playbooks are shown.",
     "titleLabel": "Problem",
