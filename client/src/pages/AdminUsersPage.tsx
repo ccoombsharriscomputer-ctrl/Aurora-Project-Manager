@@ -658,8 +658,6 @@ export function AdminUsersPage() {
                     <td>
                       {u.role === "ADMIN" ? (
                         <span className="muted">{t("adminUsers.playbooksAlways")}</span>
-                      ) : u.role === "TICKET_SEARCH" ? (
-                        <span className="muted">—</span>
                       ) : (
                         <input
                           type="checkbox"

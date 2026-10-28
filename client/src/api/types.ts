@@ -45,6 +45,9 @@ export interface CurrentUser {
   accessibleSoftwareLines: SoftwareLine[];
   // Can open the Fix Playbooks page: always true for admins.
   canEditPlaybooks: boolean;
+  // Support-line people (and Ticket Search accounts): APM shows them only Fix Playbooks,
+  // Settings and the playbook help.
+  supportOnly: boolean;
   // Already resolved server-side to what actually renders — default-filled if this user has
   // never customized, and filtered to widgets their role can see either way. See
   // dashboardWidgets.ts for the widget catalog and per-role availability.

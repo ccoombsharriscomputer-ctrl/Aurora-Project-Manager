@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Fix Playbooks — Help</title>
+<style>
+  /* Same palette and fonts as help.html (the full APM guide). This page is the only help
+     support-line accounts see, so it covers fix playbooks and nothing else. */
+  :root {
+    --ink: #16202a;
+    --paper: #f6f7f4;
+    --surface: #ffffff;
+    --line: #e1e4de;
+    --muted: #5b6670;
+    --accent: #2e6f5c;
+    --accent-soft: rgba(46, 111, 92, 0.12);
+    --warn: #9c6a17;
+    --warn-soft: rgba(156, 106, 23, 0.12);
+    --shadow: 0 1px 2px rgba(22, 32, 42, 0.06), 0 8px 24px rgba(22, 32, 42, 0.06);
+    --font-display: Constantia, Cambria, Georgia, "Times New Roman", serif;
+    --font-body: Corbel, "Segoe UI", -apple-system, "Helvetica Neue", Arial, sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ink: #e7ece7;
+      --paper: #10161a;
+      --surface: #171f23;
+      --line: #28322e;
+      --muted: #8ca096;
+      --accent: #59c2a0;
+      --accent-soft: rgba(89, 194, 160, 0.14);
+      --warn: #e0b15c;
+      --warn-soft: rgba(224, 177, 92, 0.14);
+      --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 24px rgba(0, 0, 0, 0.3);
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font: 17px/1.6 var(--font-body);
+  }
+  main { max-width: 760px; margin: 0 auto; padding: 40px 16px 64px; }
+  h1, h2 { font-family: var(--font-display); font-weight: 600; line-height: 1.25; }
+  h1 { font-size: 34px; margin: 0 0 6px; }
+  h2 { font-size: 23px; margin: 36px 0 10px; color: var(--accent); }
+  .lede { color: var(--muted); margin: 0 0 28px; }
+  section {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    box-shadow: var(--shadow);
+    padding: 4px 22px 18px;
+    margin-bottom: 18px;
+  }
+  ul, ol { padding-left: 22px; }
+  li { margin: 4px 0; }
+  .note {
+    background: var(--warn-soft);
+    border-left: 4px solid var(--warn);
+    border-radius: 6px;
+    padding: 10px 14px;
+    margin: 14px 0 0;
+  }
+  b { color: var(--ink); }
+  .tag {
+    display: inline-block;
+    background: var(--accent-soft);
+    color: var(--accent);
+    border-radius: 999px;
+    padding: 0 10px;
+    font-size: 14px;
+    white-space: nowrap;
+  }
+</style>
+</head>
+<body>
+<main>
+  <h1>Fix Playbooks</h1>
+  <p class="lede">Short step-by-step fixes for common support problems. You write them here in APM; support staff see them in the Ticket Finder program.</p>
+
+  <section>
+    <h2>What a playbook does</h2>
+    <ul>
+      <li>When a ticket's title contains a playbook's <b>match words</b>, Ticket Finder shows a <b>yellow banner</b> under the ticket and the steps in its <b>Playbooks</b> tab.</li>
+      <li>Ticket Finder's <b>AI research</b> also reads matching playbooks and says which ones it relied on.</li>
+      <li>Only playbooks that are <b>switched on</b> and have steps are shown.</li>
+    </ul>
+    <p class="note">Playbooks match on title words only. Ticket Finder reminds staff to check the ticket really is that problem before following the steps.</p>
+  </section>
+
+  <section>
+    <h2>The fields</h2>
+    <ul>
+      <li><b>Problem</b>: a short name, e.g. "Printer Setup missing in Cash Receipting".</li>
+      <li><b>Product line</b>: <span class="tag">TRIO</span> <span class="tag">MSI</span> <span class="tag">Spectrum</span> <span class="tag">OpenWindow</span> <span class="tag">ResourceMate</span> or <b>All product lines</b>. A TRIO playbook only shows on tickets whose TeamSupport product is a TRIO product.</li>
+      <li><b>Match words</b>: words or phrases, separated by commas. A ticket matches when its title contains any of them as whole words (capitals don't matter). Add the different ways customers word the problem, e.g. "printer setup, receipt printer".</li>
+      <li><b>Products</b> (optional): narrow it further to tickets whose product name contains one of these, e.g. "Cash Receipting".</li>
+      <li><b>Steps</b>: one step per line, in order. Ticket Finder numbers them.</li>
+      <li><b>Switched on</b>: tick it once the steps are checked. It can't be switched on without steps.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>Writing steps with AI</h2>
+    <ol>
+      <li>Fill in the problem, product line and match words.</li>
+      <li>Click <b>Draft steps with AI</b>. This saves the playbook first.</li>
+      <li>The AI reads up to 8 matching <b>closed Support tickets</b> from the last year, only from the playbook's product line when one is set, and writes steps from how they were fixed. It takes about 1–2 minutes.</li>
+      <li>Read the <b>Check</b> notes and the list of tickets it used, then edit the steps.</li>
+      <li>Tick <b>Switched on</b> and click <b>Save</b>.</li>
+    </ol>
+    <p class="note">The AI only reads TeamSupport. Nothing is ever written back to a ticket. Always check its steps before switching a playbook on.</p>
+  </section>
+
+  <section>
+    <h2>Finding your way around</h2>
+    <ul>
+      <li>Use <b>Show</b> above the list to see one product line at a time, or the playbooks for all lines.</li>
+      <li>The <b>Status</b> column says whether each playbook is on, has steps waiting to be checked, or has no steps yet.</li>
+      <li><b>Delete</b> is inside the edit form. Switching a playbook off is usually better, as it keeps the steps.</li>
+      <li><b>Settings</b> (left menu) is where you change your password, language and colours.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>Getting access</h2>
+    <ul>
+      <li>An APM admin gives playbook access with the <b>Playbooks</b> checkbox on the Users page.</li>
+      <li>Support accounts without that access can't sign in to APM. They use the Ticket Finder program only.</li>
+    </ul>
+  </section>
+</main>
+</body>
+</html>

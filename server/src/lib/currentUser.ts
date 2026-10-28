@@ -1,5 +1,5 @@
 import { prisma } from "./prisma";
-import type { AuthedUser } from "../middleware/auth";
+import { isSupportOnly, type AuthedUser } from "../middleware/auth";
 import { effectiveDashboardLayout } from "./dashboardWidgets";
 
 // The lines a user can switch into: admins get every line (already unrestricted); everyone
@@ -51,6 +51,8 @@ export async function buildCurrentUserPayload(user: {
     activeSoftwareLineId: user.activeSoftwareLineId,
     accessibleSoftwareLines,
     canEditPlaybooks: user.role === "ADMIN" || user.canEditPlaybooks,
+    // Support-line people see only Fix Playbooks, Settings and the playbook help in APM.
+    supportOnly: isSupportOnly(user),
     dashboardLayout: effectiveDashboardLayout(user.dashboardLayout, user.role),
   };
 }

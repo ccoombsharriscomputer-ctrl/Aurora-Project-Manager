@@ -8,12 +8,48 @@ import { ProjectTabBar } from "./ProjectTabBar";
 import { AssistantPanel } from "./AssistantPanel";
 
 const HELP_URL = "/help.html";
+// Support-line people only use APM for fix playbooks, so their Help is just that.
+const PLAYBOOK_HELP_URL = "/playbook-help.html";
 
 export function Layout() {
   const { t } = useTranslation();
   const { user, logout } = useAuth();
   // Where the Ask Jarvis button is drawn: an empty spot in the sidebar, just above the user's name.
   const [assistantSlot, setAssistantSlot] = useState<HTMLElement | null>(null);
+
+  if (user?.supportOnly) {
+    return (
+      <div className="app-shell">
+        <aside className="sidebar">
+          <div className="sidebar-brand">
+            <img src="/logo.png" alt="" className="sidebar-brand-logo" />
+            Aurora PM
+          </div>
+          <NavLink to="/fix-playbooks" className={({ isActive }) => `sidebar-link${isActive ? " active" : ""}`}>
+            {t("layout.fixPlaybooks")}
+          </NavLink>
+          <NavLink to="/settings" className={({ isActive }) => `sidebar-link${isActive ? " active" : ""}`}>
+            {t("layout.settings")}
+          </NavLink>
+          <a href={PLAYBOOK_HELP_URL} target="_blank" rel="noopener noreferrer" className="sidebar-link">
+            {t("layout.help")}
+          </a>
+          <div className="sidebar-footer">
+            <div>{user.name}</div>
+            <div>{user.email}</div>
+            <button className="btn btn-sm" style={{ marginTop: 10 }} onClick={() => logout()}>
+              {t("layout.logOut")}
+            </button>
+          </div>
+        </aside>
+        <main className="main-content">
+          <div className="main-content-inner">
+            <Outlet />
+          </div>
+        </main>
+      </div>
+    );
+  }
 
   return (
     <OpenTabsProvider>

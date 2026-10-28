@@ -568,6 +568,7 @@
     "everyPlaybook": "Todas las guías",
     "newPlaybook": "Nueva guía",
     "intro": "Soluciones breves paso a paso para problemas de soporte comunes. Cuando el título de un ticket contiene las palabras clave de una guía, Ticket Finder muestra la guía junto al ticket y su investigación con IA usa los pasos como evidencia. Solo se muestran las guías activadas.",
+    "helpLink": "Cómo funcionan las guías",
     "titleLabel": "Problema",
     "titlePlaceholder": "p. ej. Falta Printer Setup en Cash Receipting",
     "matchWords": "Palabras clave",

@@ -77,19 +77,28 @@ async function getUserFromRequest(req: Request): Promise<AuthedUser | null> {
   }
 }
 
-// The only parts of the API a Ticket Search account may use with a sign-in cookie: its own
-// account (sign out, change password). Checked by baseUrl in requireAuth, which every router
-// uses, so a route added later is blocked for them by default rather than needing to opt out.
-// They can't get a cookie from /login anyway — this covers an account switched to Ticket
-// Search while it still had one.
-const TICKET_SEARCH_ALLOWED_BASES = ["/api/auth"];
+// The Support line's people (and any Ticket Search account) use the Ticket Finder program, not
+// APM. Admins are never limited.
+export const SUPPORT_LINE_ID = "support";
+
+export function isSupportOnly(user: { role: AuthedUser["role"]; softwareLineId: string }): boolean {
+  return user.role !== "ADMIN" && (user.role === "TICKET_SEARCH" || user.softwareLineId === SUPPORT_LINE_ID);
+}
+
+// What a support-only account may use with a sign-in cookie: with playbook access, its own
+// account (Settings) and the Fix Playbooks page; without it, nothing at all (sign-out has no
+// requireAuth, so it still works). Checked by baseUrl in requireAuth, which every router uses,
+// so a route added later is blocked for them by default rather than needing to opt out.
+// /login refuses them without playbook access too; this covers someone who already had a
+// cookie when they were moved to Support or lost playbook access.
+const SUPPORT_ONLY_ALLOWED_BASES = ["/api/auth", "/api/fix-playbooks"];
 
 export async function requireAuth(req: Request, res: Response, next: NextFunction) {
   const user = await getUserFromRequest(req);
   if (!user) {
     return res.status(401).json({ error: "Not authenticated" });
   }
-  if (user.role === "TICKET_SEARCH" && !TICKET_SEARCH_ALLOWED_BASES.includes(req.baseUrl)) {
+  if (isSupportOnly(user) && !(user.canEditPlaybooks && SUPPORT_ONLY_ALLOWED_BASES.includes(req.baseUrl))) {
     return res.status(403).json({ error: "This account can only use the Ticket Finder program" });
   }
   req.user = user;

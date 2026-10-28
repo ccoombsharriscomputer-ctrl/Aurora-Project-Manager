@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { api, ApiError } from "../api/client";
-import { extractErrorMessage } from "../context/AuthContext";
+import { extractErrorMessage, useAuth } from "../context/AuthContext";
 import { formatDate } from "../utils/format";
 
 // Kept here rather than in api/types.ts: only this admin page uses them.
@@ -257,6 +257,7 @@ function PlaybookForm({
 
 export function FixPlaybooksPage() {
   const { t } = useTranslation();
+  const { user } = useAuth();
   // null = closed, "new" = new playbook form, otherwise the id being edited.
   const [editing, setEditing] = useState<string | null>(null);
   // "" = every playbook, "shared" = only the ones for every line, otherwise one line's id.
@@ -290,6 +291,15 @@ export function FixPlaybooksPage() {
       </div>
       <p className="muted" style={{ marginTop: -12, marginBottom: 20 }}>
         {t("fixPlaybooks.intro")}
+        {/* Support-only accounts already get this page as their sidebar Help. */}
+        {!user?.supportOnly && (
+          <>
+            {" "}
+            <a href="/playbook-help.html" target="_blank" rel="noopener noreferrer">
+              {t("fixPlaybooks.helpLink")}
+            </a>
+          </>
+        )}
       </p>
       <label className="gap-8" style={{ marginBottom: 12, alignItems: "center" }}>
         <span>{t("fixPlaybooks.showLine")}</span>

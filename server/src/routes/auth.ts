@@ -3,7 +3,7 @@ import { z } from "zod";
 import { Prisma } from "@prisma/client";
 import { prisma } from "../lib/prisma";
 import { COOKIE_NAME, comparePassword, hashPassword, signToken } from "../lib/auth";
-import { requireAuth } from "../middleware/auth";
+import { isSupportOnly, requireAuth } from "../middleware/auth";
 import { buildCurrentUserPayload } from "../lib/currentUser";
 import { sanitizeDashboardLayout } from "../lib/dashboardWidgets";
 
@@ -37,7 +37,9 @@ router.post("/login", async (req, res) => {
   if (!valid) {
     return res.status(401).json({ error: "Invalid email or password" });
   }
-  if (user.role === "TICKET_SEARCH") {
+  // Support-line people only get into APM for the Fix Playbooks page, and only when an admin
+  // has given them playbook access.
+  if (isSupportOnly(user) && !user.canEditPlaybooks) {
     return res.status(403).json({ error: "This account is for the Ticket Finder program only." });
   }
 

@@ -1,16 +1,23 @@
-import { Navigate, Outlet } from "react-router-dom";
+import { Navigate, Outlet, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "../context/AuthContext";
+
+// The only pages a support-line person can open (the server refuses them everything else).
+const SUPPORT_ONLY_PATHS = ["/fix-playbooks", "/settings"];
 
 export function ProtectedRoute() {
   const { t } = useTranslation();
   const { user, loading } = useAuth();
+  const { pathname } = useLocation();
 
   if (loading) {
     return <div className="auth-page">{t("common.loading")}</div>;
   }
   if (!user) {
     return <Navigate to="/login" replace />;
+  }
+  if (user.supportOnly && !SUPPORT_ONLY_PATHS.includes(pathname)) {
+    return <Navigate to="/fix-playbooks" replace />;
   }
   return <Outlet />;
 }
