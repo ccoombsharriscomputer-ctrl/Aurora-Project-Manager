@@ -40,7 +40,7 @@ router.post("/login", async (req, res) => {
   // Support-line people only get into APM for the Fix Playbooks page, and only when an admin
   // has given them playbook access.
   if (isSupportOnly(user) && !user.canEditPlaybooks) {
-    return res.status(403).json({ error: "This account is for the Ticket Finder program only." });
+    return res.status(403).json({ error: "This account is for the Ticket Researcher program only." });
   }
 
   // Each fresh login starts a user back on their home line, even if a previous session

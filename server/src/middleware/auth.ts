@@ -99,7 +99,7 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
     return res.status(401).json({ error: "Not authenticated" });
   }
   if (isSupportOnly(user) && !(user.canEditPlaybooks && SUPPORT_ONLY_ALLOWED_BASES.includes(req.baseUrl))) {
-    return res.status(403).json({ error: "This account can only use the Ticket Finder program" });
+    return res.status(403).json({ error: "This account can only use the Ticket Researcher program" });
   }
   req.user = user;
   next();
