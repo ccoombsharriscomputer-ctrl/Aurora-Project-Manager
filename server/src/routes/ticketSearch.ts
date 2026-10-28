@@ -4,7 +4,7 @@ import { z } from "zod";
 import { prisma } from "../lib/prisma";
 import { comparePassword, generateTicketFinderToken, hashTicketFinderToken } from "../lib/auth";
 import { requireTicketFinderDevice } from "../middleware/auth";
-import { researchTicketWithAi, TicketAiFailedError, TicketAiNotConfiguredError } from "../lib/ticketResearchAi";
+import { findAiJob, startAiJob, TicketAiFailedError, TicketAiNotConfiguredError } from "../lib/ticketResearchAi";
 import {
   customerSnapshot,
   fetchTeamSupportCustomers,
@@ -182,37 +182,50 @@ router.get("/tickets/:ticketNumber/similar", async (req, res) => {
   }
 });
 
-// AI research (summary, likely cause, steps, reply draft). Costs real money per call, so it's
-// cached 30 minutes per ticket and limited per device. Still read-only toward TeamSupport.
-router.get("/tickets/:ticketNumber/ai-research", async (req, res) => {
-  if (!/^\d{1,10}$/.test(req.params.ticketNumber)) {
+// AI research (summary, likely cause, steps, reply draft). A run outlasts Cloudflare's 100 s
+// request limit, so the first call starts it and answers 202 {pending: true}; the program asks
+// again every few seconds until it gets the result. Costs real money per run, so finished
+// results are kept 30 minutes per ticket and new runs are limited per device. Still
+// read-only toward TeamSupport.
+router.get("/tickets/:ticketNumber/ai-research", (req, res) => {
+  const ticketNumber = req.params.ticketNumber;
+  if (!/^\d{1,10}$/.test(ticketNumber)) {
     return res.status(400).json({ error: "Ticket number must be digits only" });
   }
-  if (!aiAttempt(req.ticketFinder!.deviceId)) {
-    return res.status(429).json({ error: "You've used the AI research a lot this hour. Try again later." });
+  let job = findAiJob(ticketNumber);
+  if (!job) {
+    if (!aiAttempt(req.ticketFinder!.deviceId)) {
+      return res.status(429).json({ error: "You've used the AI research a lot this hour. Try again later." });
+    }
+    job = startAiJob(ticketNumber);
   }
-  try {
-    res.json(await researchTicketWithAi(req.params.ticketNumber));
-  } catch (err) {
-    if (err instanceof TicketAiNotConfiguredError) {
-      return res.status(503).json({ error: "AI research isn't set up on the server." });
-    }
-    if (err instanceof TicketAiFailedError) {
-      return res.status(502).json({ error: err.message });
-    }
-    if (err instanceof Anthropic.APIError) {
-      console.error(`[ticketAi] Claude API error ${err.status}: ${err.message}`);
-      return res.status(502).json({
-        error:
-          err.status === 401
-            ? "The server's AI key isn't valid. Ask an APM admin to check ANTHROPIC_API_KEY."
-            : err.status === 429 || (err.status ?? 0) >= 500
-              ? "The AI service is busy. Try again in a minute."
-              : "The AI request failed.",
-      });
-    }
-    sendTeamSupportError(res, err);
+  if (job.status === "pending") {
+    return res.status(202).json({ pending: true, startedAt: new Date(job.at).toISOString() });
   }
+  if (job.status === "done") {
+    return res.json(job.result);
+  }
+  const err = job.error;
+  if (err instanceof TicketAiNotConfiguredError) {
+    return res.status(503).json({ error: "AI research isn't set up on the server." });
+  }
+  if (err instanceof TicketAiFailedError) {
+    return res.status(502).json({ error: err.message });
+  }
+  if (err instanceof Anthropic.APIError) {
+    console.error(`[ticketAi] Claude API error ${err.status}: ${err.message}`);
+    return res.status(502).json({
+      error:
+        err.status === 401
+          ? "The server's AI key isn't valid. Ask an APM admin to check ANTHROPIC_API_KEY."
+          : err.status === 429 || (err.status ?? 0) >= 500
+            ? "The AI service is busy. Try again in a minute."
+            : // Claude's own reason (never includes the key), so the next report says what's wrong.
+              `The AI request failed (${err.status}): ${err.message.slice(0, 300)}`,
+    });
+  }
+  console.error(`[ticketAi] research failed: ${err instanceof Error ? err.message : err}`);
+  sendTeamSupportError(res, err);
 });
 
 router.get("/tickets/:ticketNumber/customer", async (req, res) => {

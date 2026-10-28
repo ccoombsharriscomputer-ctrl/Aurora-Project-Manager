@@ -141,26 +141,98 @@ function buildPrompt(similar: SimilarTicketsResult, history: TicketHistoryEntry[
   return parts.join("\n\n");
 }
 
-function cachedAi() {
-  const entries = new Map<string, { at: number; value: Promise<TicketAiResearch> }>();
-  return (key: string, load: () => Promise<TicketAiResearch>) => {
-    const now = Date.now();
-    const hit = entries.get(key);
-    if (hit && now - hit.at < AI_CACHE_MS) return hit.value;
-    const value = load();
-    entries.set(key, { at: now, value });
-    value.catch(() => entries.delete(key));
-    if (entries.size > 200) {
-      for (const [k, e] of entries) if (now - e.at >= AI_CACHE_MS) entries.delete(k);
-    }
-    return value;
-  };
+// The model APM's contract reader already runs on with this key, used when the main model
+// isn't available to it.
+const BACKUP_MODEL = process.env.CONTRACT_MODEL || "claude-sonnet-5";
+
+interface ClaudeAnswer {
+  model: string;
+  stopReason: string | null;
+  text: string;
 }
 
-const aiCache = cachedAi();
+// Tries the full request first (server-side refusal fallback on), then steps down so a key
+// or account without access to the beta option or the main model still gets an answer:
+// a rejected option (400) retries without the beta, an unavailable model (403/404) retries
+// on BACKUP_MODEL. Each failure is logged with Claude's own message.
+async function askClaude(client: Anthropic, prompt: string, ticketNumber: string): Promise<ClaudeAnswer> {
+  const base = {
+    max_tokens: 16000,
+    output_config: { effort: "medium" as const, format: { type: "json_schema" as const, schema: RESULT_SCHEMA } },
+    system: SYSTEM_PROMPT,
+    messages: [{ role: "user" as const, content: prompt }],
+  };
+  const log = (r: { model: string; usage: { input_tokens: number; output_tokens: number }; stop_reason: string | null }) =>
+    console.log(`[ticketAi] #${ticketNumber} ${r.model} in=${r.usage.input_tokens} out=${r.usage.output_tokens} stop=${r.stop_reason}`);
+  const textOf = (blocks: { type: string }[]) =>
+    blocks.filter((b): b is { type: "text"; text: string } => b.type === "text").map((b) => b.text).join("");
 
-export function researchTicketWithAi(ticketNumber: string): Promise<TicketAiResearch> {
-  return aiCache(ticketNumber, async () => {
+  try {
+    const r = await client.beta.messages.create({
+      ...base,
+      model: MODEL,
+      betas: ["server-side-fallback-2026-07-01"],
+      fallbacks: "default",
+    });
+    log(r);
+    return { model: r.model, stopReason: r.stop_reason, text: textOf(r.content) };
+  } catch (err) {
+    if (!(err instanceof Anthropic.APIError) || ![400, 403, 404].includes(err.status ?? 0)) throw err;
+    console.error(`[ticketAi] #${ticketNumber} ${MODEL} with fallbacks rejected (${err.status}): ${err.message}`);
+    const model = err.status === 400 ? MODEL : BACKUP_MODEL;
+    try {
+      const r = await client.messages.create({ ...base, model });
+      log(r);
+      return { model: r.model, stopReason: r.stop_reason, text: textOf(r.content) };
+    } catch (err2) {
+      if (!(err2 instanceof Anthropic.APIError) || ![400, 403, 404].includes(err2.status ?? 0) || model === BACKUP_MODEL) throw err2;
+      console.error(`[ticketAi] #${ticketNumber} ${model} rejected (${err2.status}): ${err2.message}`);
+      const r = await client.messages.create({ ...base, model: BACKUP_MODEL });
+      log(r);
+      return { model: r.model, stopReason: r.stop_reason, text: textOf(r.content) };
+    }
+  }
+}
+
+// A run takes ~30-120 s, longer than Cloudflare (in front of APM) lets one request stay open
+// (100 s). So a run is a background job: the program starts it, then checks back until it's
+// done. Finished results are kept 30 minutes per ticket; a failed run is reported once and
+// then forgotten, so the next click really retries.
+export interface AiJob {
+  at: number;
+  status: "pending" | "done" | "failed";
+  result?: TicketAiResearch;
+  error?: unknown;
+}
+
+const jobs = new Map<string, AiJob>();
+
+export function findAiJob(ticketNumber: string): AiJob | undefined {
+  const job = jobs.get(ticketNumber);
+  if (!job) return undefined;
+  if (job.status === "done" && Date.now() - job.at >= AI_CACHE_MS) {
+    jobs.delete(ticketNumber);
+    return undefined;
+  }
+  if (job.status === "failed") jobs.delete(ticketNumber);
+  return job;
+}
+
+export function startAiJob(ticketNumber: string): AiJob {
+  const job: AiJob = { at: Date.now(), status: "pending" };
+  jobs.set(ticketNumber, job);
+  researchTicketWithAi(ticketNumber).then(
+    (result) => Object.assign(job, { status: "done", result, at: Date.now() }),
+    (error) => Object.assign(job, { status: "failed", error })
+  );
+  if (jobs.size > 200) {
+    for (const [k, j] of jobs) if (j.status !== "pending" && Date.now() - j.at >= AI_CACHE_MS) jobs.delete(k);
+  }
+  return job;
+}
+
+function researchTicketWithAi(ticketNumber: string): Promise<TicketAiResearch> {
+  return (async () => {
     const apiKey = process.env.ANTHROPIC_API_KEY;
     if (!apiKey) throw new TicketAiNotConfiguredError("ANTHROPIC_API_KEY is not configured");
 
@@ -172,29 +244,14 @@ export function researchTicketWithAi(ticketNumber: string): Promise<TicketAiRese
     ]);
 
     const client = new Anthropic({ apiKey, timeout: 150_000, maxRetries: 1 });
-    const response = await client.beta.messages.create({
-      model: MODEL,
-      max_tokens: 16000,
-      betas: ["server-side-fallback-2026-07-01"],
-      fallbacks: "default",
-      output_config: { effort: "medium", format: { type: "json_schema", schema: RESULT_SCHEMA } },
-      system: SYSTEM_PROMPT,
-      messages: [{ role: "user", content: buildPrompt(similar, history, customer) }],
-    });
+    const { model, stopReason, text } = await askClaude(client, buildPrompt(similar, history, customer), ticketNumber);
 
-    console.log(
-      `[ticketAi] #${ticketNumber} ${response.model} in=${response.usage.input_tokens} out=${response.usage.output_tokens} stop=${response.stop_reason}`
-    );
-    if (response.stop_reason === "refusal") {
+    if (stopReason === "refusal") {
       throw new TicketAiFailedError("The AI declined to research this ticket.");
     }
-    if (response.stop_reason === "max_tokens") {
+    if (stopReason === "max_tokens") {
       throw new TicketAiFailedError("The AI's answer was cut off. Try again.");
     }
-    const text = response.content
-      .filter((b): b is Anthropic.Beta.BetaTextBlock => b.type === "text")
-      .map((b) => b.text)
-      .join("");
     let parsed: z.infer<typeof resultSchema>;
     try {
       parsed = resultSchema.parse(JSON.parse(text));
@@ -212,8 +269,8 @@ export function researchTicketWithAi(ticketNumber: string): Promise<TicketAiRese
     return {
       ...parsed,
       evidence: parsed.evidence.filter((e) => known.has(e.ticketNumber.replace(/^#/, ""))),
-      model: response.model,
+      model,
       generatedAt: new Date().toISOString(),
     };
-  });
+  })();
 }
