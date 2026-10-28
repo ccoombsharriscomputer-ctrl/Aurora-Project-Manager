@@ -15,6 +15,7 @@ import { AdminUsersPage } from "./pages/AdminUsersPage";
 import { ProjectTypesPage } from "./pages/ProjectTypesPage";
 import { ProductsPage } from "./pages/ProductsPage";
 import { ReportsPage } from "./pages/ReportsPage";
+import { FixPlaybooksPage } from "./pages/FixPlaybooksPage";
 import { SettingsPage } from "./pages/SettingsPage";
 import { useRealtimeInvalidation } from "./hooks/useRealtimeInvalidation";
 import { useApplyTheme } from "./hooks/useApplyTheme";
@@ -45,6 +46,7 @@ function App() {
           <Route element={<AdminRoute />}>
             <Route path="/admin/users" element={<AdminUsersPage />} />
             <Route path="/reports" element={<ReportsPage />} />
+            <Route path="/fix-playbooks" element={<FixPlaybooksPage />} />
           </Route>
           <Route element={<ProjectLeadRoute />}>
             <Route path="/project-types" element={<ProjectTypesPage />} />

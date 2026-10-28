@@ -30,6 +30,7 @@ import notificationRoutes from "./routes/notifications";
 import followUpRoutes from "./routes/followUps";
 import assistantRoutes from "./routes/assistant";
 import ticketSearchRoutes from "./routes/ticketSearch";
+import fixPlaybookRoutes from "./routes/fixPlaybooks";
 import { attachRealtime } from "./lib/realtime";
 import { startScheduler } from "./lib/scheduler";
 import { warmTeamSupportLists } from "./lib/teamSupport";
@@ -71,6 +72,7 @@ app.use("/api/notifications", notificationRoutes);
 app.use("/api/follow-ups", followUpRoutes);
 app.use("/api/assistant", assistantRoutes);
 app.use("/api/ticket-search", ticketSearchRoutes);
+app.use("/api/fix-playbooks", fixPlaybookRoutes);
 
 app.get("/api/health", (_req, res) => res.json({ ok: true }));
 

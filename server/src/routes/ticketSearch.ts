@@ -5,6 +5,7 @@ import { prisma } from "../lib/prisma";
 import { comparePassword, generateTicketFinderToken, hashTicketFinderToken } from "../lib/auth";
 import { requireTicketFinderDevice } from "../middleware/auth";
 import { findAiJob, startAiJob, TicketAiFailedError, TicketAiNotConfiguredError } from "../lib/ticketResearchAi";
+import { findMatchingPlaybooks } from "../lib/fixPlaybooks";
 import {
   customerSnapshot,
   fetchTeamSupportCustomers,
@@ -22,7 +23,7 @@ import {
 // it got back; see requireTicketFinderDevice.
 const router = Router();
 
-function sendTeamSupportError(res: Response, err: unknown) {
+export function sendTeamSupportError(res: Response, err: unknown) {
   if (err instanceof TeamSupportNotConfiguredError) {
     return res.status(503).json({ error: "TeamSupport isn't set up on the server yet." });
   }
@@ -205,7 +206,11 @@ router.get("/tickets/:ticketNumber/ai-research", (req, res) => {
   if (job.status === "done") {
     return res.json(job.result);
   }
-  const err = job.error;
+  sendAiError(res, job.error);
+});
+
+// A failed AI run (research here, or a playbook draft in routes/fixPlaybooks.ts).
+export function sendAiError(res: Response, err: unknown) {
   if (err instanceof TicketAiNotConfiguredError) {
     return res.status(503).json({ error: "AI research isn't set up on the server." });
   }
@@ -224,8 +229,23 @@ router.get("/tickets/:ticketNumber/ai-research", (req, res) => {
               `The AI request failed (${err.status}): ${err.message.slice(0, 300)}`,
     });
   }
-  console.error(`[ticketAi] research failed: ${err instanceof Error ? err.message : err}`);
+  console.error(`[ticketAi] AI run failed: ${err instanceof Error ? err.message : err}`);
   sendTeamSupportError(res, err);
+}
+
+// Fix playbooks that match a ticket, from its title and product (both already on the program's
+// search row), so this costs no TeamSupport calls.
+const playbookMatchSchema = z.object({
+  title: z.string().trim().min(1).max(500),
+  product: z.string().trim().max(200).optional(),
+});
+
+router.get("/playbooks", async (req, res) => {
+  const parsed = playbookMatchSchema.safeParse(req.query);
+  if (!parsed.success) {
+    return res.status(400).json({ error: "A ticket title is needed to find playbooks." });
+  }
+  res.json(await findMatchingPlaybooks(parsed.data.title, parsed.data.product || null));
 });
 
 router.get("/tickets/:ticketNumber/customer", async (req, res) => {

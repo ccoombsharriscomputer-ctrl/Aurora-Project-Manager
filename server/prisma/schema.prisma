@@ -538,3 +538,24 @@ model AccessRequest {
 
   @@index([status])
 }
+
+// Short step-by-step fixes for common support problems, written by support leads in APM's
+// admin page. Ticket Finder shows the active ones that match a ticket's title (and product)
+// and feeds them to its AI research as evidence.
+model FixPlaybook {
+  id            String   @id @default(cuid())
+  title         String
+  // Words or phrases looked for in a ticket's title (whole words, any case).
+  matchPhrases  String[]
+  // Only for tickets whose product name contains one of these; empty = any product.
+  products      String[]
+  // One step per line.
+  steps         String   @default("")
+  // Off until a lead has checked the steps; only active playbooks reach Ticket Finder.
+  active        Boolean  @default(false)
+  // The closed tickets an AI draft was based on, for the lead to check.
+  sourceTickets String[]
+  updatedByName String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
