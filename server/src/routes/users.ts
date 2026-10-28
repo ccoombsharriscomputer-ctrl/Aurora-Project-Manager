@@ -60,7 +60,7 @@ const createSchema = z.object({
   name: z.string().min(1).max(100),
   email: z.string().email().transform((v) => v.trim().toLowerCase()),
   password: z.string().min(8).max(200),
-  role: z.enum(["ADMIN", "PROJECT_LEAD", "MEMBER", "READ_ONLY"]).optional(),
+  role: z.enum(["ADMIN", "PROJECT_LEAD", "MEMBER", "READ_ONLY", "TICKET_SEARCH"]).optional(),
   softwareLineId: z.string().min(1),
   accessRequestId: z.string().min(1).optional(),
 });
@@ -145,7 +145,7 @@ const updateSchema = z.object({
   name: z.string().min(1).max(100).optional(),
   email: z.string().email().transform((v) => v.trim().toLowerCase()).optional(),
   password: z.string().min(8).max(200).optional(),
-  role: z.enum(["ADMIN", "PROJECT_LEAD", "MEMBER", "READ_ONLY"]).optional(),
+  role: z.enum(["ADMIN", "PROJECT_LEAD", "MEMBER", "READ_ONLY", "TICKET_SEARCH"]).optional(),
   active: z.boolean().optional(),
   softwareLineId: z.string().min(1).optional(),
   teamSupportUserId: z.string().min(1).nullable().optional(),

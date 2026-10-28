@@ -22,6 +22,7 @@
     "roleProjectLead": "Project Lead",
     "roleAdmin": "Admin",
     "roleReadOnly": "Read Only",
+    "roleTicketSearch": "Ticket Search",
     "priorityLow": "Low",
     "priorityMedium": "Medium",
     "priorityHigh": "High",

@@ -695,3 +695,222 @@ export async function initialStatusIdForType(ticketTypeId: string): Promise<stri
   if (!match) throw new TeamSupportUpstreamError("That ticket type has no open starting status in TeamSupport", null);
   return match.id;
 }
+
+// ---- Ticket Finder (search-only desktop program, see routes/ticketSearch.ts) ----
+
+export type TicketStatusFilter = "open" | "closed" | "all";
+
+export interface TicketSearchParams {
+  text?: string;
+  ticketNumber?: string;
+  customerId?: string;
+  assignee?: string;
+  status: TicketStatusFilter;
+  // Only tickets created within this many days; null = no date limit (much slower on a
+  // common word — "printer" across all time is ~10,000 tickets and 35 seconds).
+  sinceDays: number | null;
+}
+
+export interface TicketSearchRow {
+  ticketNumber: string;
+  name: string;
+  status: string;
+  isClosed: boolean;
+  severity: string | null;
+  ticketType: string | null;
+  product: string | null;
+  groupName: string | null;
+  assigneeName: string | null;
+  customers: string[];
+  dateCreated: string;
+  dateModified: string;
+  url: string;
+}
+
+export interface TicketSearchResult {
+  total: number;
+  tickets: TicketSearchRow[];
+  // When TeamSupport was actually asked; older than "now" means this came from the cache.
+  fetchedAt: string;
+}
+
+export interface TicketHistoryEntry {
+  type: string;
+  by: string;
+  at: string;
+  visibleToCustomer: boolean;
+  text: string;
+}
+
+const MAX_SEARCH_ROWS = 200;
+const SEARCH_CACHE_MS = 10 * 60 * 1000;
+// Customer lookups are slow on TeamSupport's side: ~30 s for one busy town's last year.
+const SEARCH_TIMEOUT_MS = 120 * 1000;
+
+// Opens the ticket in TeamSupport's own web app (the same link its notification emails use).
+function ticketUrl(ticketNumber: string): string {
+  return `${apiBaseUrl()}/?TicketNumber=${encodeURIComponent(ticketNumber)}`;
+}
+
+// TeamSupport's dates look like "10/1/2026 10:15 AM"; only used for newest-first sorting.
+function ticketDateValue(text: unknown): number {
+  const ms = Date.parse(String(text ?? ""));
+  return Number.isNaN(ms) ? 0 : ms;
+}
+
+function customerNames(raw: unknown): string[] {
+  if (!raw || typeof raw !== "object") return [];
+  const inner = (raw as Record<string, unknown>).Customer ?? raw;
+  const list = Array.isArray(inner) ? inner : [inner];
+  return list
+    .map((c) => decodeEntities(String((c as Record<string, unknown>)?.CustomerName ?? "").trim()))
+    .filter(Boolean);
+}
+
+function toSearchRow(t: Record<string, unknown>): TicketSearchRow {
+  const text = (v: unknown) => (v == null || v === "" ? null : decodeEntities(String(v)));
+  const ticketNumber = String(t.TicketNumber ?? "");
+  return {
+    ticketNumber,
+    name: decodeEntities(String(t.Name ?? "")),
+    status: text(t.Status) ?? "Unknown",
+    isClosed: String(t.IsClosed).toLowerCase() === "true",
+    severity: text(t.Severity),
+    ticketType: text(t.TicketTypeName),
+    product: text(t.ProductName),
+    groupName: text(t.GroupName),
+    assigneeName: text(t.UserName),
+    customers: customerNames(t.Customers),
+    dateCreated: String(t.DateCreated ?? ""),
+    dateModified: String(t.DateModified ?? ""),
+    url: ticketUrl(ticketNumber),
+  };
+}
+
+function extractTicketList(raw: unknown): Record<string, unknown>[] {
+  if (Array.isArray(raw)) return raw as Record<string, unknown>[];
+  if (raw && typeof raw === "object") {
+    const obj = raw as Record<string, unknown>;
+    if (Array.isArray(obj.Tickets)) return obj.Tickets as Record<string, unknown>[];
+    if (obj.Tickets && typeof obj.Tickets === "object") return [obj.Tickets as Record<string, unknown>];
+  }
+  return [];
+}
+
+// TeamSupport's date filter wants yyyymmddhhmmss (confirmed 2026-10-28); other formats are
+// silently ignored rather than rejected.
+function sinceFilterValue(days: number): string {
+  const d = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getUTCFullYear()}${pad(d.getUTCMonth() + 1)}${pad(d.getUTCDate())}000000`;
+}
+
+// Filters confirmed live 2026-10-28: Field[contains]=text, IsClosed=True/False and
+// DateCreated[gt]=yyyymmddhhmmss all work on /tickets and on /customers/{id}/tickets.
+// Sorting params (OrderBy etc.) are ignored — results come back oldest first — so the full
+// match list is pulled and sorted here.
+async function runTicketSearch(p: TicketSearchParams): Promise<TicketSearchResult> {
+  const query = new URLSearchParams();
+  let path = "/api/json/tickets";
+  if (p.ticketNumber) {
+    query.set("TicketNumber", p.ticketNumber);
+  } else {
+    if (p.customerId) path = `/api/json/customers/${encodeURIComponent(p.customerId)}/tickets`;
+    if (p.text) query.set("Name[contains]", p.text);
+    if (p.assignee) query.set("UserName[contains]", p.assignee);
+    if (p.status !== "all") query.set("IsClosed", p.status === "closed" ? "True" : "False");
+    if (p.sinceDays != null) query.set("DateCreated[gt]", sinceFilterValue(p.sinceDays));
+  }
+  const raw = await teamSupportRequest(`${path}?${query.toString()}`, { signal: AbortSignal.timeout(SEARCH_TIMEOUT_MS) }).catch(
+    (err) => {
+      // A customer with no tickets, or a ticket number that doesn't exist, can come back as 404.
+      if (err instanceof TeamSupportTicketNotFoundError) return [];
+      throw err;
+    }
+  );
+  const rows = extractTicketList(raw).sort((a, b) => ticketDateValue(b.DateCreated) - ticketDateValue(a.DateCreated));
+  return {
+    total: rows.length,
+    tickets: rows.slice(0, MAX_SEARCH_ROWS).map(toSearchRow),
+    fetchedAt: new Date().toISOString(),
+  };
+}
+
+// Small time-limited cache shared by every Ticket Finder user, so the same search repeated
+// (or run by several people) within the window costs one TeamSupport call, not one each.
+function cachedLookup<T>(maxAgeMs: number, maxEntries: number) {
+  const entries = new Map<string, { at: number; value: Promise<T> }>();
+  return (key: string, load: () => Promise<T>): Promise<T> => {
+    const now = Date.now();
+    const hit = entries.get(key);
+    if (hit && now - hit.at < maxAgeMs) return hit.value;
+    const value = load();
+    entries.set(key, { at: now, value });
+    // A failed lookup isn't kept, so the next try really asks TeamSupport again.
+    value.catch(() => entries.delete(key));
+    if (entries.size > maxEntries) {
+      for (const [k, e] of entries) {
+        if (entries.size <= maxEntries && now - e.at < maxAgeMs) break;
+        entries.delete(k);
+      }
+    }
+    return value;
+  };
+}
+
+const searchCache = cachedLookup<TicketSearchResult>(SEARCH_CACHE_MS, 300);
+
+export function searchTickets(p: TicketSearchParams): Promise<TicketSearchResult> {
+  const key = JSON.stringify([p.ticketNumber, p.customerId, p.text?.toLowerCase(), p.assignee?.toLowerCase(), p.status, p.sinceDays]);
+  return searchCache(key, () => runTicketSearch(p));
+}
+
+// Ticket descriptions and comments come back as HTML that is itself HTML-escaped
+// ("&lt;p&gt;..."). The program shows plain text only, so tags are dropped here rather than
+// handing remote HTML to it to render.
+function htmlToPlainText(escaped: string): string {
+  return decodeEntities(escaped)
+    .replace(/<(script|style)[\s\S]*?<\/\1>/gi, "")
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<\/(p|div|li|tr|h[1-6])>/gi, "\n")
+    .replace(/<li[^>]*>/gi, "• ")
+    .replace(/<[^>]+>/g, "")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&#(\d+);/g, (_m, n) => String.fromCodePoint(Number(n)))
+    .replace(/&amp;/g, "&")
+    .replace(/[ \t]+\n/g, "\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
+const MAX_HISTORY_TEXT = 20000;
+const historyCache = cachedLookup<TicketHistoryEntry[]>(5 * 60 * 1000, 300);
+
+// Every description/comment on the ticket, newest first.
+export function fetchTicketHistory(ticketNumber: string): Promise<TicketHistoryEntry[]> {
+  return historyCache(ticketNumber, async () => {
+    const raw = await teamSupportRequest(`/api/json/tickets/${encodeURIComponent(ticketNumber)}/actions`).catch((err) => {
+      if (err instanceof TeamSupportTicketNotFoundError) {
+        throw new TeamSupportTicketNotFoundError(`Ticket ${ticketNumber} not found`);
+      }
+      throw err;
+    });
+    const obj = raw as Record<string, unknown> | null;
+    const actions: Record<string, unknown>[] = Array.isArray(raw)
+      ? raw
+      : Array.isArray(obj?.Actions)
+        ? (obj!.Actions as Record<string, unknown>[])
+        : obj?.Actions && typeof obj.Actions === "object"
+          ? [obj.Actions as Record<string, unknown>]
+          : [];
+    return actions
+      .sort((a, b) => ticketDateValue(b.DateCreated) - ticketDateValue(a.DateCreated))
+      .map((a) => ({
+        type: decodeEntities(String(a.ActionType ?? "Note")),
+        by: decodeEntities(String(a.CreatorName ?? "")),
+        at: String(a.DateCreated ?? ""),
+        visibleToCustomer: String(a.IsVisibleOnPortal).toLowerCase() === "true",
+        text: htmlToPlainText(String(a.Description ?? "")).slice(0, MAX_HISTORY_TEXT),
+      }));
+  });
+}

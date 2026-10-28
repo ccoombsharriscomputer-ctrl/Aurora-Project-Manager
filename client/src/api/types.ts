@@ -1,4 +1,5 @@
-export type UserRole = "ADMIN" | "PROJECT_LEAD" | "MEMBER" | "READ_ONLY";
+// TICKET_SEARCH accounts only use the Ticket Finder desktop program; they can't sign in here.
+export type UserRole = "ADMIN" | "PROJECT_LEAD" | "MEMBER" | "READ_ONLY" | "TICKET_SEARCH";
 export type ProjectMemberRole = "OWNER" | "MEMBER";
 export type TaskStatus = "TODO" | "IN_PROGRESS" | "DONE" | "NA";
 export type TaskPriority = "LOW" | "MEDIUM" | "HIGH";

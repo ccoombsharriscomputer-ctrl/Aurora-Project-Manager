@@ -79,6 +79,7 @@ function roleLabel(t: TFunction, role: UserRole): string {
   if (role === "ADMIN") return t("common.roleAdmin");
   if (role === "PROJECT_LEAD") return t("common.roleProjectLead");
   if (role === "READ_ONLY") return t("common.roleReadOnly");
+  if (role === "TICKET_SEARCH") return t("common.roleTicketSearch");
   return t("common.roleMember");
 }
 

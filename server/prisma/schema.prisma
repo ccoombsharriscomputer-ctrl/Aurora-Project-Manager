@@ -19,6 +19,9 @@ enum UserRole {
   PROJECT_LEAD
   MEMBER
   READ_ONLY
+  // Support staff who only use the Ticket Finder desktop program. Blocked from every APM
+  // route except /api/auth and /api/ticket-search, and can't sign in to the web app at all.
+  TICKET_SEARCH
 }
 
 enum ProjectMemberRole {
@@ -180,6 +183,24 @@ model User {
   softwareLineGrants    UserSoftwareLineGrant[]
   accessRequestLineSubscriptions AccessRequestLineSubscription[]
   savedReports          SavedReport[]
+  ticketFinderDevices   TicketFinderDevice[]
+}
+
+// One signed-in copy of the Ticket Finder desktop program. The program signs in once with
+// the user's APM email and password and gets back a random key, kept encrypted on that PC;
+// only its SHA-256 hash is stored here. The key works on /api/ticket-search and nothing
+// else, stops working when the user is deactivated, and is revoked by signing out.
+model TicketFinderDevice {
+  id         String    @id @default(cuid())
+  userId     String
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash  String    @unique
+  deviceName String
+  createdAt  DateTime  @default(now())
+  lastUsedAt DateTime  @default(now())
+  revokedAt  DateTime?
+
+  @@index([userId])
 }
 
 // Scopes which software lines' access-request emails an admin receives, when their

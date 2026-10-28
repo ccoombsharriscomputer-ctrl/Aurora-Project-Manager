@@ -39,3 +39,13 @@ export function generatePasswordResetToken(): string {
 export function hashPasswordResetToken(token: string): string {
   return createHash("sha256").update(token).digest("hex");
 }
+
+// The Ticket Finder program's sign-in key: random like a reset token, and stored the same way
+// (SHA-256 hash only), so a database copy can't be used to search tickets.
+export function generateTicketFinderToken(): string {
+  return randomBytes(32).toString("base64url");
+}
+
+export function hashTicketFinderToken(token: string): string {
+  return createHash("sha256").update(token).digest("hex");
+}

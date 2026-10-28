@@ -111,6 +111,7 @@ function CreateUserForm({
             <option value="PROJECT_LEAD">{t("common.roleProjectLead")}</option>
             <option value="ADMIN">{t("common.roleAdmin")}</option>
             <option value="READ_ONLY">{t("common.roleReadOnly")}</option>
+            <option value="TICKET_SEARCH">{t("common.roleTicketSearch")}</option>
           </select>
         </div>
         <div className="field">
@@ -604,6 +605,7 @@ export function AdminUsersPage() {
                         <option value="PROJECT_LEAD">{t("common.roleProjectLead")}</option>
                         <option value="ADMIN">{t("common.roleAdmin")}</option>
                         <option value="READ_ONLY">{t("common.roleReadOnly")}</option>
+                        <option value="TICKET_SEARCH">{t("common.roleTicketSearch")}</option>
                       </select>
                     </td>
                     <td>

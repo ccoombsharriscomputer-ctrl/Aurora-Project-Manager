@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from "express";
-import { COOKIE_NAME, verifyToken } from "../lib/auth";
+import { COOKIE_NAME, hashTicketFinderToken, verifyToken } from "../lib/auth";
 import { prisma } from "../lib/prisma";
 import { effectiveDashboardLayout, type DashboardWidgetEntry } from "../lib/dashboardWidgets";
 
@@ -7,7 +7,7 @@ export interface AuthedUser {
   id: string;
   name: string;
   email: string;
-  role: "ADMIN" | "PROJECT_LEAD" | "MEMBER" | "READ_ONLY";
+  role: "ADMIN" | "PROJECT_LEAD" | "MEMBER" | "READ_ONLY" | "TICKET_SEARCH";
   theme: "LIGHT" | "DARK" | "SYSTEM" | "MIDNIGHT" | "AURORA" | "SUNSET" | "OCEAN" | "FOREST" | "PASTEL" | "SLATE" | "CONTRAST" | "GOTHAM" | "METROPOLIS" | "EMPIRE" | "TATOOINE" | "HOTH" | "GALAXY";
   accentColor: "BLUE" | "GREEN" | "PURPLE" | "ORANGE" | "RED" | "TEAL" | "INDIGO" | "PINK" | "CYAN" | "GOLD" | "LIME" | "GRAPHITE";
   locale: "EN" | "ES" | "FR_CA";
@@ -75,12 +75,62 @@ async function getUserFromRequest(req: Request): Promise<AuthedUser | null> {
   }
 }
 
+// The only parts of the API a Ticket Search account may use with a sign-in cookie: its own
+// account (sign out, change password). Checked by baseUrl in requireAuth, which every router
+// uses, so a route added later is blocked for them by default rather than needing to opt out.
+// They can't get a cookie from /login anyway — this covers an account switched to Ticket
+// Search while it still had one.
+const TICKET_SEARCH_ALLOWED_BASES = ["/api/auth"];
+
 export async function requireAuth(req: Request, res: Response, next: NextFunction) {
   const user = await getUserFromRequest(req);
   if (!user) {
     return res.status(401).json({ error: "Not authenticated" });
   }
+  if (user.role === "TICKET_SEARCH" && !TICKET_SEARCH_ALLOWED_BASES.includes(req.baseUrl)) {
+    return res.status(403).json({ error: "This account can only use the Ticket Finder program" });
+  }
   req.user = user;
+  next();
+}
+
+export interface TicketFinderCaller {
+  userId: string;
+  name: string;
+  email: string;
+  deviceId: string;
+}
+
+declare global {
+  namespace Express {
+    interface Request {
+      ticketFinder?: TicketFinderCaller;
+    }
+  }
+}
+
+// For /api/ticket-search only: the Ticket Finder program sends the key it got at sign-in as
+// "Authorization: Bearer <key>". Deliberately separate from requireAuth — the key is never
+// accepted anywhere else, so a copied key can search tickets and nothing more. Any active
+// APM user may use the program, not just Ticket Search accounts.
+export async function requireTicketFinderDevice(req: Request, res: Response, next: NextFunction) {
+  const header = req.get("authorization") ?? "";
+  const match = /^Bearer\s+(\S+)$/i.exec(header);
+  if (!match) {
+    return res.status(401).json({ error: "Not signed in" });
+  }
+  const device = await prisma.ticketFinderDevice.findUnique({
+    where: { tokenHash: hashTicketFinderToken(match[1]) },
+    include: { user: { select: { id: true, name: true, email: true, active: true } } },
+  });
+  if (!device || device.revokedAt || !device.user.active) {
+    return res.status(401).json({ error: "Not signed in" });
+  }
+  // At most one write an hour per device, not one per search.
+  if (Date.now() - device.lastUsedAt.getTime() > 60 * 60 * 1000) {
+    await prisma.ticketFinderDevice.update({ where: { id: device.id }, data: { lastUsedAt: new Date() } });
+  }
+  req.ticketFinder = { userId: device.user.id, name: device.user.name, email: device.user.email, deviceId: device.id };
   next();
 }
 

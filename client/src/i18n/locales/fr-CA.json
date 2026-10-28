@@ -22,6 +22,7 @@
     "roleProjectLead": "Chef de projet",
     "roleAdmin": "Administrateur",
     "roleReadOnly": "Lecture seule",
+    "roleTicketSearch": "Recherche de billets",
     "priorityLow": "Faible",
     "priorityMedium": "Moyenne",
     "priorityHigh": "Élevée",

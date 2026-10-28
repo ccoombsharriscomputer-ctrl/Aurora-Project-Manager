@@ -37,6 +37,9 @@ router.post("/login", async (req, res) => {
   if (!valid) {
     return res.status(401).json({ error: "Invalid email or password" });
   }
+  if (user.role === "TICKET_SEARCH") {
+    return res.status(403).json({ error: "This account is for the Ticket Finder program only." });
+  }
 
   // Each fresh login starts a user back on their home line, even if a previous session
   // left them switched into another one (admin or a granted Project Lead/Member alike).
