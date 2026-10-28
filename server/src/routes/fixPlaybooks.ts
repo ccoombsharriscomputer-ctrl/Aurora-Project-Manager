@@ -1,13 +1,14 @@
 import { Router } from "express";
 import { z } from "zod";
 import { prisma } from "../lib/prisma";
-import { requireAdmin, requireAuth } from "../middleware/auth";
+import { requireAuth, requirePlaybookEditor } from "../middleware/auth";
 import { findDraftJob, forgetActivePlaybooks, forgetDraftJob, PRODUCT_LINES, startDraftJob } from "../lib/fixPlaybooks";
 import { sendAiError } from "./ticketSearch";
 
-// Admin page for the fix playbooks Ticket Finder shows next to matching tickets.
+// Page for the fix playbooks Ticket Finder shows next to matching tickets: admins, plus users
+// an admin has given playbook access (Users page).
 const router = Router();
-router.use(requireAuth, requireAdmin);
+router.use(requireAuth, requirePlaybookEditor);
 
 // The product lines a playbook can be limited to, for the page's dropdowns.
 router.get("/product-lines", (_req, res) => {

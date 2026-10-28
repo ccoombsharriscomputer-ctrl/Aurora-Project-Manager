@@ -1,6 +1,6 @@
 import { Navigate, Route, Routes } from "react-router-dom";
 import { Layout } from "./components/Layout";
-import { ProtectedRoute, AdminRoute, ProjectLeadRoute } from "./components/ProtectedRoute";
+import { ProtectedRoute, AdminRoute, ProjectLeadRoute, PlaybookEditorRoute } from "./components/ProtectedRoute";
 import { LoginPage } from "./pages/LoginPage";
 import { RequestAccessPage } from "./pages/RequestAccessPage";
 import { ForgotPasswordPage } from "./pages/ForgotPasswordPage";
@@ -46,6 +46,8 @@ function App() {
           <Route element={<AdminRoute />}>
             <Route path="/admin/users" element={<AdminUsersPage />} />
             <Route path="/reports" element={<ReportsPage />} />
+          </Route>
+          <Route element={<PlaybookEditorRoute />}>
             <Route path="/fix-playbooks" element={<FixPlaybooksPage />} />
           </Route>
           <Route element={<ProjectLeadRoute />}>

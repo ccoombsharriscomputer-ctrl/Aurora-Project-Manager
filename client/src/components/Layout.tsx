@@ -50,7 +50,7 @@ export function Layout() {
               {t("layout.reports")}
             </NavLink>
           )}
-          {user?.role === "ADMIN" && (
+          {user?.canEditPlaybooks && (
             <NavLink to="/fix-playbooks" className={({ isActive }) => `sidebar-link${isActive ? " active" : ""}`}>
               {t("layout.fixPlaybooks")}
             </NavLink>

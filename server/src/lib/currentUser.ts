@@ -33,6 +33,7 @@ export async function buildCurrentUserPayload(user: {
   softwareLineId: string;
   activeSoftwareLineId: string | null;
   grantedSoftwareLineIds: string[];
+  canEditPlaybooks: boolean;
   // Raw column value (or already-resolved AuthedUser["dashboardLayout"], both accepted) —
   // resolved to what actually renders below regardless of which shape the caller has on hand.
   dashboardLayout?: unknown;
@@ -49,6 +50,7 @@ export async function buildCurrentUserPayload(user: {
     softwareLineId: user.softwareLineId,
     activeSoftwareLineId: user.activeSoftwareLineId,
     accessibleSoftwareLines,
+    canEditPlaybooks: user.role === "ADMIN" || user.canEditPlaybooks,
     dashboardLayout: effectiveDashboardLayout(user.dashboardLayout, user.role),
   };
 }

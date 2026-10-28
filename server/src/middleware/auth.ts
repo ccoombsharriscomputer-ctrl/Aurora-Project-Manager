@@ -15,6 +15,7 @@ export interface AuthedUser {
   activeSoftwareLineId: string | null;
   grantedSoftwareLineIds: string[];
   teamSupportUserId: string | null;
+  canEditPlaybooks: boolean;
   // Already resolved to "what actually renders" (default-filled and role-filtered) — see
   // lib/dashboardWidgets.ts — so nothing downstream needs to re-derive it from the raw column.
   dashboardLayout: DashboardWidgetEntry[];
@@ -68,6 +69,7 @@ async function getUserFromRequest(req: Request): Promise<AuthedUser | null> {
       activeSoftwareLineId: user.activeSoftwareLineId,
       grantedSoftwareLineIds: user.softwareLineGrants.map((g) => g.softwareLineId),
       teamSupportUserId: user.teamSupportUserId,
+      canEditPlaybooks: user.canEditPlaybooks,
       dashboardLayout: effectiveDashboardLayout(user.dashboardLayout, user.role),
     };
   } catch {
@@ -148,6 +150,14 @@ export async function attachUserIfPresent(req: Request, _res: Response, next: Ne
 export function requireAdmin(req: Request, res: Response, next: NextFunction) {
   if (req.user?.role !== "ADMIN") {
     return res.status(403).json({ error: "Admin access required" });
+  }
+  next();
+}
+
+// Fix playbooks (Ticket Finder): admins, plus anyone an admin has given playbook access.
+export function requirePlaybookEditor(req: Request, res: Response, next: NextFunction) {
+  if (req.user?.role !== "ADMIN" && !req.user?.canEditPlaybooks) {
+    return res.status(403).json({ error: "Playbook access required" });
   }
   next();
 }

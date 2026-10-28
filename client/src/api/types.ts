@@ -43,6 +43,8 @@ export interface CurrentUser {
   // Lines this user can switch into: every line for an admin, or home + granted for
   // everyone else. Length 1 means there's nothing to switch between.
   accessibleSoftwareLines: SoftwareLine[];
+  // Can open the Fix Playbooks page: always true for admins.
+  canEditPlaybooks: boolean;
   // Already resolved server-side to what actually renders — default-filled if this user has
   // never customized, and filtered to widgets their role can see either way. See
   // dashboardWidgets.ts for the widget catalog and per-role availability.
@@ -131,6 +133,8 @@ export interface AdminUser extends UserSummary {
   // non-empty for PROJECT_LEAD/MEMBER roles.
   grantedSoftwareLines: SoftwareLine[];
   teamSupportUserId: string | null;
+  // Fix playbook access for a non-admin (admins always have it).
+  canEditPlaybooks: boolean;
   // Only meaningful for role ADMIN. If true, this admin gets emailed for every access
   // request regardless of software line; if false, only for lines in accessRequestLines.
   accessRequestNotifyAllLines: boolean;

@@ -28,6 +28,20 @@ export function AdminRoute() {
   return <Outlet />;
 }
 
+// Fix playbooks: admins, plus users an admin has given playbook access.
+export function PlaybookEditorRoute() {
+  const { t } = useTranslation();
+  const { user, loading } = useAuth();
+
+  if (loading) {
+    return <div className="auth-page">{t("common.loading")}</div>;
+  }
+  if (!user || !user.canEditPlaybooks) {
+    return <Navigate to="/dashboard" replace />;
+  }
+  return <Outlet />;
+}
+
 export function ProjectLeadRoute() {
   const { t } = useTranslation();
   const { user, loading } = useAuth();

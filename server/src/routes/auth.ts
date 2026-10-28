@@ -128,6 +128,7 @@ router.patch("/me", requireAuth, async (req, res) => {
       locale: true,
       softwareLineId: true,
       activeSoftwareLineId: true,
+      canEditPlaybooks: true,
       dashboardLayout: true,
     },
   });
@@ -195,6 +196,7 @@ router.patch("/active-line", requireAuth, async (req, res) => {
       locale: true,
       softwareLineId: true,
       activeSoftwareLineId: true,
+      canEditPlaybooks: true,
       dashboardLayout: true,
     },
   });

@@ -15,6 +15,7 @@ const userSelect = {
   active: true,
   createdAt: true,
   teamSupportUserId: true,
+  canEditPlaybooks: true,
   softwareLine: { select: { id: true, name: true } },
   softwareLineGrants: { select: { softwareLine: { select: { id: true, name: true } } } },
   accessRequestNotifyAllLines: true,
@@ -149,6 +150,8 @@ const updateSchema = z.object({
   active: z.boolean().optional(),
   softwareLineId: z.string().min(1).optional(),
   teamSupportUserId: z.string().min(1).nullable().optional(),
+  // Fix playbook access for a non-admin (admins always have it).
+  canEditPlaybooks: z.boolean().optional(),
   // Extra software lines a Project Lead/Member can switch into beyond their home line —
   // replace-all semantics (the full desired set, not a delta). Only meaningful for those two
   // roles; anyone else keeps an empty set (see the auto-clear below).

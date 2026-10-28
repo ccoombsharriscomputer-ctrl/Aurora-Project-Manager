@@ -8,20 +8,17 @@ import { fetchTicketHistory, searchTickets, type TicketHistoryEntry, type Ticket
 // by admins (routes/fixPlaybooks.ts). Ticket Finder shows the active ones matching a ticket and
 // its AI research uses them as evidence. Drafting one with AI only reads TeamSupport.
 
-// Product lines, told apart by how TeamSupport product names start ("TRIO Cash Receipting",
-// "SF - Payroll", "Spectrum - FLEXIBILL"...). A playbook set to a line only matches that
-// line's tickets. Products starting any other way belong to no line, so only playbooks for
-// every line match them.
+// Product lines: APM's own software lines (same ids as the SoftwareLine table; R & D and
+// Support have no products of their own), told apart by how TeamSupport product names start
+// ("TRIO Cash Receipting", "Spectrum - FLEXIBILL", "RM-NG"...). A playbook set to a line only
+// matches that line's tickets. Products of other lines (SF, A+, ICS...) belong to none of
+// these, so only playbooks for all lines match them.
 export const PRODUCT_LINES: { id: string; name: string; pattern: RegExp }[] = [
   { id: "trio", name: "TRIO", pattern: /^TRIO\b/i },
-  { id: "smartfusion", name: "SmartFusion", pattern: /^(SF\s*-|SmartFusion\b)/i },
-  { id: "spectrum", name: "Spectrum", pattern: /^Spectrum\b/i },
-  { id: "openwindow", name: "Open Window", pattern: /^Open\s?Window\b/i },
-  { id: "aplus", name: "A+", pattern: /^A\+/ },
-  { id: "ics", name: "ICS", pattern: /^ICS\b/i },
   { id: "msi", name: "MSI", pattern: /^MSI\b/i },
-  { id: "munismart", name: "MuniSmart", pattern: /^MuniSmart\b/i },
-  { id: "printmail", name: "Print & Mail", pattern: /^PM\s*-/i },
+  { id: "spectrum", name: "Spectrum", pattern: /^Spectrum\b/i },
+  { id: "openwindow", name: "OpenWindow", pattern: /^Open\s?Window\b/i },
+  { id: "resourcemate", name: "ResourceMate", pattern: /^(RM\s*-|ResourceMate\b)/i },
 ];
 
 export function productLineOf(product: string | null): string | null {
@@ -188,7 +185,9 @@ function draftPrompt(
   );
 }
 
-// Closed tickets from the last year whose titles match the playbook, newest first.
+// Closed Support tickets from the last year whose titles match the playbook (and so its product
+// line), newest first. Other ticket types (Print And Mail jobs, Internal Tasks, chatbot tests...)
+// aren't customer problems, so they're left out.
 async function ticketsForDraft(playbook: { productLine: string | null; matchPhrases: string[]; products: string[] }): Promise<TicketSearchRow[]> {
   const phrases = playbook.matchPhrases
     .map((p) => p.trim())
@@ -202,6 +201,7 @@ async function ticketsForDraft(playbook: { productLine: string | null; matchPhra
     for (const row of result.tickets) {
       if (seen.has(row.ticketNumber)) continue;
       seen.add(row.ticketNumber);
+      if (row.ticketType?.trim().toLowerCase() !== "support") continue;
       if (playbookMatch(playbook, row.name, row.product).length) found.push(row);
     }
   }
@@ -220,7 +220,7 @@ async function draftPlaybook(playbookId: string): Promise<PlaybookDraft> {
 
   const rows = await ticketsForDraft(playbook);
   if (rows.length === 0) {
-    throw new TicketAiFailedError("No closed tickets from the last year matched these words, product line and products, so there's nothing to draft from.");
+    throw new TicketAiFailedError("No closed Support tickets from the last year matched these words, product line and products, so there's nothing to draft from.");
   }
   const tickets = await Promise.all(
     rows.map(async (row) => ({

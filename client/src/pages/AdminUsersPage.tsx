@@ -324,6 +324,7 @@ interface UserEditData {
   softwareLineId?: string;
   grantedSoftwareLineIds?: string[];
   teamSupportUserId?: string | null;
+  canEditPlaybooks?: boolean;
   name?: string;
   email?: string;
   password?: string;
@@ -524,6 +525,7 @@ export function AdminUsersPage() {
               <th>{t("common.softwareLine")}</th>
               <th>{t("adminUsers.extraLines")}</th>
               <th>{t("adminUsers.accessRequestEmails")}</th>
+              <th>{t("adminUsers.playbooks")}</th>
               <th>{t("adminUsers.teamSupportUser")}</th>
               <th>{t("common.status")}</th>
               <th>{t("adminUsers.joined")}</th>
@@ -533,7 +535,7 @@ export function AdminUsersPage() {
           <tbody>
             {filteredUsers.length === 0 && (
               <tr>
-                <td colSpan={10} className="muted">
+                <td colSpan={11} className="muted">
                   {t("adminUsers.noUsersMatchFilter")}
                 </td>
               </tr>
@@ -541,7 +543,7 @@ export function AdminUsersPage() {
             {filteredUsers.map((u) =>
               editingUserId === u.id ? (
                 <tr key={u.id}>
-                  <td colSpan={10}>
+                  <td colSpan={11}>
                     <form
                       className="card"
                       style={{ margin: "8px 0" }}
@@ -654,6 +656,21 @@ export function AdminUsersPage() {
                       )}
                     </td>
                     <td>
+                      {u.role === "ADMIN" ? (
+                        <span className="muted">{t("adminUsers.playbooksAlways")}</span>
+                      ) : u.role === "TICKET_SEARCH" ? (
+                        <span className="muted">—</span>
+                      ) : (
+                        <input
+                          type="checkbox"
+                          checked={u.canEditPlaybooks}
+                          title={t("adminUsers.playbookAccess")}
+                          aria-label={t("adminUsers.playbookAccess")}
+                          onChange={(e) => updateUser.mutate({ id: u.id, data: { canEditPlaybooks: e.target.checked } })}
+                        />
+                      )}
+                    </td>
+                    <td>
                       <TeamSupportUserPicker
                         value={u.teamSupportUserId}
                         users={teamSupportUsers ?? []}
@@ -689,7 +706,7 @@ export function AdminUsersPage() {
                   </tr>
                   {expandedGrantsUserId === u.id && (u.role === "PROJECT_LEAD" || u.role === "MEMBER") && (
                     <tr>
-                      <td colSpan={10}>
+                      <td colSpan={11}>
                         <GrantedLinesPanel
                           user={u}
                           allLines={softwareLines ?? []}
@@ -700,7 +717,7 @@ export function AdminUsersPage() {
                   )}
                   {expandedAccessRequestUserId === u.id && u.role === "ADMIN" && (
                     <tr>
-                      <td colSpan={10}>
+                      <td colSpan={11}>
                         <AccessRequestScopePanel
                           user={u}
                           allLines={softwareLines ?? []}
@@ -712,7 +729,7 @@ export function AdminUsersPage() {
                   )}
                   {deleteErrors[u.id] && (
                     <tr>
-                      <td colSpan={10}>
+                      <td colSpan={11}>
                         <div className="error-text">{deleteErrors[u.id]}</div>
                       </td>
                     </tr>
