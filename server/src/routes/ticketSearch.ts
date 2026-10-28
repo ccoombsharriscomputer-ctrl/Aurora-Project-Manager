@@ -4,8 +4,10 @@ import { prisma } from "../lib/prisma";
 import { comparePassword, generateTicketFinderToken, hashTicketFinderToken } from "../lib/auth";
 import { requireTicketFinderDevice } from "../middleware/auth";
 import {
+  customerSnapshot,
   fetchTeamSupportCustomers,
   fetchTicketHistory,
+  findSimilarTickets,
   searchTickets,
   TeamSupportNotConfiguredError,
   TeamSupportTicketNotFoundError,
@@ -155,6 +157,36 @@ router.get("/tickets/:ticketNumber/history", async (req, res) => {
   }
   try {
     res.json(await fetchTicketHistory(req.params.ticketNumber));
+  } catch (err) {
+    sendTeamSupportError(res, err);
+  }
+});
+
+// Research helpers for working out what's wrong and how it was fixed before. Both only read
+// from TeamSupport, and both are cached 30 minutes per ticket.
+router.get("/tickets/:ticketNumber/similar", async (req, res) => {
+  if (!/^\d{1,10}$/.test(req.params.ticketNumber)) {
+    return res.status(400).json({ error: "Ticket number must be digits only" });
+  }
+  if (!searchAttempt(req.ticketFinder!.deviceId)) {
+    return res.status(429).json({ error: "That's a lot of lookups in a minute. Wait a moment and try again." });
+  }
+  try {
+    res.json(await findSimilarTickets(req.params.ticketNumber));
+  } catch (err) {
+    sendTeamSupportError(res, err);
+  }
+});
+
+router.get("/tickets/:ticketNumber/customer", async (req, res) => {
+  if (!/^\d{1,10}$/.test(req.params.ticketNumber)) {
+    return res.status(400).json({ error: "Ticket number must be digits only" });
+  }
+  if (!searchAttempt(req.ticketFinder!.deviceId)) {
+    return res.status(429).json({ error: "That's a lot of lookups in a minute. Wait a moment and try again." });
+  }
+  try {
+    res.json(await customerSnapshot(req.params.ticketNumber));
   } catch (err) {
     sendTeamSupportError(res, err);
   }

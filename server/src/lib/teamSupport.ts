@@ -698,6 +698,12 @@ export async function initialStatusIdForType(ticketTypeId: string): Promise<stri
 
 // ---- Ticket Finder (search-only desktop program, see routes/ticketSearch.ts) ----
 
+// Everything Ticket Finder asks TeamSupport goes through here, and this only ever sends GET:
+// the program is research-only and must never change a ticket (user's rule, 2026-10-28).
+function teamSupportGet(path: string, init?: Omit<RequestInit, "method" | "body">): Promise<unknown> {
+  return teamSupportRequest(path, { ...init, method: "GET" });
+}
+
 export type TicketStatusFilter = "open" | "closed" | "all";
 
 export interface TicketSearchParams {
@@ -722,8 +728,11 @@ export interface TicketSearchRow {
   groupName: string | null;
   assigneeName: string | null;
   customers: string[];
+  customerIds: string[];
+  productId: string | null;
   dateCreated: string;
   dateModified: string;
+  dateClosed: string | null;
   url: string;
 }
 
@@ -758,13 +767,16 @@ function ticketDateValue(text: unknown): number {
   return Number.isNaN(ms) ? 0 : ms;
 }
 
-function customerNames(raw: unknown): string[] {
+function customerRefs(raw: unknown): { id: string; name: string }[] {
   if (!raw || typeof raw !== "object") return [];
   const inner = (raw as Record<string, unknown>).Customer ?? raw;
   const list = Array.isArray(inner) ? inner : [inner];
   return list
-    .map((c) => decodeEntities(String((c as Record<string, unknown>)?.CustomerName ?? "").trim()))
-    .filter(Boolean);
+    .map((c) => {
+      const row = c as Record<string, unknown>;
+      return { id: String(row?.CustomerID ?? ""), name: decodeEntities(String(row?.CustomerName ?? "").trim()) };
+    })
+    .filter((c) => c.name);
 }
 
 function toSearchRow(t: Record<string, unknown>): TicketSearchRow {
@@ -780,9 +792,12 @@ function toSearchRow(t: Record<string, unknown>): TicketSearchRow {
     product: text(t.ProductName),
     groupName: text(t.GroupName),
     assigneeName: text(t.UserName),
-    customers: customerNames(t.Customers),
+    customers: customerRefs(t.Customers).map((c) => c.name),
+    customerIds: customerRefs(t.Customers).map((c) => c.id).filter(Boolean),
+    productId: t.ProductID ? String(t.ProductID) : null,
     dateCreated: String(t.DateCreated ?? ""),
     dateModified: String(t.DateModified ?? ""),
+    dateClosed: t.DateClosed ? String(t.DateClosed) : null,
     url: ticketUrl(ticketNumber),
   };
 }
@@ -809,6 +824,18 @@ function sinceFilterValue(days: number): string {
 // DateCreated[gt]=yyyymmddhhmmss all work on /tickets and on /customers/{id}/tickets.
 // Sorting params (OrderBy etc.) are ignored — results come back oldest first — so the full
 // match list is pulled and sorted here.
+// Every matching ticket, newest first. Read-only: Ticket Finder never writes to TeamSupport.
+async function fetchTicketRows(path: string, query: URLSearchParams): Promise<Record<string, unknown>[]> {
+  const raw = await teamSupportGet(`${path}?${query.toString()}`, { signal: AbortSignal.timeout(SEARCH_TIMEOUT_MS) }).catch(
+    (err) => {
+      // A customer with no tickets, or a ticket number that doesn't exist, can come back as 404.
+      if (err instanceof TeamSupportTicketNotFoundError) return [];
+      throw err;
+    }
+  );
+  return extractTicketList(raw).sort((a, b) => ticketDateValue(b.DateCreated) - ticketDateValue(a.DateCreated));
+}
+
 async function runTicketSearch(p: TicketSearchParams): Promise<TicketSearchResult> {
   const query = new URLSearchParams();
   let path = "/api/json/tickets";
@@ -821,14 +848,7 @@ async function runTicketSearch(p: TicketSearchParams): Promise<TicketSearchResul
     if (p.status !== "all") query.set("IsClosed", p.status === "closed" ? "True" : "False");
     if (p.sinceDays != null) query.set("DateCreated[gt]", sinceFilterValue(p.sinceDays));
   }
-  const raw = await teamSupportRequest(`${path}?${query.toString()}`, { signal: AbortSignal.timeout(SEARCH_TIMEOUT_MS) }).catch(
-    (err) => {
-      // A customer with no tickets, or a ticket number that doesn't exist, can come back as 404.
-      if (err instanceof TeamSupportTicketNotFoundError) return [];
-      throw err;
-    }
-  );
-  const rows = extractTicketList(raw).sort((a, b) => ticketDateValue(b.DateCreated) - ticketDateValue(a.DateCreated));
+  const rows = await fetchTicketRows(path, query);
   return {
     total: rows.length,
     tickets: rows.slice(0, MAX_SEARCH_ROWS).map(toSearchRow),
@@ -889,7 +909,7 @@ const historyCache = cachedLookup<TicketHistoryEntry[]>(5 * 60 * 1000, 300);
 // Every description/comment on the ticket, newest first.
 export function fetchTicketHistory(ticketNumber: string): Promise<TicketHistoryEntry[]> {
   return historyCache(ticketNumber, async () => {
-    const raw = await teamSupportRequest(`/api/json/tickets/${encodeURIComponent(ticketNumber)}/actions`).catch((err) => {
+    const raw = await teamSupportGet(`/api/json/tickets/${encodeURIComponent(ticketNumber)}/actions`).catch((err) => {
       if (err instanceof TeamSupportTicketNotFoundError) {
         throw new TeamSupportTicketNotFoundError(`Ticket ${ticketNumber} not found`);
       }
@@ -912,5 +932,157 @@ export function fetchTicketHistory(ticketNumber: string): Promise<TicketHistoryE
         visibleToCustomer: String(a.IsVisibleOnPortal).toLowerCase() === "true",
         text: htmlToPlainText(String(a.Description ?? "")).slice(0, MAX_HISTORY_TEXT),
       }));
+  });
+}
+
+// ---- Ticket Finder research: similar solved tickets and the customer's recent tickets ----
+
+export interface SimilarTicket {
+  ticket: TicketSearchRow;
+  // Title words it shares with the ticket being researched.
+  matchedWords: string[];
+  sameProduct: boolean;
+  // The most detailed of the ticket's last few notes — usually where the fix is written down
+  // (the very last one is often just "closing this ticket now").
+  fixNote: TicketHistoryEntry | null;
+}
+
+export interface SimilarTicketsResult {
+  ticket: TicketSearchRow;
+  searchedWords: string[];
+  similar: SimilarTicket[];
+}
+
+export interface CustomerSnapshot {
+  customerName: string | null;
+  days: number;
+  // Why there's no list, when there isn't one (no customer, or the "_Unknown Company" catch-all).
+  skipped: string | null;
+  openCount: number;
+  sameProductCount: number;
+  tickets: TicketSearchRow[];
+}
+
+const SIMILAR_DAYS = 730;
+const SIMILAR_MAX = 6;
+const CUSTOMER_DAYS = 90;
+const RESEARCH_CACHE_MS = 30 * 60 * 1000;
+
+// Words that say nothing about what the problem is. Title words not on this list are what
+// similar tickets get matched on.
+const STOP_WORDS = new Set(
+  (
+    "a an and are as at be but by can cannot cant could did do does doesnt dont for from get getting got has have help " +
+    "how i im in into is isnt issue issues it its me my need needs new no not of on or our please problem problems re " +
+    "fw fwd question questions should so some still that the their there this to trying unable up urgent us want was " +
+    "we were what when where which why will with wont would you your asap assistance external internal ticket request " +
+    "working work works error errors town city county village any again"
+  ).split(" ")
+);
+
+function titleWords(title: string): string[] {
+  const words = title
+    .replace(/\[[^\]]*\]/g, " ") // "[EXTERNAL]" style tags
+    .toLowerCase()
+    .split(/[^a-z0-9]+/)
+    .filter((w) => w.length >= 3 && !/^\d+$/.test(w) && !STOP_WORDS.has(w));
+  return Array.from(new Set(words));
+}
+
+function findTicketRow(ticketNumber: string): Promise<TicketSearchRow> {
+  return searchTickets({ ticketNumber, status: "all", sinceDays: null }).then((r) => {
+    if (!r.tickets[0]) throw new TeamSupportTicketNotFoundError(`Ticket ${ticketNumber} not found`);
+    return r.tickets[0];
+  });
+}
+
+const similarCache = cachedLookup<SimilarTicketsResult>(RESEARCH_CACHE_MS, 200);
+
+// Closed tickets from the last 2 years whose titles share words with this one, best match
+// first, each with its final note. TeamSupport can only filter on one "contains" word at a
+// time, so the two longest title words are searched (on the same product when the ticket has
+// one, which keeps each lookup to ~5 s) and the results ranked here by words in common.
+export function findSimilarTickets(ticketNumber: string): Promise<SimilarTicketsResult> {
+  return similarCache(ticketNumber, async () => {
+    const ticket = await findTicketRow(ticketNumber);
+    // The town's own name ("Norway MVR printer issues") would only find that town's tickets.
+    const customerWords = new Set(ticket.customers.flatMap((c) => titleWords(c)));
+    const words = titleWords(ticket.name).filter((w) => !customerWords.has(w));
+    const searchWords = [...words].sort((a, b) => b.length - a.length).slice(0, 2);
+    if (searchWords.length === 0) return { ticket, searchedWords: [], similar: [] };
+
+    const lookup = (word: string, productId: string | null) => {
+      const q = new URLSearchParams({ "Name[contains]": word, IsClosed: "True", "DateCreated[gt]": sinceFilterValue(SIMILAR_DAYS) });
+      if (productId) q.set("ProductID", productId);
+      return fetchTicketRows("/api/json/tickets", q);
+    };
+    let candidates = (await Promise.all(searchWords.map((w) => lookup(w, ticket.productId)))).flat();
+    // Too few on the same product: widen to every product for the best word.
+    if (ticket.productId && candidates.length < 3) candidates = candidates.concat(await lookup(searchWords[0], null));
+
+    const seen = new Set<string>([ticket.ticketNumber]);
+    const scored: { row: TicketSearchRow; matched: string[]; score: number; created: number }[] = [];
+    for (const raw of candidates) {
+      const row = toSearchRow(raw);
+      if (seen.has(row.ticketNumber)) continue;
+      seen.add(row.ticketNumber);
+      const theirs = new Set(titleWords(row.name));
+      const matched = words.filter((w) => theirs.has(w));
+      if (matched.length === 0) continue; // "contains" also hits inside longer words
+      const sameProduct = !!ticket.productId && row.productId === ticket.productId;
+      scored.push({ row, matched, score: matched.length * 2 + (sameProduct ? 1 : 0), created: ticketDateValue(row.dateCreated) });
+    }
+    scored.sort((a, b) => b.score - a.score || b.created - a.created);
+    const top = scored.slice(0, SIMILAR_MAX);
+
+    const notes = await Promise.all(
+      top.map((s) =>
+        fetchTicketHistory(s.row.ticketNumber)
+          .then((h) => h.filter((e) => e.text.length >= 15).slice(0, 3).sort((a, b) => b.text.length - a.text.length)[0] ?? null)
+          .catch(() => null)
+      )
+    );
+    return {
+      ticket,
+      searchedWords: searchWords,
+      similar: top.map((s, i) => ({
+        ticket: s.row,
+        matchedWords: s.matched,
+        sameProduct: !!ticket.productId && s.row.productId === ticket.productId,
+        fixNote: notes[i],
+      })),
+    };
+  });
+}
+
+const customerSnapshotCache = cachedLookup<CustomerSnapshot>(RESEARCH_CACHE_MS, 200);
+
+// The customer's other tickets from the last 90 days (TeamSupport answers this in ~10 s for a
+// busy town; a year takes 30+ s), to spot repeat problems.
+export function customerSnapshot(ticketNumber: string): Promise<CustomerSnapshot> {
+  return customerSnapshotCache(ticketNumber, async () => {
+    const ticket = await findTicketRow(ticketNumber);
+    const customerId = ticket.customerIds[0];
+    const customerName = ticket.customers[0] ?? null;
+    const empty = (skipped: string): CustomerSnapshot => ({
+      customerName, days: CUSTOMER_DAYS, skipped, openCount: 0, sameProductCount: 0, tickets: [],
+    });
+    if (!customerId) return empty("This ticket has no customer on it.");
+    if (customerName?.startsWith("_Unknown")) {
+      return empty('The customer is TeamSupport\'s "Unknown Company" catch-all, so its other tickets aren\'t related.');
+    }
+
+    const q = new URLSearchParams({ "DateCreated[gt]": sinceFilterValue(CUSTOMER_DAYS) });
+    const rows = (await fetchTicketRows(`/api/json/customers/${encodeURIComponent(customerId)}/tickets`, q))
+      .map(toSearchRow)
+      .filter((r) => r.ticketNumber !== ticket.ticketNumber);
+    return {
+      customerName,
+      days: CUSTOMER_DAYS,
+      skipped: null,
+      openCount: rows.filter((r) => !r.isClosed).length,
+      sameProductCount: ticket.productId ? rows.filter((r) => r.productId === ticket.productId).length : 0,
+      tickets: rows.slice(0, MAX_SEARCH_ROWS),
+    };
   });
 }
