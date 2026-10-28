@@ -563,8 +563,8 @@
   "fixPlaybooks": {
     "loading": "Chargement des guides…",
     "productLine": "Gamme de produits",
-    "allLines": "Toutes les gammes",
-    "productLineHelp": "Gammes de produits d'APM. Seuls les billets dont le produit TeamSupport fait partie de cette gamme correspondent, et le brouillon IA ne lit que les billets de soutien de cette gamme. Choisissez « Toutes les gammes » pour une solution qui s'applique partout.",
+    "chooseLine": "Choisissez une gamme de produits",
+    "productLineHelp": "Chaque guide vise une seule gamme de produits : les gammes fonctionnent trop différemment pour partager une solution. Il ne correspond qu'aux billets dont le produit TeamSupport fait partie de cette gamme, et le brouillon IA ne lit que les billets de soutien de cette gamme. Pour le même problème dans une autre gamme, créez un autre guide.",
     "showLine": "Afficher :",
     "everyPlaybook": "Tous les guides",
     "newPlaybook": "Nouveau guide",

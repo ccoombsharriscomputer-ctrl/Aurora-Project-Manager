@@ -31,12 +31,10 @@ const cleanList = (max: number) =>
 
 const playbookSchema = z.object({
   title: z.string().trim().min(1, "Give the playbook a title").max(200),
-  // null = every product line.
+  // Every playbook is for one line: the lines work too differently to share a fix.
   productLine: z
-    .string()
-    .refine((id) => PRODUCT_LINES.some((l) => l.id === id), "Unknown product line")
-    .nullable()
-    .default(null),
+    .string({ required_error: "Choose a product line", invalid_type_error: "Choose a product line" })
+    .refine((id) => PRODUCT_LINES.some((l) => l.id === id), "Choose a product line"),
   matchPhrases: cleanList(40),
   products: cleanList(20),
   steps: z.string().max(10_000),

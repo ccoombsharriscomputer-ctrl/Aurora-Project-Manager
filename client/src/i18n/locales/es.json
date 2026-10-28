@@ -563,8 +563,8 @@
   "fixPlaybooks": {
     "loading": "Cargando guías…",
     "productLine": "Línea de producto",
-    "allLines": "Todas las líneas",
-    "productLineHelp": "Líneas de producto de APM. Solo coinciden los tickets cuyo producto de TeamSupport pertenece a esta línea, y el borrador de IA solo lee los tickets de Soporte de esa línea. Elija \"Todas las líneas\" para una solución que aplica a todo.",
+    "chooseLine": "Elija una línea de producto",
+    "productLineHelp": "Cada guía es para una sola línea de producto: las líneas funcionan de forma muy distinta. Solo coincide con tickets cuyo producto de TeamSupport es de esta línea, y el borrador de IA solo lee los tickets de Soporte de esta línea. Para el mismo problema en otra línea, cree otra guía.",
     "showLine": "Mostrar:",
     "everyPlaybook": "Todas las guías",
     "newPlaybook": "Nueva guía",

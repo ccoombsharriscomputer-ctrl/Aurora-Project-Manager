@@ -10,9 +10,9 @@ import { fetchTicketHistory, searchTickets, type TicketHistoryEntry, type Ticket
 
 // Product lines: APM's own software lines (same ids as the SoftwareLine table; R & D and
 // Support have no products of their own), told apart by how TeamSupport product names start
-// ("TRIO Cash Receipting", "Spectrum - FLEXIBILL", "RM-NG"...). A playbook set to a line only
-// matches that line's tickets. Products of other lines (SF, A+, ICS...) belong to none of
-// these, so only playbooks for all lines match them.
+// ("TRIO Cash Receipting", "Spectrum - FLEXIBILL", "RM-NG"...). Every playbook belongs to one
+// line and only matches that line's tickets, so products of other lines (SF, A+, ICS...)
+// never get a playbook.
 export const PRODUCT_LINES: { id: string; name: string; pattern: RegExp }[] = [
   { id: "trio", name: "TRIO", pattern: /^TRIO\b/i },
   { id: "msi", name: "MSI", pattern: /^MSI\b/i },
@@ -33,7 +33,7 @@ export function productLineName(id: string | null): string | null {
 export interface MatchedPlaybook {
   id: string;
   title: string;
-  // Display name ("TRIO"), or null for a playbook that covers every line.
+  // Display name, e.g. "TRIO".
   productLine: string | null;
   steps: string;
   matchedPhrases: string[];
@@ -52,7 +52,7 @@ export function playbookMatch(
   title: string,
   product: string | null
 ): string[] {
-  if (playbook.productLine && productLineOf(product) !== playbook.productLine) return [];
+  if (!playbook.productLine || productLineOf(product) !== playbook.productLine) return [];
   if (playbook.products.length) {
     const p = (product ?? "").toLowerCase();
     if (!playbook.products.some((want) => want.trim() && p.includes(want.trim().toLowerCase()))) return [];

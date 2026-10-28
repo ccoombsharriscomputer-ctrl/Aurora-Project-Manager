@@ -9,7 +9,7 @@ import { formatDate } from "../utils/format";
 interface FixPlaybook {
   id: string;
   title: string;
-  productLine: string | null;
+  productLine: string;
   matchPhrases: string[];
   products: string[];
   steps: string;
@@ -169,8 +169,10 @@ function PlaybookForm({
       </div>
       <div className="field">
         <label>{t("fixPlaybooks.productLine")}</label>
-        <select value={productLine ?? ""} onChange={(e) => setProductLine(e.target.value || null)}>
-          <option value="">{t("fixPlaybooks.allLines")}</option>
+        <select required value={productLine ?? ""} onChange={(e) => setProductLine(e.target.value || null)}>
+          <option value="" disabled>
+            {t("fixPlaybooks.chooseLine")}
+          </option>
           {productLines.map((l) => (
             <option key={l.id} value={l.id}>
               {l.name}
@@ -260,10 +262,10 @@ export function FixPlaybooksPage() {
   const { user } = useAuth();
   // null = closed, "new" = new playbook form, otherwise the id being edited.
   const [editing, setEditing] = useState<string | null>(null);
-  // "" = every playbook, "shared" = only the ones for every line, otherwise one line's id.
+  // "" = every playbook, otherwise one line's id.
   const [lineFilter, setLineFilter] = useState("");
   const productLines = useProductLines();
-  const lineName = (id: string | null) => (id ? productLines.find((l) => l.id === id)?.name ?? id : t("fixPlaybooks.allLines"));
+  const lineName = (id: string) => productLines.find((l) => l.id === id)?.name ?? id;
   const { data: playbooks, isLoading } = useQuery({
     queryKey: ["fix-playbooks"],
     queryFn: () => api.get<FixPlaybook[]>("/fix-playbooks"),
@@ -273,11 +275,11 @@ export function FixPlaybooksPage() {
     return <div className="muted">{t("fixPlaybooks.loading")}</div>;
   }
 
-  const lineOrder = (id: string | null) => (id ? productLines.findIndex((l) => l.id === id) : -1);
+  const lineOrder = (id: string) => productLines.findIndex((l) => l.id === id);
   const shown = playbooks
-    .filter((p) => !lineFilter || (lineFilter === "shared" ? !p.productLine : p.productLine === lineFilter))
+    .filter((p) => !lineFilter || p.productLine === lineFilter)
     .sort((a, b) => lineOrder(a.productLine) - lineOrder(b.productLine) || a.title.localeCompare(b.title));
-  const newLine = lineFilter && lineFilter !== "shared" ? lineFilter : null;
+  const newLine = lineFilter || null;
 
   return (
     <div>
@@ -305,7 +307,6 @@ export function FixPlaybooksPage() {
         <span>{t("fixPlaybooks.showLine")}</span>
         <select value={lineFilter} onChange={(e) => setLineFilter(e.target.value)}>
           <option value="">{t("fixPlaybooks.everyPlaybook")}</option>
-          <option value="shared">{t("fixPlaybooks.allLines")}</option>
           {productLines.map((l) => (
             <option key={l.id} value={l.id}>
               {l.name}

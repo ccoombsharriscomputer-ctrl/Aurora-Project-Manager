@@ -563,8 +563,8 @@
   "fixPlaybooks": {
     "loading": "Loading playbooks…",
     "productLine": "Product line",
-    "allLines": "All product lines",
-    "productLineHelp": "APM's product lines. Only tickets whose TeamSupport product belongs to this line match, and the AI draft only reads that line's Support tickets. Pick \"All product lines\" for a fix that applies everywhere.",
+    "chooseLine": "Choose a product line",
+    "productLineHelp": "Each playbook is for one product line: the lines work too differently to share a fix. It only matches tickets whose TeamSupport product is in this line, and the AI draft only reads this line's Support tickets. For the same problem in another line, add a separate playbook.",
     "showLine": "Show:",
     "everyPlaybook": "Every playbook",
     "newPlaybook": "New playbook",

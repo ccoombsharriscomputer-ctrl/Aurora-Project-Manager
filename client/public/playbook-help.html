@@ -95,7 +95,7 @@
     <h2>The fields</h2>
     <ul>
       <li><b>Problem</b>: a short name, e.g. "Printer Setup missing in Cash Receipting".</li>
-      <li><b>Product line</b>: <span class="tag">TRIO</span> <span class="tag">MSI</span> <span class="tag">Spectrum</span> <span class="tag">OpenWindow</span> <span class="tag">ResourceMate</span> or <b>All product lines</b>. A TRIO playbook only shows on tickets whose TeamSupport product is a TRIO product.</li>
+      <li><b>Product line</b> (required): <span class="tag">TRIO</span> <span class="tag">MSI</span> <span class="tag">Spectrum</span> <span class="tag">OpenWindow</span> <span class="tag">ResourceMate</span>. A TRIO playbook only shows on tickets whose TeamSupport product is a TRIO product. The lines work very differently, so the same problem in two lines needs <b>two playbooks</b>, each with that line's own steps.</li>
       <li><b>Match words</b>: words or phrases, separated by commas. A ticket matches when its title contains any of them as whole words (capitals don't matter). Add the different ways customers word the problem, e.g. "printer setup, receipt printer".</li>
       <li><b>Products</b> (optional): narrow it further to tickets whose product name contains one of these, e.g. "Cash Receipting".</li>
       <li><b>Steps</b>: one step per line, in order. Ticket Finder numbers them.</li>
@@ -108,7 +108,7 @@
     <ol>
       <li>Fill in the problem, product line and match words.</li>
       <li>Click <b>Draft steps with AI</b>. This saves the playbook first.</li>
-      <li>The AI reads up to 8 matching <b>closed Support tickets</b> from the last year, only from the playbook's product line when one is set, and writes steps from how they were fixed. It takes about 1–2 minutes.</li>
+      <li>The AI reads up to 8 matching <b>closed Support tickets</b> from the last year, <b>only from the playbook's product line</b>, and writes steps from how they were fixed. It takes about 1–2 minutes.</li>
       <li>Read the <b>Check</b> notes and the list of tickets it used, then edit the steps.</li>
       <li>Tick <b>Switched on</b> and click <b>Save</b>.</li>
     </ol>
@@ -118,7 +118,7 @@
   <section>
     <h2>Finding your way around</h2>
     <ul>
-      <li>Use <b>Show</b> above the list to see one product line at a time, or the playbooks for all lines.</li>
+      <li>Use <b>Show</b> above the list to see one product line at a time. A new playbook added while a line is shown starts on that line.</li>
       <li>The <b>Status</b> column says whether each playbook is on, has steps waiting to be checked, or has no steps yet.</li>
       <li><b>Delete</b> is inside the edit form. Switching a playbook off is usually better, as it keeps the steps.</li>
       <li><b>Settings</b> (left menu) is where you change your password, language and colours.</li>
