@@ -1,8 +1,10 @@
 import { Router, type Response } from "express";
+import Anthropic from "@anthropic-ai/sdk";
 import { z } from "zod";
 import { prisma } from "../lib/prisma";
 import { comparePassword, generateTicketFinderToken, hashTicketFinderToken } from "../lib/auth";
 import { requireTicketFinderDevice } from "../middleware/auth";
+import { researchTicketWithAi, TicketAiFailedError, TicketAiNotConfiguredError } from "../lib/ticketResearchAi";
 import {
   customerSnapshot,
   fetchTeamSupportCustomers,
@@ -61,6 +63,8 @@ function slidingLimit(max: number, windowMs: number) {
 
 const signInAttempt = slidingLimit(10, 15 * 60 * 1000);
 const searchAttempt = slidingLimit(30, 60 * 1000);
+// Cached repeats of the same ticket don't cost anything, but still count here.
+const aiAttempt = slidingLimit(20, 60 * 60 * 1000);
 
 const deviceLoginSchema = z.object({
   email: z.string().email(),
@@ -174,6 +178,39 @@ router.get("/tickets/:ticketNumber/similar", async (req, res) => {
   try {
     res.json(await findSimilarTickets(req.params.ticketNumber));
   } catch (err) {
+    sendTeamSupportError(res, err);
+  }
+});
+
+// AI research (summary, likely cause, steps, reply draft). Costs real money per call, so it's
+// cached 30 minutes per ticket and limited per device. Still read-only toward TeamSupport.
+router.get("/tickets/:ticketNumber/ai-research", async (req, res) => {
+  if (!/^\d{1,10}$/.test(req.params.ticketNumber)) {
+    return res.status(400).json({ error: "Ticket number must be digits only" });
+  }
+  if (!aiAttempt(req.ticketFinder!.deviceId)) {
+    return res.status(429).json({ error: "You've used the AI research a lot this hour. Try again later." });
+  }
+  try {
+    res.json(await researchTicketWithAi(req.params.ticketNumber));
+  } catch (err) {
+    if (err instanceof TicketAiNotConfiguredError) {
+      return res.status(503).json({ error: "AI research isn't set up on the server." });
+    }
+    if (err instanceof TicketAiFailedError) {
+      return res.status(502).json({ error: err.message });
+    }
+    if (err instanceof Anthropic.APIError) {
+      console.error(`[ticketAi] Claude API error ${err.status}: ${err.message}`);
+      return res.status(502).json({
+        error:
+          err.status === 401
+            ? "The server's AI key isn't valid. Ask an APM admin to check ANTHROPIC_API_KEY."
+            : err.status === 429 || (err.status ?? 0) >= 500
+              ? "The AI service is busy. Try again in a minute."
+              : "The AI request failed.",
+      });
+    }
     sendTeamSupportError(res, err);
   }
 });
