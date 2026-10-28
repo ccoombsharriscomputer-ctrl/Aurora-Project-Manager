@@ -334,7 +334,12 @@
     "manageAccessRequestsAll": "Manage notifications (all lines)",
     "manageAccessRequestsCount": "Manage notifications ({{count}})",
     "accessRequestAllLines": "Notify for every software line",
-    "accessRequestScopeIntro": "Choose which software lines' access requests this admin gets emailed about. Turn off \"every line\" to pick specific ones instead."
+    "accessRequestScopeIntro": "Choose which software lines' access requests this admin gets emailed about. Turn off \"every line\" to pick specific ones instead.",
+    "sendInvite": "Email them an invite to pick their own password",
+    "emailInvite": "Email invite",
+    "emailInviteHint": "Emails a one-time link to pick a password (works for 7 days)",
+    "confirmInvite": "Email {{name}} ({{email}}) a link to pick a password?",
+    "inviteSent": "Invite sent to {{email}}."
   },
   "projectTypes": {
     "newProjectType": "New project type",
@@ -596,5 +601,9 @@
     "offReadyToCheck": "Off — steps ready to check",
     "offNoSteps": "Off — no steps yet",
     "none": "No playbooks yet."
+  },
+  "calendarOption": {
+    "label": "Also add to the Aurora Calendar (on the due date)",
+    "needsAssigneeAndDate": "pick an assignee and due date first"
   }
 }

@@ -340,3 +340,52 @@ export function renderPasswordResetEmail(locale: Locale, content: PasswordResetC
   const text = [s.heading(content.userName), s.body(content.expiresInHours), content.url, "", s.ignore].join("\n");
   return { subject: s.subject, html, text };
 }
+
+export interface InviteContent {
+  userName: string;
+  invitedByName: string;
+  url: string;
+  email: string;
+  expiresInDays: number;
+}
+
+const INVITE_STRINGS: Record<
+  Locale,
+  { subject: string; heading: (name: string) => string; body: (by: string) => string; button: string; footer: (email: string, days: number) => string }
+> = {
+  EN: {
+    subject: "You're invited to Aurora Project Manager",
+    heading: (name) => `Hi ${name},`,
+    body: (by) => `${by} added you to Aurora Project Manager, the project tracker for the Aurora product lines. Pick your password to get started:`,
+    button: "Pick your password",
+    footer: (email, days) => `You'll sign in with ${email}. The link works once and expires in ${days} days — after that, ask for a new invite.`,
+  },
+  ES: {
+    subject: "Lo invitamos a Aurora Project Manager",
+    heading: (name) => `Hola ${name},`,
+    body: (by) => `${by} lo agregó a Aurora Project Manager, el seguimiento de proyectos de las líneas de producto de Aurora. Elija su contraseña para comenzar:`,
+    button: "Elegir mi contraseña",
+    footer: (email, days) => `Iniciará sesión con ${email}. El enlace funciona una sola vez y vence en ${days} días — después, pida una nueva invitación.`,
+  },
+  FR_CA: {
+    subject: "Vous êtes invité à Aurora Project Manager",
+    heading: (name) => `Bonjour ${name},`,
+    body: (by) => `${by} vous a ajouté à Aurora Project Manager, le suivi de projets des gammes de produits Aurora. Choisissez votre mot de passe pour commencer :`,
+    button: "Choisir mon mot de passe",
+    footer: (email, days) => `Vous vous connecterez avec ${email}. Le lien ne fonctionne qu'une fois et expire dans ${days} jours — ensuite, demandez une nouvelle invitation.`,
+  },
+};
+
+export function renderInviteEmail(locale: Locale, content: InviteContent): RenderedEmail {
+  const s = INVITE_STRINGS[locale];
+  const html = wrapHtml(`
+    <p style="margin:0 0 16px;">${escapeHtml(s.heading(content.userName))}</p>
+    <p style="margin:0 0 20px;">${escapeHtml(s.body(content.invitedByName))}</p>
+    <p style="margin:0 0 24px;">
+      <a href="${content.url}" style="display:inline-block;background:#3457d5;color:#ffffff;text-decoration:none;font-weight:600;padding:10px 20px;border-radius:6px;">${s.button}</a>
+    </p>
+    <p style="margin:0;color:#8a8f98;font-size:13px;">${escapeHtml(s.footer(content.email, content.expiresInDays))}</p>
+  `);
+  const text = [s.heading(content.userName), s.body(content.invitedByName), content.url, "", s.footer(content.email, content.expiresInDays)].join("\n");
+  return { subject: s.subject, html, text };
+}

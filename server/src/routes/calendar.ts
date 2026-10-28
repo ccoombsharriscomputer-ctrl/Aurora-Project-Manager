@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { z } from "zod";
+import { calendarIsConfigured } from "../lib/calendar";
 import { prisma } from "../lib/prisma";
 import { effectiveSoftwareLineId, requireAuth } from "../middleware/auth";
 
@@ -9,6 +10,11 @@ router.use(requireAuth);
 const querySchema = z.object({
   start: z.string(),
   end: z.string(),
+});
+
+// Lets the task forms show "Add to the Aurora Calendar" only when the link is set up.
+router.get("/status", (_req, res) => {
+  res.json({ enabled: calendarIsConfigured });
 });
 
 router.get("/", async (req, res) => {

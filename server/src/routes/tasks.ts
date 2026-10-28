@@ -12,6 +12,7 @@ import { contractCategoryForActionType, contractCategoryForTaskTitle } from "../
 import { PS_ACTION_TYPES, syncTaskUpdateToTeamSupport, teamSupportTaskContext } from "../lib/teamSupport";
 import { formatHours } from "../lib/format";
 import { notifyTaskAssigned } from "../lib/email";
+import { removeTaskFromCalendar, trySync } from "../lib/calendar";
 
 const router = Router();
 router.use(requireAuth);
@@ -60,6 +61,8 @@ const updateSchema = z.object({
   priority: z.enum(["LOW", "MEDIUM", "HIGH"]).optional(),
   assigneeId: z.string().nullable().optional(),
   dueDate: z.string().datetime().nullable().optional(),
+  // Also show on / take off the Aurora Calendar (on the due date). Needs an assignee and due date.
+  addToCalendar: z.boolean().optional(),
 });
 
 router.patch("/:id", blockReadOnly, async (req, res) => {
@@ -96,8 +99,17 @@ router.patch("/:id", blockReadOnly, async (req, res) => {
     }
   }
 
-  const { naReason, ...rest } = parsed.data;
+  if (parsed.data.addToCalendar) {
+    const hasAssignee = parsed.data.assigneeId !== undefined ? !!parsed.data.assigneeId : !!existing.assigneeId;
+    const hasDueDate = parsed.data.dueDate !== undefined ? !!parsed.data.dueDate : !!existing.dueDate;
+    if (!hasAssignee || !hasDueDate) {
+      return res.status(400).json({ error: "Assign the task and give it a due date before adding it to the calendar" });
+    }
+  }
+
+  const { naReason, addToCalendar, ...rest } = parsed.data;
   const data: Record<string, unknown> = { ...rest };
+  if (addToCalendar !== undefined) data.onCalendar = addToCalendar;
   if (parsed.data.dueDate !== undefined) {
     data.dueDate = parsed.data.dueDate ? new Date(parsed.data.dueDate) : null;
   }
@@ -167,7 +179,19 @@ router.patch("/:id", blockReadOnly, async (req, res) => {
     emitUpdate({ scope: "dashboard" });
   }
 
-  res.json(task);
+  // Keep the calendar in step: put it there / move it if its title, person or date changed, or
+  // take it off when asked. A calendar problem never blocks saving, it's reported back instead.
+  let calendarError: string | null = null;
+  if (addToCalendar === false) {
+    await removeTaskFromCalendar(task.id).catch((err) => {
+      console.error(`[calendar] remove failed for task ${task.id}:`, err);
+      calendarError = "The task was saved, but taking it off the Aurora Calendar failed. Try again.";
+    });
+  } else if (task.onCalendar && (addToCalendar || parsed.data.title !== undefined || parsed.data.assigneeId !== undefined || parsed.data.dueDate !== undefined)) {
+    calendarError = await trySync(task.id);
+  }
+
+  res.json({ ...task, calendarError });
 });
 
 router.delete("/:id", blockReadOnly, async (req, res) => {
@@ -176,6 +200,9 @@ router.delete("/:id", blockReadOnly, async (req, res) => {
     return res.status(404).json({ error: "Task not found" });
   }
   await prisma.task.delete({ where: { id: req.params.id } }).catch(() => null);
+  if (task.onCalendar) {
+    await removeTaskFromCalendar(task.id).catch((err) => console.error(`[calendar] remove failed for deleted task ${task.id}:`, err));
+  }
   // Logged after the delete, with taskId omitted since the task is already gone by this
   // point — projectId still stands since only the task, not the project, was removed.
   await logActivity({

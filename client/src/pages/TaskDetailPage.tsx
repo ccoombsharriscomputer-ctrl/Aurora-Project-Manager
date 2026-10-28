@@ -9,6 +9,7 @@ import { useOpenTabs } from "../context/OpenTabsContext";
 import { formatDate, formatMinutes, formatRelativeTime } from "../utils/format";
 import { useActiveTimer } from "../hooks/useActiveTimer";
 import { LinkifiedText } from "../components/LinkifiedText";
+import { CalendarOption } from "../components/CalendarOption";
 import { clearTaskCommentDraft, loadTaskCommentDraft, saveTaskCommentDraft } from "../utils/taskCommentDraft";
 
 const COLLAPSED_COUNT = 3;
@@ -177,11 +178,14 @@ export function TaskDetailPage() {
   // query has resolved).
   const [editAssigneeId, setEditAssigneeId] = useState("");
   const [editDueDate, setEditDueDate] = useState("");
+  const [editOnCalendar, setEditOnCalendar] = useState(false);
   const [assignmentError, setAssignmentError] = useState<string | null>(null);
   const prevTaskIdForAssignmentRef = useRef<string | undefined>(undefined);
 
   const assignmentDirty = task
-    ? editAssigneeId !== (task.assignee?.id ?? "") || editDueDate !== (task.dueDate ? task.dueDate.slice(0, 10) : "")
+    ? editAssigneeId !== (task.assignee?.id ?? "") ||
+      editDueDate !== (task.dueDate ? task.dueDate.slice(0, 10) : "") ||
+      editOnCalendar !== task.onCalendar
     : false;
 
   // Resyncs from the server whenever the underlying task data changes (initial load, a
@@ -197,6 +201,7 @@ export function TaskDetailPage() {
     if (assignmentDirty && !taskChanged) return;
     setEditAssigneeId(task.assignee?.id ?? "");
     setEditDueDate(task.dueDate ? task.dueDate.slice(0, 10) : "");
+    setEditOnCalendar(task.onCalendar);
     setAssignmentError(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [task?.id, task?.assignee?.id, task?.dueDate]);
@@ -303,15 +308,28 @@ export function TaskDetailPage() {
       return;
     }
     setAssignmentError(null);
+    // Unassigning also takes the task off the calendar.
+    const wantOnCalendar = editOnCalendar && !!editAssigneeId;
     updateTask.mutate(
-      { assigneeId: editAssigneeId || null, dueDate: editDueDate ? new Date(editDueDate).toISOString() : null },
-      { onError: (err) => setAssignmentError(extractErrorMessage(err)) }
+      {
+        assigneeId: editAssigneeId || null,
+        dueDate: editDueDate ? new Date(editDueDate).toISOString() : null,
+        ...(wantOnCalendar !== task!.onCalendar ? { addToCalendar: wantOnCalendar } : {}),
+      },
+      {
+        onSuccess: (saved) => {
+          const warning = (saved as { calendarError?: string | null } | undefined)?.calendarError;
+          if (warning) window.alert(warning);
+        },
+        onError: (err) => setAssignmentError(extractErrorMessage(err)),
+      }
     );
   }
 
   function cancelAssignment() {
     setEditAssigneeId(task!.assignee?.id ?? "");
     setEditDueDate(task!.dueDate ? task!.dueDate.slice(0, 10) : "");
+    setEditOnCalendar(task!.onCalendar);
     setAssignmentError(null);
   }
 
@@ -728,6 +746,14 @@ export function TaskDetailPage() {
               <span>{formatDate(task.dueDate)}</span>
             )}
           </div>
+          {canWrite && (
+            <CalendarOption
+              checked={editOnCalendar}
+              onChange={setEditOnCalendar}
+              ready={!!editAssigneeId && !!editDueDate}
+              alreadyOn={task.onCalendar}
+            />
+          )}
           {assignmentError && <div className="error-text">{assignmentError}</div>}
           {canWrite && assignmentDirty && (
             <div className="gap-8" style={{ marginTop: 4, marginBottom: 12 }}>

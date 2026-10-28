@@ -272,6 +272,10 @@ export interface Task {
   dueDate: string | null;
   completedAt: string | null;
   naReason: string | null;
+  // Also shown on the Aurora Calendar.
+  onCalendar: boolean;
+  // Sent only right after saving: set when the calendar part failed (the task itself saved).
+  calendarError?: string | null;
   createdAt: string;
   updatedAt: string;
   project?: { id: string; name: string };

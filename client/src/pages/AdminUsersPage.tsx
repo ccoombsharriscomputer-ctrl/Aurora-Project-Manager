@@ -28,6 +28,8 @@ function CreateUserForm({
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  // On by default: the person gets an email to pick their own password, so no starting one is needed.
+  const [sendInvite, setSendInvite] = useState(true);
   const [role, setRole] = useState<UserRole>("MEMBER");
   const [softwareLineId, setSoftwareLineId] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -47,7 +49,8 @@ function CreateUserForm({
       api.post<AdminUser>("/users", {
         name,
         email,
-        password,
+        password: sendInvite ? undefined : password,
+        sendInvite,
         role,
         softwareLineId,
         accessRequestId: prefill?.accessRequestId,
@@ -98,11 +101,16 @@ function CreateUserForm({
           <label>{t("adminUsers.initialPassword")}</label>
           <input
             type="password"
-            required
+            required={!sendInvite}
+            disabled={sendInvite}
             minLength={8}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
           />
+          <label style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 6, fontWeight: "normal" }}>
+            <input type="checkbox" checked={sendInvite} onChange={(e) => setSendInvite(e.target.checked)} />
+            {t("adminUsers.sendInvite")}
+          </label>
         </div>
         <div className="field">
           <label>{t("common.role")}</label>
@@ -489,6 +497,14 @@ export function AdminUsersPage() {
     onError: (err, id) => setDeleteErrors((prev) => ({ ...prev, [id]: extractErrorMessage(err) })),
   });
 
+  // Per-row result of "Email invite" (sent / failed), shown under the row.
+  const [inviteStatus, setInviteStatus] = useState<Record<string, { ok: boolean; text: string }>>({});
+  const sendInviteEmail = useMutation({
+    mutationFn: (u: AdminUser) => api.post(`/users/${u.id}/invite`),
+    onSuccess: (_data, u) => setInviteStatus((prev) => ({ ...prev, [u.id]: { ok: true, text: t("adminUsers.inviteSent", { email: u.email }) } })),
+    onError: (err, u) => setInviteStatus((prev) => ({ ...prev, [u.id]: { ok: false, text: extractErrorMessage(err) } })),
+  });
+
   if (isLoading || !users) {
     return <div className="muted">{t("adminUsers.loadingUsers")}</div>;
   }
@@ -684,6 +700,16 @@ export function AdminUsersPage() {
                       </button>
                       <button
                         className="btn btn-sm"
+                        disabled={!u.active || sendInviteEmail.isPending}
+                        title={t("adminUsers.emailInviteHint")}
+                        onClick={() => {
+                          if (confirm(t("adminUsers.confirmInvite", { name: u.name, email: u.email }))) sendInviteEmail.mutate(u);
+                        }}
+                      >
+                        {t("adminUsers.emailInvite")}
+                      </button>
+                      <button
+                        className="btn btn-sm"
                         disabled={u.id === me?.id}
                         onClick={() => updateUser.mutate({ id: u.id, data: { active: !u.active } })}
                       >
@@ -722,6 +748,13 @@ export function AdminUsersPage() {
                           onToggleAllLines={(allLines) => toggleAccessRequestAllLines(u, allLines)}
                           onToggleLine={(lineId) => toggleAccessRequestLine(u, lineId)}
                         />
+                      </td>
+                    </tr>
+                  )}
+                  {inviteStatus[u.id] && (
+                    <tr>
+                      <td colSpan={11}>
+                        <div className={inviteStatus[u.id].ok ? "muted" : "error-text"}>{inviteStatus[u.id].text}</div>
                       </td>
                     </tr>
                   )}

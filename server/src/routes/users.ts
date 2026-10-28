@@ -1,9 +1,11 @@
+import { randomBytes } from "crypto";
 import { Router } from "express";
 import { z } from "zod";
 import { prisma } from "../lib/prisma";
 import { attachUserIfPresent, effectiveSoftwareLineId, requireAdmin, requireAuth } from "../middleware/auth";
 import { emitUpdate } from "../lib/realtime";
-import { hashPassword } from "../lib/auth";
+import { generatePasswordResetToken, hashPassword, hashPasswordResetToken } from "../lib/auth";
+import { sendInviteEmail } from "../lib/email";
 
 const router = Router();
 
@@ -60,11 +62,40 @@ router.get("/", requireAuth, async (req, res) => {
 const createSchema = z.object({
   name: z.string().min(1).max(100),
   email: z.string().email().transform((v) => v.trim().toLowerCase()),
-  password: z.string().min(8).max(200),
+  // Either the admin types a starting password, or sendInvite emails the person a link to pick
+  // their own (then no password is needed here).
+  password: z.string().min(8).max(200).optional().or(z.literal("")),
+  sendInvite: z.boolean().default(false),
   role: z.enum(["ADMIN", "PROJECT_LEAD", "MEMBER", "READ_ONLY", "TICKET_SEARCH"]).optional(),
   softwareLineId: z.string().min(1),
   accessRequestId: z.string().min(1).optional(),
-});
+}).refine((b) => b.sendInvite || b.password, { message: "Set a starting password (8+ characters) or send an invite" });
+
+// How long an emailed invite link stays valid. Long on purpose: a new hire may not open it for
+// days. (A "forgot password" link, by contrast, lasts one hour — routes/passwordReset.ts.)
+const INVITE_LINK_DAYS = 7;
+
+// Makes a fresh one-time link (replacing any earlier one) and emails it. Throws if sending fails,
+// so callers can tell the admin to try again.
+async function emailInvite(userId: string, invitedByName: string) {
+  const user = await prisma.user.findUniqueOrThrow({ where: { id: userId }, select: { id: true, name: true, email: true, locale: true } });
+  const token = generatePasswordResetToken();
+  await prisma.user.update({
+    where: { id: user.id },
+    data: {
+      passwordResetTokenHash: hashPasswordResetToken(token),
+      passwordResetExpiresAt: new Date(Date.now() + INVITE_LINK_DAYS * 24 * 60 * 60 * 1000),
+    },
+  });
+  await sendInviteEmail({
+    to: user.email,
+    locale: user.locale,
+    userName: user.name,
+    invitedByName,
+    token,
+    expiresInDays: INVITE_LINK_DAYS,
+  });
+}
 
 class HttpError extends Error {
   status: number;
@@ -84,7 +115,7 @@ router.post("/", attachUserIfPresent, async (req, res) => {
   if (!parsed.success) {
     return res.status(400).json({ error: parsed.error.issues[0].message });
   }
-  const { name, email, password, role, softwareLineId, accessRequestId } = parsed.data;
+  const { name, email, password, sendInvite, role, softwareLineId, accessRequestId } = parsed.data;
 
   try {
     const user = await prisma.$transaction(async (tx) => {
@@ -118,7 +149,8 @@ router.post("/", attachUserIfPresent, async (req, res) => {
         throw new HttpError(409, "An account with that email already exists");
       }
 
-      const passwordHash = await hashPassword(password);
+      // An invited person gets a random password nobody knows until they pick their own.
+      const passwordHash = await hashPassword(password || randomBytes(24).toString("hex"));
       return tx.user.create({
         data: {
           name,
@@ -133,12 +165,34 @@ router.post("/", attachUserIfPresent, async (req, res) => {
 
     emitUpdate({ scope: "users" });
     if (accessRequestId) emitUpdate({ scope: "access-requests" });
+    if (sendInvite && req.user) {
+      try {
+        await emailInvite(user.id, req.user.name);
+      } catch (err) {
+        console.error(`[email] invite failed for ${user.email}:`, err);
+        return res.status(502).json({ error: `${user.name} was added, but the invite email failed. Use Email invite on their row to try again.` });
+      }
+    }
     res.status(201).json(serializeUser(user));
   } catch (err) {
     if (err instanceof HttpError) {
       return res.status(err.status).json({ error: err.message });
     }
     throw err;
+  }
+});
+
+// Re-sends (or sends for the first time) the invite email, with a fresh link.
+router.post("/:id/invite", requireAuth, requireAdmin, async (req, res) => {
+  const target = await prisma.user.findUnique({ where: { id: req.params.id } });
+  if (!target) return res.status(404).json({ error: "User not found" });
+  if (!target.active) return res.status(400).json({ error: "Turn this person on first — inactive people can't sign in" });
+  try {
+    await emailInvite(target.id, req.user!.name);
+    res.json({ ok: true });
+  } catch (err) {
+    console.error(`[email] invite failed for ${target.email}:`, err);
+    res.status(502).json({ error: "The invite email failed to send. Try again in a minute." });
   }
 });
 

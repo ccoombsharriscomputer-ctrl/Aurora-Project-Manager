@@ -377,6 +377,8 @@ model Task {
   dueDate     DateTime?
   completedAt DateTime?
   naReason    String?
+  // Also shown on the Aurora Calendar (on its due date). Optional, chosen when assigning.
+  onCalendar  Boolean      @default(false)
   createdById String
   createdBy   User         @relation("TaskCreatedBy", fields: [createdById], references: [id])
   createdAt   DateTime     @default(now())

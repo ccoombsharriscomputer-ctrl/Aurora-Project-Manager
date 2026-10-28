@@ -334,7 +334,12 @@
     "manageAccessRequestsAll": "Gestionar notificaciones (todas las líneas)",
     "manageAccessRequestsCount": "Gestionar notificaciones ({{count}})",
     "accessRequestAllLines": "Notificar para cada línea de producto",
-    "accessRequestScopeIntro": "Elija sobre qué líneas de producto este administrador recibe correos de solicitudes de acceso. Desactive \"todas las líneas\" para elegir líneas específicas."
+    "accessRequestScopeIntro": "Elija sobre qué líneas de producto este administrador recibe correos de solicitudes de acceso. Desactive \"todas las líneas\" para elegir líneas específicas.",
+    "sendInvite": "Enviarle una invitación por correo para elegir su contraseña",
+    "emailInvite": "Enviar invitación",
+    "emailInviteHint": "Envía un enlace de un solo uso para elegir contraseña (válido 7 días)",
+    "confirmInvite": "¿Enviar a {{name}} ({{email}}) un enlace para elegir contraseña?",
+    "inviteSent": "Invitación enviada a {{email}}."
   },
   "projectTypes": {
     "newProjectType": "Nuevo tipo de proyecto",
@@ -596,5 +601,9 @@
     "offReadyToCheck": "Desactivada — pasos listos para revisar",
     "offNoSteps": "Desactivada — sin pasos aún",
     "none": "Aún no hay guías."
+  },
+  "calendarOption": {
+    "label": "Agregar también al Calendario Aurora (en la fecha de vencimiento)",
+    "needsAssigneeAndDate": "primero elija responsable y fecha de vencimiento"
   }
 }

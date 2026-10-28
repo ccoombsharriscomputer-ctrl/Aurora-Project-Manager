@@ -5,6 +5,7 @@ import { blockReadOnly, effectiveSoftwareLineId, requireAuth } from "../middlewa
 import { logActivity } from "../lib/activity";
 import { emitUpdate } from "../lib/realtime";
 import { loadSubProjectInScope, userHasLineAccess } from "../lib/scope";
+import { trySync } from "../lib/calendar";
 import { notifyTaskAssigned } from "../lib/email";
 
 const router = Router();
@@ -137,6 +138,8 @@ const createTaskSchema = z.object({
   priority: z.enum(["LOW", "MEDIUM", "HIGH"]).optional(),
   assigneeId: z.string().optional().nullable(),
   dueDate: z.string().datetime().optional().nullable(),
+  // Optional: also show the task on the Aurora Calendar, on its due date (needs an assignee and due date).
+  addToCalendar: z.boolean().optional(),
 });
 
 router.post("/:id/tasks", blockReadOnly, async (req, res) => {
@@ -165,6 +168,8 @@ router.post("/:id/tasks", blockReadOnly, async (req, res) => {
     return res.status(400).json({ error: "A due date is required when a task is assigned to someone" });
   }
 
+  const addToCalendar = Boolean(parsed.data.addToCalendar && parsed.data.assigneeId && parsed.data.dueDate);
+
   const maxOrder = await prisma.task.aggregate({
     where: { subProjectId: subProject.id },
     _max: { order: true },
@@ -180,6 +185,7 @@ router.post("/:id/tasks", blockReadOnly, async (req, res) => {
       priority: parsed.data.priority ?? "MEDIUM",
       assigneeId: parsed.data.assigneeId ?? null,
       dueDate: parsed.data.dueDate ? new Date(parsed.data.dueDate) : null,
+      onCalendar: addToCalendar,
       createdById: req.user!.id,
       order: (maxOrder._max.order ?? -10) + 10,
     },
@@ -222,7 +228,9 @@ router.post("/:id/tasks", blockReadOnly, async (req, res) => {
   emitUpdate({ scope: "project", projectId: subProject.projectId });
   emitUpdate({ scope: "dashboard" });
 
-  res.status(201).json(task);
+  // A calendar problem never blocks the task: it's saved either way, and the page shows the warning.
+  const calendarError = addToCalendar ? await trySync(task.id) : null;
+  res.status(201).json({ ...task, calendarError });
 });
 
 const reorderTasksSchema = z.object({

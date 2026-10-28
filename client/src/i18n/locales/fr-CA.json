@@ -334,7 +334,12 @@
     "manageAccessRequestsAll": "Gérer les notifications (toutes les lignes)",
     "manageAccessRequestsCount": "Gérer les notifications ({{count}})",
     "accessRequestAllLines": "Aviser pour chaque ligne de produit",
-    "accessRequestScopeIntro": "Choisissez pour quelles lignes de produit cet administrateur reçoit des courriels de demandes d'accès. Désactivez « toutes les lignes » pour en choisir des précises."
+    "accessRequestScopeIntro": "Choisissez pour quelles lignes de produit cet administrateur reçoit des courriels de demandes d'accès. Désactivez « toutes les lignes » pour en choisir des précises.",
+    "sendInvite": "Lui envoyer une invitation par courriel pour choisir son mot de passe",
+    "emailInvite": "Envoyer l'invitation",
+    "emailInviteHint": "Envoie un lien à usage unique pour choisir un mot de passe (valide 7 jours)",
+    "confirmInvite": "Envoyer à {{name}} ({{email}}) un lien pour choisir un mot de passe ?",
+    "inviteSent": "Invitation envoyée à {{email}}."
   },
   "projectTypes": {
     "newProjectType": "Nouveau type de projet",
@@ -596,5 +601,9 @@
     "offReadyToCheck": "Désactivé — étapes à vérifier",
     "offNoSteps": "Désactivé — aucune étape",
     "none": "Aucun guide pour l'instant."
+  },
+  "calendarOption": {
+    "label": "Ajouter aussi au calendrier Aurora (à la date d'échéance)",
+    "needsAssigneeAndDate": "choisissez d'abord un responsable et une date d'échéance"
   }
 }

@@ -8,6 +8,7 @@ import type { SubProjectDetail, Task, TaskPriority, UserSummary } from "../api/t
 import { extractErrorMessage, useAuth } from "../context/AuthContext";
 import { useOpenTabs } from "../context/OpenTabsContext";
 import { formatDueDate, formatMinutes } from "../utils/format";
+import { CalendarOption } from "../components/CalendarOption";
 
 const COLUMNS: { status: Task["status"]; labelKey: string }[] = [
   { status: "TODO", labelKey: "common.statusTodo" },
@@ -31,6 +32,7 @@ function NewTaskForm({ subProjectId, members }: { subProjectId: string; members:
   const [priority, setPriority] = useState<TaskPriority>("MEDIUM");
   const [assigneeId, setAssigneeId] = useState("");
   const [dueDate, setDueDate] = useState("");
+  const [addToCalendar, setAddToCalendar] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
 
@@ -42,14 +44,18 @@ function NewTaskForm({ subProjectId, members }: { subProjectId: string; members:
         priority,
         assigneeId: assigneeId || undefined,
         dueDate: dueDate ? new Date(dueDate).toISOString() : undefined,
+        addToCalendar: addToCalendar && !!assigneeId && !!dueDate ? true : undefined,
       }),
-    onSuccess: () => {
+    onSuccess: (created) => {
+      // The task saved even if the calendar part failed; say so instead of failing silently.
+      if (created.calendarError) window.alert(created.calendarError);
       queryClient.invalidateQueries({ queryKey: ["sub-project-tasks", subProjectId] });
       queryClient.invalidateQueries({ queryKey: ["dashboard"] });
       setTitle("");
       setDescription("");
       setAssigneeId("");
       setDueDate("");
+      setAddToCalendar(false);
       setOpen(false);
       setError(null);
     },
@@ -131,6 +137,7 @@ function NewTaskForm({ subProjectId, members }: { subProjectId: string; members:
           />
         </div>
       </div>
+      <CalendarOption checked={addToCalendar} onChange={setAddToCalendar} ready={!!assigneeId && !!dueDate} />
       {error && <div className="error-text">{error}</div>}
       <div className="gap-8">
         <button className="btn btn-primary" type="submit" disabled={createTask.isPending}>

@@ -4,6 +4,7 @@ import type { Locale } from "@prisma/client";
 import {
   renderAccessRequestEmail,
   renderDigestEmail,
+  renderInviteEmail,
   renderPasswordResetEmail,
   renderTaskAssignedEmail,
   type DigestPayload,
@@ -170,6 +171,26 @@ export async function sendPasswordResetEmail(params: {
     userName: params.userName,
     url: passwordResetUrl(params.token),
     expiresInHours: params.expiresInHours,
+  });
+  await sendAll([{ to: params.to, ...rendered }]);
+}
+
+// An admin-sent invite: the same one-time link as a password reset, but worded as a welcome and
+// valid for days instead of an hour (the route sets the expiry; expiresInDays is only the copy).
+export async function sendInviteEmail(params: {
+  to: string;
+  locale: Locale;
+  userName: string;
+  invitedByName: string;
+  token: string;
+  expiresInDays: number;
+}): Promise<void> {
+  const rendered = renderInviteEmail(params.locale, {
+    userName: params.userName,
+    invitedByName: params.invitedByName,
+    email: params.to,
+    url: passwordResetUrl(params.token),
+    expiresInDays: params.expiresInDays,
   });
   await sendAll([{ to: params.to, ...rendered }]);
 }
