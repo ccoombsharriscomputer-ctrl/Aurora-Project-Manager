@@ -610,7 +610,7 @@
     "title": "Knowledge Base import",
     "backToPlaybooks": "Back to playbooks",
     "loading": "Loading articles…",
-    "intro": "TRIO's TeamSupport Knowledge Base articles, sorted by AI into corrections (fixes for something that went wrong) and everything else. Pick the corrections that deserve a fix playbook. Read-only: nothing is changed in TeamSupport.",
+    "intro": "TRIO's published TeamSupport Knowledge Base articles (\"Visible on Portal\" ticked), sorted by AI into corrections (fixes for something that went wrong) and everything else. Pick the corrections that deserve a fix playbook. Read-only: nothing is changed in TeamSupport.",
     "sortButton": "Read and sort articles with AI",
     "sorting": "Sorting… (a few minutes)",
     "sortHelp": "Reads the Knowledge Base and sorts up to 40 new or edited articles per click. Articles already sorted are skipped. Each run uses some TeamSupport calls and costs a little AI money.",

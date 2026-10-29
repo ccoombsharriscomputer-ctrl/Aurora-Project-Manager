@@ -610,7 +610,7 @@
     "title": "Importar de la base de conocimientos",
     "backToPlaybooks": "Volver a las guías",
     "loading": "Cargando artículos…",
-    "intro": "Los artículos de la base de conocimientos de TRIO en TeamSupport, clasificados por la IA en correcciones (soluciones para algo que salió mal) y todo lo demás. Elija las correcciones que merecen una guía de solución. Solo lectura: no se cambia nada en TeamSupport.",
+    "intro": "Los artículos publicados de la base de conocimientos de TRIO en TeamSupport (con \"Visible on Portal\" marcado), clasificados por la IA en correcciones (soluciones para algo que salió mal) y todo lo demás. Elija las correcciones que merecen una guía de solución. Solo lectura: no se cambia nada en TeamSupport.",
     "sortButton": "Leer y clasificar artículos con IA",
     "sorting": "Clasificando… (unos minutos)",
     "sortHelp": "Lee la base de conocimientos y clasifica hasta 40 artículos nuevos o editados por clic. Los ya clasificados se omiten. Cada ejecución usa algunas llamadas a TeamSupport y cuesta un poco de IA.",

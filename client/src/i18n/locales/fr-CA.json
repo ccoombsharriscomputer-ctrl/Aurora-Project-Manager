@@ -610,7 +610,7 @@
     "title": "Import de la base de connaissances",
     "backToPlaybooks": "Retour aux guides",
     "loading": "Chargement des articles…",
-    "intro": "Les articles de la base de connaissances TRIO dans TeamSupport, triés par l'IA en corrections (solutions à un problème) et le reste. Choisissez les corrections qui méritent un guide de solution. Lecture seule : rien n'est modifié dans TeamSupport.",
+    "intro": "Les articles publiés de la base de connaissances TRIO dans TeamSupport (case « Visible on Portal » cochée), triés par l'IA en corrections (solutions à un problème) et le reste. Choisissez les corrections qui méritent un guide de solution. Lecture seule : rien n'est modifié dans TeamSupport.",
     "sortButton": "Lire et trier les articles avec l'IA",
     "sorting": "Tri en cours… (quelques minutes)",
     "sortHelp": "Lit la base de connaissances et trie jusqu'à 40 articles nouveaux ou modifiés par clic. Les articles déjà triés sont ignorés. Chaque passage utilise quelques appels TeamSupport et coûte un peu d'IA.",

@@ -120,6 +120,14 @@ async function sortKbArticles(): Promise<SortRunResult> {
   if (!apiKey) throw new TicketAiNotConfiguredError("ANTHROPIC_API_KEY is not configured");
 
   const rows = (await fetchKnowledgeBaseArticles()).filter(isTrioArticle);
+  // An empty answer is far more likely a TeamSupport hiccup than an empty Knowledge Base, and
+  // would otherwise wipe every pick below.
+  if (rows.length === 0) {
+    throw new TicketAiFailedError("TeamSupport returned no published TRIO Knowledge Base articles. Try again in a few minutes.");
+  }
+  // Articles no longer published (box unticked) or removed from the Knowledge Base drop off the
+  // list, pick and all; they come back as new if they're published again.
+  await prisma.kbArticle.deleteMany({ where: { ticketNumber: { notIn: rows.map((r) => r.ticketNumber) } } });
   const stored = new Map((await prisma.kbArticle.findMany()).map((a) => [a.ticketNumber, a]));
   for (const row of rows) {
     const existing = stored.get(row.ticketNumber);

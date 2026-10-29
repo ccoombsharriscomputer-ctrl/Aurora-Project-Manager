@@ -887,13 +887,18 @@ export function searchTickets(p: TicketSearchParams): Promise<TicketSearchResult
   return searchCache(key, () => runTicketSearch(p));
 }
 
-// Every Knowledge Base article (in TeamSupport, a ticket with IsKnowledgeBase set), newest
-// first. One TeamSupport call; the article text is each ticket's first action. Read-only.
+// Every published Knowledge Base article (in TeamSupport, a ticket with IsKnowledgeBase set and
+// its "Visible on Portal" box ticked), newest first. One TeamSupport call (~1,700 articles,
+// ~45 s, confirmed 2026-10-29); the article text is each ticket's first action. Read-only.
 export async function fetchKnowledgeBaseArticles(): Promise<TicketSearchRow[]> {
-  const rows = await fetchTicketRows("/api/json/tickets", new URLSearchParams({ IsKnowledgeBase: "True" }));
-  // Guards against the filter being silently ignored (as unknown filters are), which would
-  // otherwise hand back ordinary tickets as articles.
-  return rows.filter((t) => String(t.IsKnowledgeBase).toLowerCase() === "true").map(toSearchRow);
+  const rows = await fetchTicketRows(
+    "/api/json/tickets",
+    new URLSearchParams({ IsKnowledgeBase: "True", IsVisibleOnPortal: "True" })
+  );
+  // Guards against a filter being silently ignored (as unknown filters are), which would
+  // otherwise hand back ordinary tickets or unpublished drafts as articles.
+  const yes = (v: unknown) => String(v).toLowerCase() === "true";
+  return rows.filter((t) => yes(t.IsKnowledgeBase) && yes(t.IsVisibleOnPortal)).map(toSearchRow);
 }
 
 // Ticket descriptions and comments come back as HTML that is itself HTML-escaped
