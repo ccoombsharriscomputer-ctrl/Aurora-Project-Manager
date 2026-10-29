@@ -151,6 +151,11 @@ model User {
   teamSupportUserId   String?
   // Lets a non-admin add and edit Ticket Finder's fix playbooks (admins always can).
   canEditPlaybooks    Boolean     @default(false)
+  // Lets this user sort TeamSupport Knowledge Base articles for playbooks. Not automatic for
+  // admins: only someone with canGrantKbImport can give it out (Users page).
+  canImportKb         Boolean     @default(false)
+  // The owner of the Knowledge Base import; set only by migration, never through the API.
+  canGrantKbImport    Boolean     @default(false)
   createdAt           DateTime    @default(now())
   // Self-service "forgot password" — set together when a reset is requested, cleared
   // together the moment it's used (or overwritten by a fresh request, which invalidates
@@ -565,4 +570,25 @@ model FixPlaybook {
   updatedByName String?
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
+}
+
+// A TRIO TeamSupport Knowledge Base article, sorted by AI into fixes for a problem
+// ("correction") or anything else, so a lead can pick which deserve a fix playbook
+// (lib/kbArticles.ts). Read-only toward TeamSupport.
+model KbArticle {
+  ticketNumber    String    @id
+  title           String
+  product         String?
+  url             String
+  // TeamSupport's DateModified when last read; a change means it's sorted again.
+  articleModified String
+  // "correction" | "other"; null until the AI has sorted it.
+  verdict         String?
+  reason          String?
+  sortedAt        DateTime?
+  // "undecided" | "wanted" | "skipped": the lead's pick.
+  decision        String    @default("undecided")
+  decidedByName   String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
 }

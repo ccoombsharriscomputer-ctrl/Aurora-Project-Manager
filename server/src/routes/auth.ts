@@ -131,6 +131,8 @@ router.patch("/me", requireAuth, async (req, res) => {
       softwareLineId: true,
       activeSoftwareLineId: true,
       canEditPlaybooks: true,
+      canImportKb: true,
+      canGrantKbImport: true,
       dashboardLayout: true,
     },
   });
@@ -199,6 +201,8 @@ router.patch("/active-line", requireAuth, async (req, res) => {
       softwareLineId: true,
       activeSoftwareLineId: true,
       canEditPlaybooks: true,
+      canImportKb: true,
+      canGrantKbImport: true,
       dashboardLayout: true,
     },
   });

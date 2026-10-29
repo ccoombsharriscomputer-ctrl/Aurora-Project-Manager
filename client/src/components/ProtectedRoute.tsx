@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 import { useAuth } from "../context/AuthContext";
 
 // The only pages a support-line person can open (the server refuses them everything else).
-const SUPPORT_ONLY_PATHS = ["/fix-playbooks", "/settings"];
+const SUPPORT_ONLY_PATHS = ["/fix-playbooks", "/fix-playbooks/knowledge-base", "/settings"];
 
 export function ProtectedRoute() {
   const { t } = useTranslation();
@@ -44,6 +44,20 @@ export function PlaybookEditorRoute() {
     return <div className="auth-page">{t("common.loading")}</div>;
   }
   if (!user || !user.canEditPlaybooks) {
+    return <Navigate to="/dashboard" replace />;
+  }
+  return <Outlet />;
+}
+
+// Knowledge Base import: only users its owner has given it to (not every admin).
+export function KbImporterRoute() {
+  const { t } = useTranslation();
+  const { user, loading } = useAuth();
+
+  if (loading) {
+    return <div className="auth-page">{t("common.loading")}</div>;
+  }
+  if (!user || !user.canImportKb) {
     return <Navigate to="/dashboard" replace />;
   }
   return <Outlet />;

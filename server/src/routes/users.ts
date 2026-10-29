@@ -18,6 +18,7 @@ const userSelect = {
   createdAt: true,
   teamSupportUserId: true,
   canEditPlaybooks: true,
+  canImportKb: true,
   softwareLine: { select: { id: true, name: true } },
   softwareLineGrants: { select: { softwareLine: { select: { id: true, name: true } } } },
   accessRequestNotifyAllLines: true,
@@ -206,6 +207,8 @@ const updateSchema = z.object({
   teamSupportUserId: z.string().min(1).nullable().optional(),
   // Fix playbook access for a non-admin (admins always have it).
   canEditPlaybooks: z.boolean().optional(),
+  // Knowledge Base import: only its owner (canGrantKbImport) may change this.
+  canImportKb: z.boolean().optional(),
   // Extra software lines a Project Lead/Member can switch into beyond their home line —
   // replace-all semantics (the full desired set, not a delta). Only meaningful for those two
   // roles; anyone else keeps an empty set (see the auto-clear below).
@@ -246,6 +249,15 @@ router.patch("/:id", requireAuth, requireAdmin, async (req, res) => {
     });
     if (existing && existing.id !== req.params.id) {
       return res.status(409).json({ error: "An account with that email already exists" });
+    }
+  }
+
+  if (parsed.data.canImportKb !== undefined) {
+    if (!req.user!.canGrantKbImport) {
+      return res.status(403).json({ error: "Only the owner of the Knowledge Base import can change who has it." });
+    }
+    if (target.canGrantKbImport && !parsed.data.canImportKb) {
+      return res.status(400).json({ error: "The owner of the Knowledge Base import always keeps it." });
     }
   }
 
@@ -296,6 +308,10 @@ router.patch("/:id", requireAuth, requireAdmin, async (req, res) => {
 
   const { password, grantedSoftwareLineIds, accessRequestLineIds, ...rest } = parsed.data;
   const data: Record<string, unknown> = { ...rest };
+  // The import lives on the Fix Playbooks page, so giving it gives playbook access too.
+  if (rest.canImportKb) {
+    data.canEditPlaybooks = true;
+  }
   if (password) {
     data.passwordHash = await hashPassword(password);
   }

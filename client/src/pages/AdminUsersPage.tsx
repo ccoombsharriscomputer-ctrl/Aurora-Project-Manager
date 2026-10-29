@@ -333,6 +333,7 @@ interface UserEditData {
   grantedSoftwareLineIds?: string[];
   teamSupportUserId?: string | null;
   canEditPlaybooks?: boolean;
+  canImportKb?: boolean;
   name?: string;
   email?: string;
   password?: string;
@@ -409,6 +410,9 @@ function AccessRequestScopePanel({
 export function AdminUsersPage() {
   const { t } = useTranslation();
   const { user: me } = useAuth();
+  // The Knowledge Base import column is only for its owner, who alone can give it out.
+  const showKbImport = !!me?.canGrantKbImport;
+  const columnCount = showKbImport ? 12 : 11;
   const queryClient = useQueryClient();
   const [deleteErrors, setDeleteErrors] = useState<Record<string, string>>({});
   const [prefill, setPrefill] = useState<CreateUserPrefill | null>(null);
@@ -542,6 +546,7 @@ export function AdminUsersPage() {
               <th>{t("adminUsers.extraLines")}</th>
               <th>{t("adminUsers.accessRequestEmails")}</th>
               <th>{t("adminUsers.playbooks")}</th>
+              {showKbImport && <th>{t("adminUsers.kbImport")}</th>}
               <th>{t("adminUsers.teamSupportUser")}</th>
               <th>{t("common.status")}</th>
               <th>{t("adminUsers.joined")}</th>
@@ -551,7 +556,7 @@ export function AdminUsersPage() {
           <tbody>
             {filteredUsers.length === 0 && (
               <tr>
-                <td colSpan={11} className="muted">
+                <td colSpan={columnCount} className="muted">
                   {t("adminUsers.noUsersMatchFilter")}
                 </td>
               </tr>
@@ -559,7 +564,7 @@ export function AdminUsersPage() {
             {filteredUsers.map((u) =>
               editingUserId === u.id ? (
                 <tr key={u.id}>
-                  <td colSpan={11}>
+                  <td colSpan={columnCount}>
                     <form
                       className="card"
                       style={{ margin: "8px 0" }}
@@ -684,6 +689,21 @@ export function AdminUsersPage() {
                         />
                       )}
                     </td>
+                    {showKbImport && (
+                      <td>
+                        {u.id === me?.id ? (
+                          <span className="muted">{t("adminUsers.kbImportOwner")}</span>
+                        ) : (
+                          <input
+                            type="checkbox"
+                            checked={u.canImportKb}
+                            title={t("adminUsers.kbImportAccess")}
+                            aria-label={t("adminUsers.kbImportAccess")}
+                            onChange={(e) => updateUser.mutate({ id: u.id, data: { canImportKb: e.target.checked } })}
+                          />
+                        )}
+                      </td>
+                    )}
                     <td>
                       <TeamSupportUserPicker
                         value={u.teamSupportUserId}
@@ -730,7 +750,7 @@ export function AdminUsersPage() {
                   </tr>
                   {expandedGrantsUserId === u.id && (u.role === "PROJECT_LEAD" || u.role === "MEMBER") && (
                     <tr>
-                      <td colSpan={11}>
+                      <td colSpan={columnCount}>
                         <GrantedLinesPanel
                           user={u}
                           allLines={softwareLines ?? []}
@@ -741,7 +761,7 @@ export function AdminUsersPage() {
                   )}
                   {expandedAccessRequestUserId === u.id && u.role === "ADMIN" && (
                     <tr>
-                      <td colSpan={11}>
+                      <td colSpan={columnCount}>
                         <AccessRequestScopePanel
                           user={u}
                           allLines={softwareLines ?? []}
@@ -753,14 +773,14 @@ export function AdminUsersPage() {
                   )}
                   {inviteStatus[u.id] && (
                     <tr>
-                      <td colSpan={11}>
+                      <td colSpan={columnCount}>
                         <div className={inviteStatus[u.id].ok ? "muted" : "error-text"}>{inviteStatus[u.id].text}</div>
                       </td>
                     </tr>
                   )}
                   {deleteErrors[u.id] && (
                     <tr>
-                      <td colSpan={11}>
+                      <td colSpan={columnCount}>
                         <div className="error-text">{deleteErrors[u.id]}</div>
                       </td>
                     </tr>

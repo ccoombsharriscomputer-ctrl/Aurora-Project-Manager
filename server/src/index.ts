@@ -31,6 +31,7 @@ import followUpRoutes from "./routes/followUps";
 import assistantRoutes from "./routes/assistant";
 import ticketSearchRoutes from "./routes/ticketSearch";
 import fixPlaybookRoutes from "./routes/fixPlaybooks";
+import kbArticleRoutes from "./routes/kbArticles";
 import { attachRealtime } from "./lib/realtime";
 import { startScheduler } from "./lib/scheduler";
 import { warmTeamSupportLists } from "./lib/teamSupport";
@@ -72,6 +73,8 @@ app.use("/api/notifications", notificationRoutes);
 app.use("/api/follow-ups", followUpRoutes);
 app.use("/api/assistant", assistantRoutes);
 app.use("/api/ticket-search", ticketSearchRoutes);
+// Before /api/fix-playbooks, whose playbook-editor check would otherwise run first.
+app.use("/api/fix-playbooks/kb-articles", kbArticleRoutes);
 app.use("/api/fix-playbooks", fixPlaybookRoutes);
 
 app.get("/api/health", (_req, res) => res.json({ ok: true }));

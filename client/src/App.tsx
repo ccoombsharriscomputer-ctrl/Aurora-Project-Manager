@@ -1,6 +1,6 @@
 import { Navigate, Route, Routes } from "react-router-dom";
 import { Layout } from "./components/Layout";
-import { ProtectedRoute, AdminRoute, ProjectLeadRoute, PlaybookEditorRoute } from "./components/ProtectedRoute";
+import { ProtectedRoute, AdminRoute, ProjectLeadRoute, PlaybookEditorRoute, KbImporterRoute } from "./components/ProtectedRoute";
 import { LoginPage } from "./pages/LoginPage";
 import { RequestAccessPage } from "./pages/RequestAccessPage";
 import { ForgotPasswordPage } from "./pages/ForgotPasswordPage";
@@ -16,6 +16,7 @@ import { ProjectTypesPage } from "./pages/ProjectTypesPage";
 import { ProductsPage } from "./pages/ProductsPage";
 import { ReportsPage } from "./pages/ReportsPage";
 import { FixPlaybooksPage } from "./pages/FixPlaybooksPage";
+import { KbImportPage } from "./pages/KbImportPage";
 import { SettingsPage } from "./pages/SettingsPage";
 import { useRealtimeInvalidation } from "./hooks/useRealtimeInvalidation";
 import { useApplyTheme } from "./hooks/useApplyTheme";
@@ -49,6 +50,9 @@ function App() {
           </Route>
           <Route element={<PlaybookEditorRoute />}>
             <Route path="/fix-playbooks" element={<FixPlaybooksPage />} />
+            <Route element={<KbImporterRoute />}>
+              <Route path="/fix-playbooks/knowledge-base" element={<KbImportPage />} />
+            </Route>
           </Route>
           <Route element={<ProjectLeadRoute />}>
             <Route path="/project-types" element={<ProjectTypesPage />} />

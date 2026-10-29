@@ -16,6 +16,8 @@ export interface AuthedUser {
   grantedSoftwareLineIds: string[];
   teamSupportUserId: string | null;
   canEditPlaybooks: boolean;
+  canImportKb: boolean;
+  canGrantKbImport: boolean;
   // Already resolved to "what actually renders" (default-filled and role-filtered) — see
   // lib/dashboardWidgets.ts — so nothing downstream needs to re-derive it from the raw column.
   dashboardLayout: DashboardWidgetEntry[];
@@ -70,6 +72,8 @@ async function getUserFromRequest(req: Request): Promise<AuthedUser | null> {
       grantedSoftwareLineIds: user.softwareLineGrants.map((g) => g.softwareLineId),
       teamSupportUserId: user.teamSupportUserId,
       canEditPlaybooks: user.canEditPlaybooks,
+      canImportKb: user.canImportKb,
+      canGrantKbImport: user.canGrantKbImport,
       dashboardLayout: effectiveDashboardLayout(user.dashboardLayout, user.role),
     };
   } catch {
@@ -91,7 +95,7 @@ export function isSupportOnly(user: { role: AuthedUser["role"]; softwareLineId: 
 // so a route added later is blocked for them by default rather than needing to opt out.
 // /login refuses them without playbook access too; this covers someone who already had a
 // cookie when they were moved to Support or lost playbook access.
-const SUPPORT_ONLY_ALLOWED_BASES = ["/api/auth", "/api/fix-playbooks"];
+const SUPPORT_ONLY_ALLOWED_BASES = ["/api/auth", "/api/fix-playbooks", "/api/fix-playbooks/kb-articles"];
 
 export async function requireAuth(req: Request, res: Response, next: NextFunction) {
   const user = await getUserFromRequest(req);
@@ -167,6 +171,15 @@ export function requireAdmin(req: Request, res: Response, next: NextFunction) {
 export function requirePlaybookEditor(req: Request, res: Response, next: NextFunction) {
   if (req.user?.role !== "ADMIN" && !req.user?.canEditPlaybooks) {
     return res.status(403).json({ error: "Playbook access required" });
+  }
+  next();
+}
+
+// Knowledge Base import (Fix Playbooks): only users given it on the Users page by its owner.
+// Deliberately not automatic for admins.
+export function requireKbImporter(req: Request, res: Response, next: NextFunction) {
+  if (!req.user?.canImportKb) {
+    return res.status(403).json({ error: "Knowledge Base import access required" });
   }
   next();
 }

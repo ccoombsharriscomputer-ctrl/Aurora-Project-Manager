@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
+import { Link } from "react-router-dom";
 import { api, ApiError } from "../api/client";
 import { extractErrorMessage, useAuth } from "../context/AuthContext";
 import { formatDate } from "../utils/format";
@@ -285,11 +286,18 @@ export function FixPlaybooksPage() {
     <div>
       <div className="page-header page-header-plain">
         <h1>{t("layout.fixPlaybooks")}</h1>
-        {editing !== "new" && (
-          <button className="btn btn-primary" onClick={() => setEditing("new")}>
-            {t("fixPlaybooks.newPlaybook")}
-          </button>
-        )}
+        <div className="gap-8">
+          {user?.canImportKb && (
+            <Link className="btn" to="/fix-playbooks/knowledge-base">
+              {t("kbImport.openButton")}
+            </Link>
+          )}
+          {editing !== "new" && (
+            <button className="btn btn-primary" onClick={() => setEditing("new")}>
+              {t("fixPlaybooks.newPlaybook")}
+            </button>
+          )}
+        </div>
       </div>
       <p className="muted" style={{ marginTop: -12, marginBottom: 20 }}>
         {t("fixPlaybooks.intro")}

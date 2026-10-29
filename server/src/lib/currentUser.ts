@@ -34,6 +34,8 @@ export async function buildCurrentUserPayload(user: {
   activeSoftwareLineId: string | null;
   grantedSoftwareLineIds: string[];
   canEditPlaybooks: boolean;
+  canImportKb: boolean;
+  canGrantKbImport: boolean;
   // Raw column value (or already-resolved AuthedUser["dashboardLayout"], both accepted) —
   // resolved to what actually renders below regardless of which shape the caller has on hand.
   dashboardLayout?: unknown;
@@ -51,6 +53,9 @@ export async function buildCurrentUserPayload(user: {
     activeSoftwareLineId: user.activeSoftwareLineId,
     accessibleSoftwareLines,
     canEditPlaybooks: user.role === "ADMIN" || user.canEditPlaybooks,
+    // Knowledge Base import: never automatic for admins.
+    canImportKb: user.canImportKb,
+    canGrantKbImport: user.canGrantKbImport,
     // Support-line people see only Fix Playbooks, Settings and the playbook help in APM.
     supportOnly: isSupportOnly(user),
     dashboardLayout: effectiveDashboardLayout(user.dashboardLayout, user.role),

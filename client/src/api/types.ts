@@ -45,6 +45,10 @@ export interface CurrentUser {
   accessibleSoftwareLines: SoftwareLine[];
   // Can open the Fix Playbooks page: always true for admins.
   canEditPlaybooks: boolean;
+  // Can use the Knowledge Base import on Fix Playbooks (never automatic for admins).
+  canImportKb: boolean;
+  // Owns the Knowledge Base import: the only one who can give it to others (Users page).
+  canGrantKbImport: boolean;
   // Support-line people (and Ticket Search accounts): APM shows them only Fix Playbooks,
   // Settings and the playbook help.
   supportOnly: boolean;
@@ -138,6 +142,8 @@ export interface AdminUser extends UserSummary {
   teamSupportUserId: string | null;
   // Fix playbook access for a non-admin (admins always have it).
   canEditPlaybooks: boolean;
+  // Knowledge Base import access; only its owner sees or changes this.
+  canImportKb: boolean;
   // Only meaningful for role ADMIN. If true, this admin gets emailed for every access
   // request regardless of software line; if false, only for lines in accessRequestLines.
   accessRequestNotifyAllLines: boolean;
