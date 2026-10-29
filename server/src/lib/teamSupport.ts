@@ -1,3 +1,5 @@
+import { productLineOf } from "./productLines";
+
 // TeamSupport shards accounts across regional servers (NA1, NA2, NA3, NA4) — NA1 happens to
 // be reachable at the bare "app.teamsupport.com", but every other server needs its own
 // subdomain (e.g. "app.na2.teamsupport.com"). There's no way to know which one an account is
@@ -1001,7 +1003,8 @@ const similarCache = cachedLookup<SimilarTicketsResult>(RESEARCH_CACHE_MS, 200);
 // Closed tickets from the last 2 years whose titles share words with this one, best match
 // first, each with its final note. TeamSupport can only filter on one "contains" word at a
 // time, so the two longest title words are searched (on the same product when the ticket has
-// one, which keeps each lookup to ~5 s) and the results ranked here by words in common.
+// one, which keeps each lookup to ~5 s) and the results ranked here by words in common. Only
+// tickets from the same product line (TRIO, MSI...) are kept.
 export function findSimilarTickets(ticketNumber: string): Promise<SimilarTicketsResult> {
   return similarCache(ticketNumber, async () => {
     const ticket = await findTicketRow(ticketNumber);
@@ -1019,6 +1022,10 @@ export function findSimilarTickets(ticketNumber: string): Promise<SimilarTickets
     let candidates = (await Promise.all(searchWords.map((w) => lookup(w, ticket.productId)))).flat();
     // Too few on the same product: widen to every product for the best word.
     if (ticket.productId && candidates.length < 3) candidates = candidates.concat(await lookup(searchWords[0], null));
+    // Never mix product lines (a TRIO fix doesn't apply to MSI). TeamSupport can't filter by
+    // line, so other lines' tickets are dropped here. Tickets with no APM line keep every product.
+    const line = productLineOf(ticket.product);
+    if (line) candidates = candidates.filter((raw) => productLineOf(toSearchRow(raw).product) === line);
 
     const seen = new Set<string>([ticket.ticketNumber]);
     const scored: { row: TicketSearchRow; matched: string[]; score: number; created: number }[] = [];

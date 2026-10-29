@@ -1,6 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { z } from "zod";
 import { prisma } from "./prisma";
+import { PRODUCT_LINES, productLineName, productLineOf } from "./productLines";
 import { askClaude, TicketAiFailedError, TicketAiNotConfiguredError } from "./ticketResearchAi";
 import { fetchTicketHistory, searchTickets, type TicketHistoryEntry, type TicketSearchRow } from "./teamSupport";
 
@@ -8,27 +9,8 @@ import { fetchTicketHistory, searchTickets, type TicketHistoryEntry, type Ticket
 // by admins (routes/fixPlaybooks.ts). Ticket Finder shows the active ones matching a ticket and
 // its AI research uses them as evidence. Drafting one with AI only reads TeamSupport.
 
-// Product lines: APM's own software lines (same ids as the SoftwareLine table; R & D and
-// Support have no products of their own), told apart by how TeamSupport product names start
-// ("TRIO Cash Receipting", "Spectrum - FLEXIBILL", "RM-NG"...). Every playbook belongs to one
-// line and only matches that line's tickets, so products of other lines (SF, A+, ICS...)
-// never get a playbook.
-export const PRODUCT_LINES: { id: string; name: string; pattern: RegExp }[] = [
-  { id: "trio", name: "TRIO", pattern: /^TRIO\b/i },
-  { id: "msi", name: "MSI", pattern: /^MSI\b/i },
-  { id: "spectrum", name: "Spectrum", pattern: /^Spectrum\b/i },
-  { id: "openwindow", name: "OpenWindow", pattern: /^Open\s?Window\b/i },
-  { id: "resourcemate", name: "ResourceMate", pattern: /^(RM\s*-|ResourceMate\b)/i },
-];
-
-export function productLineOf(product: string | null): string | null {
-  const p = (product ?? "").trim();
-  return PRODUCT_LINES.find((l) => l.pattern.test(p))?.id ?? null;
-}
-
-export function productLineName(id: string | null): string | null {
-  return PRODUCT_LINES.find((l) => l.id === id)?.name ?? null;
-}
+// Product lines (one per playbook) live in productLines.ts.
+export { PRODUCT_LINES, productLineName, productLineOf };
 
 export interface MatchedPlaybook {
   id: string;
