@@ -2,23 +2,32 @@ import { Router } from "express";
 import { z } from "zod";
 import { prisma } from "../lib/prisma";
 import { requireAuth, requireKbImporter } from "../middleware/auth";
-import { currentSortJob, startSortJob, type SortJob } from "../lib/kbArticles";
+import { draftJob, sortJob, startDraftJob, startSortJob, type BackgroundJob } from "../lib/kbArticles";
 import { sendAiError } from "./ticketSearch";
 
 // Knowledge Base import on the Fix Playbooks page: TRIO Knowledge Base articles sorted by AI,
-// and the lead's pick for each. Only users given the import (Users page) — not every admin.
+// the lead's pick for each, and AI-drafted playbooks from the picks. Only users given the import
+// (Users page) — not every admin.
 const router = Router();
 router.use(requireAuth, requireKbImporter);
 
-function jobState(job: SortJob | null) {
-  if (!job) return null;
+function jobState<T>(job: BackgroundJob<T> | null) {
+  if (!job || job.status === "failed") return null;
   return { status: job.status, startedAt: new Date(job.at).toISOString(), result: job.result ?? null };
 }
 
 router.get("/", async (_req, res) => {
   const articles = await prisma.kbArticle.findMany({ orderBy: { title: "asc" } });
-  const job = currentSortJob();
-  res.json({ articles, sort: job?.status === "failed" ? null : jobState(job) });
+  // A draft playbook deleted since doesn't count as made.
+  const ids = articles.map((a) => a.playbookId).filter((id): id is string => !!id);
+  const existing = new Set(
+    (await prisma.fixPlaybook.findMany({ where: { id: { in: ids } }, select: { id: true } })).map((p) => p.id)
+  );
+  res.json({
+    articles: articles.map((a) => ({ ...a, playbookId: a.playbookId && existing.has(a.playbookId) ? a.playbookId : null })),
+    sort: jobState(sortJob.peek()),
+    drafts: jobState(draftJob.peek()),
+  });
 });
 
 // Reads the Knowledge Base and sorts up to 40 new or edited articles in the background.
@@ -28,7 +37,20 @@ router.post("/sort", (_req, res) => {
 });
 
 router.get("/sort", (_req, res) => {
-  const job = currentSortJob();
+  const job = sortJob.current();
+  if (job?.status === "failed") {
+    return sendAiError(res, job.error);
+  }
+  res.json(jobState(job));
+});
+
+// Drafts a switched-off playbook from up to 9 picked articles in the background.
+router.post("/drafts", (req, res) => {
+  res.status(202).json(jobState(startDraftJob(req.user!.name)));
+});
+
+router.get("/drafts", (_req, res) => {
+  const job = draftJob.current();
   if (job?.status === "failed") {
     return sendAiError(res, job.error);
   }

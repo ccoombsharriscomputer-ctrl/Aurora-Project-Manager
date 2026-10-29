@@ -614,7 +614,6 @@
     "sortButton": "Leer y clasificar artículos con IA",
     "sorting": "Clasificando… (unos minutos)",
     "sortHelp": "Lee la base de conocimientos y clasifica hasta 40 artículos nuevos o editados por clic. Los ya clasificados se omiten. Cada ejecución usa algunas llamadas a TeamSupport y cuesta un poco de IA.",
-    "sortTooLong": "La clasificación está tardando más de lo normal. Vuelva a mirar en unos minutos.",
     "lastRun": "Se encontraron {{found}} artículos de TRIO y se clasificaron {{sorted}}.",
     "stillToSort": "Quedan {{count}} por clasificar: haga clic otra vez para continuar.",
     "allSorted": "Todos los artículos están clasificados.",
@@ -633,7 +632,18 @@
     "wanted": "Crear una guía",
     "skipped": "Omitir",
     "noneYet": "Aún no hay artículos. Haga clic en \"Leer y clasificar artículos con IA\" para empezar.",
-    "noneHere": "No hay artículos en este grupo."
+    "noneHere": "No hay artículos en este grupo.",
+    "tooLong": "Esto está tardando más de lo normal. Vuelva a mirar en unos minutos.",
+    "drafting": "Redactando… (unos minutos)",
+    "draftButton": "Crear borradores de guías ({{count}} elegidos)",
+    "draftHelp": "La IA redacta una guía a partir de cada artículo marcado \"Crear una guía\" (hasta 9 por clic). Los borradores se guardan desactivados en Guías de solución para que los revise y active.",
+    "draftsMade": "Se crearon {{made}} borradores de guías.",
+    "draftsCouldNot": "{{count}} artículos no se pudieron redactar (vea la nota de cada uno).",
+    "stillToDraft": "Quedan {{count}} por redactar: haga clic otra vez para continuar.",
+    "checkDrafts": "Revíselos en Guías de solución",
+    "playbook": "Guía",
+    "draftMade": "Borrador creado (desactivado)",
+    "waitingForDraft": "Esperando borrador"
   },
   "calendarOption": {
     "label": "Agregar también al Calendario Aurora (en la fecha de vencimiento)",

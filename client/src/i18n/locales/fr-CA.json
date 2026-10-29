@@ -614,7 +614,6 @@
     "sortButton": "Lire et trier les articles avec l'IA",
     "sorting": "Tri en cours… (quelques minutes)",
     "sortHelp": "Lit la base de connaissances et trie jusqu'à 40 articles nouveaux ou modifiés par clic. Les articles déjà triés sont ignorés. Chaque passage utilise quelques appels TeamSupport et coûte un peu d'IA.",
-    "sortTooLong": "Le tri prend plus de temps que prévu. Revenez dans quelques minutes.",
     "lastRun": "{{found}} articles TRIO trouvés, {{sorted}} triés.",
     "stillToSort": "Il en reste {{count}} à trier : cliquez de nouveau pour continuer.",
     "allSorted": "Tous les articles sont triés.",
@@ -633,7 +632,18 @@
     "wanted": "Créer un guide",
     "skipped": "Ignorer",
     "noneYet": "Aucun article pour l'instant. Cliquez sur « Lire et trier les articles avec l'IA » pour commencer.",
-    "noneHere": "Aucun article dans ce groupe."
+    "noneHere": "Aucun article dans ce groupe.",
+    "tooLong": "Cela prend plus de temps que prévu. Revenez dans quelques minutes.",
+    "drafting": "Rédaction en cours… (quelques minutes)",
+    "draftButton": "Créer des brouillons de guides ({{count}} choisis)",
+    "draftHelp": "L'IA rédige un guide à partir de chaque article marqué « Créer un guide » (jusqu'à 9 par clic). Les brouillons sont enregistrés désactivés dans Guides de solution pour que vous les vérifiiez et les activiez.",
+    "draftsMade": "{{made}} brouillons de guides créés.",
+    "draftsCouldNot": "{{count}} articles n'ont pas pu être rédigés (voir la note de chacun).",
+    "stillToDraft": "Il en reste {{count}} à rédiger : cliquez de nouveau pour continuer.",
+    "checkDrafts": "Vérifiez-les dans Guides de solution",
+    "playbook": "Guide",
+    "draftMade": "Brouillon créé (désactivé)",
+    "waitingForDraft": "En attente d'un brouillon"
   },
   "calendarOption": {
     "label": "Ajouter aussi au calendrier Aurora (à la date d'échéance)",

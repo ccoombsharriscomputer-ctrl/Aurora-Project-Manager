@@ -614,7 +614,6 @@
     "sortButton": "Read and sort articles with AI",
     "sorting": "Sorting… (a few minutes)",
     "sortHelp": "Reads the Knowledge Base and sorts up to 40 new or edited articles per click. Articles already sorted are skipped. Each run uses some TeamSupport calls and costs a little AI money.",
-    "sortTooLong": "Sorting is taking unusually long. Check back in a few minutes.",
     "lastRun": "Found {{found}} TRIO articles and sorted {{sorted}}.",
     "stillToSort": "{{count}} still to sort: click again to continue.",
     "allSorted": "Every article is sorted.",
@@ -633,7 +632,18 @@
     "wanted": "Make a playbook",
     "skipped": "Skip",
     "noneYet": "No articles yet. Click \"Read and sort articles with AI\" to start.",
-    "noneHere": "No articles in this group."
+    "noneHere": "No articles in this group.",
+    "tooLong": "This is taking unusually long. Check back in a few minutes.",
+    "drafting": "Drafting… (a few minutes)",
+    "draftButton": "Create draft playbooks ({{count}} picked)",
+    "draftHelp": "AI writes a playbook from each article picked \"Make a playbook\" (up to 9 per click). Drafts are saved switched off on Fix Playbooks for you to check and switch on.",
+    "draftsMade": "{{made}} draft playbooks made.",
+    "draftsCouldNot": "{{count}} articles couldn't be drafted (see the note on each).",
+    "stillToDraft": "{{count}} still to draft: click again to continue.",
+    "checkDrafts": "Check them on Fix Playbooks",
+    "playbook": "Playbook",
+    "draftMade": "Draft made (off)",
+    "waitingForDraft": "Waiting for a draft"
   },
   "calendarOption": {
     "label": "Also add to the Aurora Calendar (on the due date)",

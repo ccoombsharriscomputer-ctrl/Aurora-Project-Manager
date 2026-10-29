@@ -15,82 +15,96 @@ interface KbArticle {
   reason: string | null;
   decision: "undecided" | "wanted" | "skipped";
   decidedByName: string | null;
+  playbookId: string | null;
+  draftNote: string | null;
 }
 
-interface SortState {
+interface JobState<T> {
   status: "pending" | "done";
   startedAt: string;
-  result: { found: number; sorted: number; stillToSort: number } | null;
+  result: T | null;
 }
 
-type Filter = "correction" | "other" | "unsorted" | "all";
+type SortResult = { found: number; sorted: number; stillToSort: number };
+type DraftResult = { made: number; couldNot: number; stillToDraft: number };
 
-// A run reads up to 40 articles and asks Claude about them, which outlasts one web request, so
-// the server sorts in the background and this checks back every few seconds.
-const SORT_POLL_MS = 4000;
-const SORT_GIVE_UP_MS = 10 * 60 * 1000;
+type Filter = "correction" | "other" | "unsorted" | "all";
+type JobKind = "sort" | "drafts";
+
+// Sorting and drafting both ask Claude about several articles, which outlasts one web request,
+// so the server runs them in the background and this checks back every few seconds.
+const POLL_MS = 4000;
+const GIVE_UP_MS = 10 * 60 * 1000;
 
 export function KbImportPage() {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const [filter, setFilter] = useState<Filter>("correction");
-  const [sorting, setSorting] = useState(false);
-  const [lastRun, setLastRun] = useState<SortState["result"]>(null);
+  const [running, setRunning] = useState<JobKind | null>(null);
+  const [lastSort, setLastSort] = useState<SortResult | null>(null);
+  const [lastDrafts, setLastDrafts] = useState<DraftResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const pollTimer = useRef<number | null>(null);
 
   const { data, isLoading } = useQuery({
     queryKey: ["kb-articles"],
-    queryFn: () => api.get<{ articles: KbArticle[]; sort: SortState | null }>("/fix-playbooks/kb-articles"),
+    queryFn: () =>
+      api.get<{ articles: KbArticle[]; sort: JobState<SortResult> | null; drafts: JobState<DraftResult> | null }>(
+        "/fix-playbooks/kb-articles"
+      ),
   });
 
   useEffect(() => () => {
     if (pollTimer.current) window.clearTimeout(pollTimer.current);
   }, []);
 
-  function pollSort(startedAt: number) {
+  function poll(kind: JobKind, startedAt: number) {
     pollTimer.current = window.setTimeout(async () => {
       try {
-        const state = await api.get<SortState | null>("/fix-playbooks/kb-articles/sort");
+        const state = await api.get<JobState<SortResult | DraftResult> | null>(`/fix-playbooks/kb-articles/${kind}`);
         if (state?.status === "pending") {
-          if (Date.now() - startedAt > SORT_GIVE_UP_MS) {
-            setSorting(false);
-            setError(t("kbImport.sortTooLong"));
+          if (Date.now() - startedAt > GIVE_UP_MS) {
+            setRunning(null);
+            setError(t("kbImport.tooLong"));
           } else {
-            pollSort(startedAt);
+            poll(kind, startedAt);
           }
           return;
         }
-        setSorting(false);
-        setLastRun(state?.result ?? null);
+        setRunning(null);
+        if (kind === "sort") setLastSort((state?.result as SortResult) ?? null);
+        else setLastDrafts((state?.result as DraftResult) ?? null);
         queryClient.invalidateQueries({ queryKey: ["kb-articles"] });
+        if (kind === "drafts") queryClient.invalidateQueries({ queryKey: ["fix-playbooks"] });
       } catch (err) {
-        setSorting(false);
+        setRunning(null);
         setError(extractErrorMessage(err));
         queryClient.invalidateQueries({ queryKey: ["kb-articles"] });
       }
-    }, SORT_POLL_MS);
+    }, POLL_MS);
   }
 
   // Someone may have started a run before this page opened: keep watching it.
-  const runningAtLoad = data?.sort?.status === "pending";
+  const runningAtLoad: JobKind | null =
+    data?.sort?.status === "pending" ? "sort" : data?.drafts?.status === "pending" ? "drafts" : null;
   useEffect(() => {
-    if (runningAtLoad && !sorting) {
-      setSorting(true);
-      pollSort(Date.now());
+    if (runningAtLoad && !running) {
+      setRunning(runningAtLoad);
+      poll(runningAtLoad, Date.now());
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [runningAtLoad]);
 
-  async function startSort() {
+  async function start(kind: JobKind) {
     setError(null);
-    setLastRun(null);
+    if (kind === "sort") setLastSort(null);
+    else setLastDrafts(null);
     try {
-      setSorting(true);
-      await api.post("/fix-playbooks/kb-articles/sort");
-      pollSort(Date.now());
+      setRunning(kind);
+      await api.post(`/fix-playbooks/kb-articles/${kind}`);
+      poll(kind, Date.now());
     } catch (err) {
-      setSorting(false);
+      setRunning(null);
       setError(extractErrorMessage(err));
     }
   }
@@ -107,6 +121,7 @@ export function KbImportPage() {
   }
 
   const articles = data.articles;
+  const waitingForDraft = articles.filter((a) => a.decision === "wanted" && !a.playbookId).length;
   const count = (f: Filter) =>
     f === "all" ? articles.length : articles.filter((a) => (f === "unsorted" ? a.verdict === null : a.verdict === f)).length;
   const shown = articles.filter((a) =>
@@ -125,16 +140,30 @@ export function KbImportPage() {
       <p className="muted" style={{ marginTop: -12, marginBottom: 20 }}>
         {t("kbImport.intro")}
       </p>
-      <div className="gap-8" style={{ marginBottom: 12, alignItems: "center", flexWrap: "wrap" }}>
-        <button className="btn btn-primary" onClick={startSort} disabled={sorting}>
-          {sorting ? t("kbImport.sorting") : t("kbImport.sortButton")}
+      <div className="gap-8" style={{ marginBottom: 8, alignItems: "center", flexWrap: "wrap" }}>
+        <button className="btn btn-primary" onClick={() => start("sort")} disabled={!!running}>
+          {running === "sort" ? t("kbImport.sorting") : t("kbImport.sortButton")}
         </button>
         <span className="muted" style={{ fontSize: 12 }}>{t("kbImport.sortHelp")}</span>
       </div>
-      {lastRun && (
+      <div className="gap-8" style={{ marginBottom: 12, alignItems: "center", flexWrap: "wrap" }}>
+        <button className="btn btn-primary" onClick={() => start("drafts")} disabled={!!running || waitingForDraft === 0}>
+          {running === "drafts" ? t("kbImport.drafting") : t("kbImport.draftButton", { count: waitingForDraft })}
+        </button>
+        <span className="muted" style={{ fontSize: 12 }}>{t("kbImport.draftHelp")}</span>
+      </div>
+      {lastSort && (
         <div className="card" style={{ marginBottom: 12 }}>
-          {t("kbImport.lastRun", { found: lastRun.found, sorted: lastRun.sorted })}{" "}
-          {lastRun.stillToSort > 0 ? t("kbImport.stillToSort", { count: lastRun.stillToSort }) : t("kbImport.allSorted")}
+          {t("kbImport.lastRun", { found: lastSort.found, sorted: lastSort.sorted })}{" "}
+          {lastSort.stillToSort > 0 ? t("kbImport.stillToSort", { count: lastSort.stillToSort }) : t("kbImport.allSorted")}
+        </div>
+      )}
+      {lastDrafts && (
+        <div className="card" style={{ marginBottom: 12 }}>
+          {t("kbImport.draftsMade", { made: lastDrafts.made })}{" "}
+          {lastDrafts.couldNot > 0 && t("kbImport.draftsCouldNot", { count: lastDrafts.couldNot })}{" "}
+          {lastDrafts.stillToDraft > 0 && t("kbImport.stillToDraft", { count: lastDrafts.stillToDraft })}{" "}
+          {lastDrafts.made > 0 && <Link to="/fix-playbooks">{t("kbImport.checkDrafts")}</Link>}
         </div>
       )}
       {error && <div className="error-text" style={{ marginBottom: 12 }}>{error}</div>}
@@ -153,6 +182,7 @@ export function KbImportPage() {
               <th>{t("kbImport.product")}</th>
               <th>{t("kbImport.aiSort")}</th>
               <th>{t("kbImport.yourPick")}</th>
+              <th>{t("kbImport.playbook")}</th>
             </tr>
           </thead>
           <tbody>
@@ -192,11 +222,21 @@ export function KbImportPage() {
                     <div className="muted" style={{ fontSize: 12 }}>{a.decidedByName}</div>
                   )}
                 </td>
+                <td>
+                  {a.playbookId ? (
+                    <Link to="/fix-playbooks">{t("kbImport.draftMade")}</Link>
+                  ) : a.decision === "wanted" ? (
+                    <span className="muted">{t("kbImport.waitingForDraft")}</span>
+                  ) : (
+                    <span className="muted">—</span>
+                  )}
+                  {a.draftNote && <div className="muted" style={{ fontSize: 12 }}>{a.draftNote}</div>}
+                </td>
               </tr>
             ))}
             {shown.length === 0 && (
               <tr>
-                <td colSpan={4} className="muted">
+                <td colSpan={5} className="muted">
                   {articles.length === 0 ? t("kbImport.noneYet") : t("kbImport.noneHere")}
                 </td>
               </tr>

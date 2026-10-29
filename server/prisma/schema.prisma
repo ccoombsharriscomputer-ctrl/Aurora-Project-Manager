@@ -589,6 +589,10 @@ model KbArticle {
   // "undecided" | "wanted" | "skipped": the lead's pick.
   decision        String    @default("undecided")
   decidedByName   String?
+  // The draft playbook AI made from this article (switched off until a lead checks it).
+  playbookId      String?
+  // Why AI couldn't draft a playbook from it, when it couldn't.
+  draftNote       String?
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 }
